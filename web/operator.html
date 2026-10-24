@@ -27,13 +27,13 @@
       <h2>Tell it what you need</h2>
       <p class="cap">e.g. “grid alert, I need 30% off for the next twenty minutes”</p>
       <div id="transcript-label" class="transcript-label" hidden>transcript (browser speech recognition): check it, then send</div>
-      <textarea id="req-text" rows="3" maxlength="4000" placeholder="Type or dictate the request"></textarea>
+      <textarea id="req-text" aria-label="request to the dispatcher" rows="3" maxlength="4000" placeholder="Type or dictate the request"></textarea>
       <div class="btn-row">
         <button id="req-send" class="primary" type="button">Send request</button>
         <button id="mic" type="button" hidden>Dictate</button>
         <span id="mic-note" class="src"></span>
       </div>
-      <div id="req-result" class="result"></div>
+      <div id="req-result" class="result" aria-live="polite"></div>
     </section>
 
     <section class="panel">
@@ -46,15 +46,15 @@
     <section class="panel">
       <h2>Waiting for you</h2>
       <p class="cap">When the cap can't be met without breaking a deadline the owner kept, the solver asks the operator.</p>
-      <div id="op-approvals" class="board"></div>
+      <div id="op-approvals" class="board" aria-live="polite" aria-relevant="additions"></div>
     </section>
 
     <section class="panel">
       <h2>Ask why</h2>
       <p class="cap">Answered from the live schedule and the solver's facts only.</p>
-      <textarea id="ask-text" rows="2" maxlength="1000" placeholder="e.g. why is training paused?"></textarea>
+      <textarea id="ask-text" aria-label="question about the plan" rows="2" maxlength="1000" placeholder="e.g. why is training paused?"></textarea>
       <div class="btn-row"><button id="ask-send" type="button">Ask</button></div>
-      <div id="ask-result" class="result"></div>
+      <div id="ask-result" class="result" aria-live="polite"></div>
     </section>
 
     <section class="panel">
@@ -65,9 +65,9 @@
     <section class="panel">
       <h2>OpenADR 3.1 EVENT</h2>
       <p class="cap">Paste the EVENT object a utility's VTN sends (JSON).</p>
-      <textarea id="adr-text" rows="6" class="mono" spellcheck="false" placeholder='{"objectType": "EVENT", "intervalPeriod": {...}, "intervals": [...]}'></textarea>
+      <textarea id="adr-text" aria-label="OpenADR EVENT JSON" rows="6" class="mono" spellcheck="false" placeholder='{"objectType": "EVENT", "intervalPeriod": {...}, "intervals": [...]}'></textarea>
       <div class="btn-row"><button id="adr-send" type="button">Send OpenADR event</button></div>
-      <div id="adr-result" class="result"></div>
+      <div id="adr-result" class="result" aria-live="polite"></div>
     </section>
   </main>
 
