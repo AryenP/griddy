@@ -28,6 +28,13 @@ members:
   - .python-version
   - scripts/probe_mac.sh
   - scripts/verify_feed.py
+  # the dashboard page (Aryen, Sat 04:05); the other pages and the shared web/style.css + web/common.js stay with 2
+  - web/index.html
+  - web/app.js
+  - web/map.js
+  - web/trace.js
+  - web/dashboard.css
+  - tests/test_web_dashboard.py
   - scripts/team.py
   - scripts/check_runtime.py
   - tests/__init__.py
@@ -79,16 +86,26 @@ members:
   - tests/fixtures/openadr/**
 - number: 2
   name: Anuraag
-  role: Frontend (all pages) first, then evals, judging docs, preflight
+  role: Frontend (chat, owner, operator, proof pages and the shared style + helpers), evals, judging docs, preflight
   github: ARP-source
   emails:
   - anuraagpunnam6@gmail.com
   assignment: team/2-anuraag.md
   branch_prefix: anurag/
   owns:
-  - web/**
+  - web/style.css
+  - web/common.js
+  - web/chat*
+  - web/owner*
+  - web/operator*
+  - web/approvals*
+  - web/receipts*
+  - web/proof*
   - scripts/qr.py
-  - tests/test_web*.py
+  - tests/test_web_pages.py
+  - tests/test_web_qr.py
+  - tests/test_web_proof*.py
+  - tests/test_web_a11y*.py
   - evals/**
   - tests/test_evals*.py
   - docs/judging/**
