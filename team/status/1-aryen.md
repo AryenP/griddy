@@ -89,3 +89,8 @@ Blockers / needs Aryen: none.
 Done: merged PR #8 (intake kind + cap-held follow-ups on the pages). No [supervisor] issues.
 Next: record the evidence3 three-way comparison when it finishes; README proof table.
 Blockers / needs Aryen: none.
+
+## 2026-10-24 03:17 PT — tick (light: evidence3 run measuring power)
+Done: no PRs or [supervisor] issues; main CI green.
+Next: record the three-way comparison when evidence3 finishes.
+Blockers / needs Aryen: none.
