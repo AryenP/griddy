@@ -20,22 +20,28 @@ isos:
     day_ahead_market: DAY_AHEAD_HOURLY
     locations: hubs
     poll_s: {lmp: 300, forecast: 1800, fuel_mix: 300}
-# Emission factors, gCO2 per kWh generated, used to turn the live fuel mix into carbon intensity.
-# Source: cite the exact table used (e.g., EPA eGRID 2023 or IPCC lifecycle medians) in DECISIONS.md before demo.
+# Emission factors, gCO2-eq per kWh generated, used to turn the live fuel mix into carbon intensity.
+# Source (all but the last four rows): IPCC AR5 WGIII (2014), Annex III, Table A.III.2, lifecycle
+#   emissions, median values (Schloemer et al., "Technology-specific Cost and Performance Parameters").
+#   https://www.ipcc.ch/site/assets/uploads/2018/02/ipcc_wg3_ar5_annex-iii.pdf
+# Source (Imports, Other): CARB Mandatory GHG Reporting Regulation (17 CCR §95111(b)(1)), default
+#   emission factor for unspecified electricity imports, 0.428 tCO2e/MWh = 428 g/kWh (combustion, not
+#   lifecycle; the closest published number for power of unknown origin in CAISO).
+# Storage discharges energy generated earlier; it is not generation and carries 0 here.
 emission_factors_gco2_per_kwh:
-  Natural Gas: 410
-  Coal: 820
-  Coal and Lignite: 820   # ERCOT name
-  Hydro: 24               # ERCOT name
-  Power Storage: 0        # ERCOT name for batteries; label as "stored"
-  Nuclear: 12
-  Solar: 41
-  Wind: 11
-  Geothermal: 38
-  Biomass: 230
-  Biogas: 230
-  Small Hydro: 24
-  Large Hydro: 24
-  Batteries: 0        # label as "stored"; attribute upstream mix if time
-  Imports: 400        # unknown mix; label as assumption
-  Other: 400
+  Natural Gas: 490        # IPCC AR5: gas, combined cycle (median)
+  Coal: 820               # IPCC AR5: coal, pulverised (median)
+  Coal and Lignite: 820   # ERCOT name; IPCC AR5 coal, pulverised (median)
+  Nuclear: 12             # IPCC AR5: nuclear (median)
+  Solar: 48               # IPCC AR5: solar PV, utility scale (median); CAISO/ERCOT solar is mostly utility scale
+  Wind: 11                # IPCC AR5: wind onshore (median)
+  Geothermal: 38          # IPCC AR5: geothermal (median)
+  Biomass: 230            # IPCC AR5: biomass, dedicated (median)
+  Biogas: 230             # IPCC AR5 has no biogas row; biomass, dedicated (median) used
+  Hydro: 24               # ERCOT name; IPCC AR5 hydropower (median)
+  Small Hydro: 24         # IPCC AR5: hydropower (median)
+  Large Hydro: 24         # IPCC AR5: hydropower (median)
+  Imports: 428            # CARB unspecified-import default (see above); mix unknown, labelled as such
+  Other: 428              # CARB unspecified-import default (see above); source unknown
+  Batteries: 0            # storage, not generation (see above)
+  Power Storage: 0        # ERCOT name for batteries; storage, not generation
