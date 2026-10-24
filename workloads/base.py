@@ -4,6 +4,8 @@ step boundaries; knobs write that file. Status goes the other way. Files are wri
 
 Control file  runs/control/<job>.json         {"state": "run|pause|stop", "device": "gpu|cpu", "threads": n}
 Status file   runs/control/<job>.status.json  {"state", "device", "progress", "rate", "t", ...}
+The SPEC §7 operations (start, pause, resume, set_concurrency, set_threads, set_device, status)
+live in controller/knobs.py, the single code path to these files.
 """
 from __future__ import annotations
 
@@ -11,23 +13,12 @@ import json
 import os
 import time
 from pathlib import Path
-from typing import Protocol
 
 from core.config import jobs as JOBS_CFG
 
 WL = JOBS_CFG.get("workloads", {})
 CONTROL_DIR = Path(WL.get("control_dir", "runs/control"))
 CHECKPOINT_DIR = Path(WL.get("checkpoint_dir", "checkpoints"))
-
-
-class WorkloadControl(Protocol):
-    def status(self) -> dict: ...
-    def start(self) -> None: ...
-    def pause(self) -> None: ...
-    def resume(self) -> None: ...
-    def set_concurrency(self, n: int) -> None: ...
-    def set_threads(self, n: int) -> None: ...
-    def set_device(self, device: str) -> None: ...
 
 
 def write_json(path: Path, data: dict) -> None:
