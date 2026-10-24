@@ -35,6 +35,8 @@ members:
   - web/trace.js
   - web/dashboard.css
   - tests/test_web_dashboard.py
+  - fleet/**
+  - tests/test_fleet*.py
   - scripts/team.py
   - scripts/check_runtime.py
   - tests/__init__.py

@@ -22,6 +22,23 @@ break anyone's work, and nobody can break yours.
 - No passwords or keys in any file, ever.
 - Short, plain commit messages.
 
+## DO THIS FIRST (Sat 5:05 AM): the laptop power test, about 2 minutes
+Aryen wants to use the team's laptops as extra "sites" in the demo. First we must know if your laptop can
+measure its own power. This test answers that. It changes nothing on your laptop.
+1. **Unplug the charger.** The battery only reports its power while the laptop runs on battery.
+2. Get the latest copy: `git pull`
+3. Open PowerShell in the repo folder and run:
+   `powershell -ExecutionPolicy Bypass -File fleet\battery_probe.ps1`
+   It reads the battery for 20 seconds with the laptop resting, then 20 seconds with the laptop working hard.
+   The fan may spin up. That is expected.
+4. It ends with a few lines starting at `== SUMMARY`. The last line says GOOD, SLOW, NO READING, PLUGGED IN or
+   UNCLEAR. If it says PLUGGED IN, unplug and run it again.
+5. Copy the SUMMARY lines into `team/status/4-arumalla.md`, on a branch called `arumalla/probe`, and open a
+   pull request: `gh pr create --fill`. Also send the summary to Aryen.
+6. This script is new and could not be tested on the Mac. If it shows an error, copy the whole error into your
+   status file the same way. That helps just as much.
+Then go on with task 1 below.
+
 ## Your tasks, in order
 
 ### 1. The picture: `docs/briefing/architecture.svg`
