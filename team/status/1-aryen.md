@@ -1,18 +1,19 @@
-# Morning brief (Sat 08:06 PT, machine 1). Newest entries are at the bottom; this block is the summary.
-- **Evidence:** the 06:40 final run is VOID: the lid was closed, the Mac slept from 06:44 (DECISIONS 08:00).
-  Calibration was clean (idle 0.49 W). Nothing from it is used. Re-run `make evidence3` with the lid open, on the
-  charger, ~30 min with the Mac otherwise idle. Record until then: none of the three-policy runs is final.
-- **New since 04:00:** live load trace and percent-below-baseline on the dashboard; laptop fleet (Windows
-  battery meters, about 1 reading a minute; Krish's Surface has a readable battery); a SIMULATED neighbourhood
-  power line around the real sites, labelled everywhere (Aryen's rule change, DECISIONS 05:45), live-checked 06:07;
-  two grids live in one run (CAISO, ERCOT, CAISO); Application Insights provisioned on Azure for Students.
-- **Team:** machine 2 merged 9 PRs overnight (operator replay, architecture picture, driver card, evals,
-  accessibility, ...); machine 3 reviewed and audited (K1-K5), its findings are fixed in d258f8d; machine 4
-  supervises every 10 min (issues 13, 14 fixed).
-- **Tag:** demo-stable-2 (Sat 08:05; the K1 fixes after 06:07 not yet live-checked: re-tag after a live run).
-- **Needs Aryen today:** open the lid (then machine 1 re-runs the evidence); the one-line .env command for the
-  Application Insights connection string; the Microsoft workshop quote at 10 AM (config/site.yaml);
-  judges' access to the private repo before Sun 08:50; rotate the Anthropic key and change the Mac password.
+# Brief (Sat 09:50 PT, machine 1). Newest entries are at the bottom; this block is the summary.
+- **Evidence of record (DECISIONS 09:46):** the 09:15 three-policy run, clean (no power gaps). Ignore the call
+  20.85 W, 0 % of seconds under the cap; pause everything 0.80 W, 99 %, 19 train steps; Brownout 14.34 W, 93 %,
+  compliant in 12 s, 1575 steps (about 83x pause everything). In README and Devpost, reports in docs/evidence/.
+  Caveat stated: that calibration read idle at 3.81 W (0.80 W measured with everything paused).
+- **Tag:** demo-stable-3 (09:48): tests, data scan, and a live check of the neighbourhood fixes (cut sized for the
+  peak, line at most 90 %, no diesel, cut withdrawn at the end).
+- **New overnight:** live load trace and percent-below-baseline on the dashboard; laptop fleet (Windows battery
+  meters, ~1 reading a minute, optional FLEET_TOKEN); a SIMULATED neighbourhood line around the real sites,
+  labelled everywhere (DECISIONS 05:45); two grids live in one run; Application Insights provisioned.
+- **Team:** machine 2 merged 9 PRs; machine 3's reviews (K1-K7) found real bugs, all fixed or flagged; machine 4
+  supervises every 10 min.
+- **Needs Aryen today:** the one-line .env command for the Application Insights connection string; the Microsoft
+  workshop quote at 10 AM (config/site.yaml); judges' access to the private repo before Sun 08:50; a decision on
+  the Azure AI Foundry deployment (machine 1 will show what it creates first); rotate the Anthropic key; change the
+  Mac password. After the hackathon, turn sleep back on: `sudo pmset -a disablesleep 0`.
 
 # Status: 1 Aryen
 
@@ -232,3 +233,8 @@ Blockers / needs Aryen: open the lid; before laptops join, put a FLEET_TOKEN in 
 
 ## 2026-10-24 09:15 PT — evidence started at 2ed6064
 Re-run of the final evidence (make evidence3): lid open, on battery at 100% (macOS reports battery power), nothing else running; the loop is silent until it finishes.
+
+## 2026-10-24 09:47 PT — evidence of record recorded, demo-stable-3
+Done: the 09:15 three-policy run recorded (DECISIONS 09:46), README and Devpost tables updated, reports in
+docs/evidence/; live check of the neighbourhood fixes passed; tagged demo-stable-3.
+Next: chat traffic under a cap (recorded), Krish's Surface as a second real site, demo script and screenshots.
