@@ -193,3 +193,9 @@ Blockers / needs Aryen: the .env command for Azure; battery tests on the other t
 
 ## 2026-10-24 06:40 PT — evidence started at 686767b
 Final evidence run (make evidence3), on the charger, nothing else running on the Mac; the loop is silent until it finishes.
+
+## 2026-10-24 07:59 PT — final evidence run void: lid closed, the Mac slept
+The 06:40 run's calibration was clean, but the lid was closed: the Mac cycled through sleep (thermal and
+maintenance) from 06:44, so the baseline run has 15-min gaps; I stopped the chain at 07:58 (DECISIONS 08:00).
+Nothing recorded from it, no demo-stable tag. Needs Aryen: open the lid (keep it on the charger), then machine 1
+re-runs make evidence3 (about 30 min, Mac otherwise idle) and writes the morning brief after it.
