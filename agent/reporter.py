@@ -13,13 +13,15 @@ Watts are measured, prices and carbon are the live values in effect at each seco
     python -m agent.reporter --run <id>|latest     # writes reports/<id>.md and reports/<id>-power.png
 
 API (machine 1): build_report(path) -> Report, compare_runs(dispatched, baseline) -> Comparison,
-resolve(run) -> (path, run_id), runtime_runs() / newest(dispatcher_enabled).
+resolve(run) -> (path, run_id), run_path(run_id) (the API's: run ids only), runtime_runs() / newest(),
+run_series(path) -> one run's measured watts, caps, actions and shortfalls for drawing.
 """
 from __future__ import annotations
 
 import argparse
 import bisect
 import json
+import re
 import statistics
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -78,6 +80,7 @@ class Run:
     schedules: list[TimelineEvent] = field(default_factory=list)
     shortfalls: list[TimelineEvent] = field(default_factory=list)
     policies: list[TimelineEvent] = field(default_factory=list)
+    actions: list[TimelineEvent] = field(default_factory=list)
     start_note: dict | None = None
     first_t: float | None = None
     last_t: float | None = None
@@ -108,6 +111,8 @@ class Run:
                 r.shortfalls.append(ev)
             elif ev.kind == "policy":
                 r.policies.append(ev)
+            elif ev.kind == "action":
+                r.actions.append(ev)
             elif ev.kind == "note" and d.get("msg") == "runtime start" and r.start_note is None:
                 r.start_note = {"t": ev.t, **d}
         r.power.sort()
@@ -404,6 +409,37 @@ def resolve(run: str, root: Path = RUNS) -> tuple[Path, str]:
     return d / "timeline.jsonl", d.name
 
 
+RUN_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]*")
+
+
+def run_path(run: str, root: Path = RUNS) -> Path:
+    """The timeline of a run id under root (or `latest`). For the HTTP API: a run id only, never a path."""
+    if not RUN_ID.fullmatch(run) or ".." in run:
+        raise FileNotFoundError(f"not a run id: {run!r}")
+    p = Path(root) / run / "timeline.jsonl"
+    if not p.is_file():
+        raise FileNotFoundError(f"no timeline for run {run!r}")
+    return p
+
+
+def run_series(path: str | Path) -> dict:
+    """One run's measured record for drawing, as its timeline logged it: 1-Hz combined watts, cap windows
+    (start and end as epoch seconds), control actions and shortfall messages."""
+    r = Run.load(path)
+    caps = []
+    for c in r.caps:
+        start = _ts(c.data["start"])
+        caps.append({"id": c.data.get("id"), "start": start, "end": start + float(c.data["duration_s"]),
+                     "target_w": float(c.data["target_w"]), "target_pct": c.data.get("target_pct"),
+                     "source": c.data.get("source"), "reason": c.data.get("reason")})
+    return {"run_id": r.run_id, "policy": r.policy, "dispatcher_enabled": r.dispatcher_enabled,
+            "machine": (r.start_note or {}).get("machine"), "started": r.first_t, "ended": r.last_t,
+            "power": [[t, w] for t, w in r.power], "caps": caps,
+            "actions": [{"t": a.t, **a.data} for a in r.actions],
+            "shortfalls": [{"t": f.t, "shortfall_kind": f.data.get("shortfall_kind"), "job_id": f.data.get("job_id"),
+                            "message": f.data.get("message")} for f in r.shortfalls]}
+
+
 def runtime_runs(root: Path = RUNS) -> list[dict]:
     """Runs the runtime wrote (`make demo` / `make baseline`), oldest first, from each timeline's
     first event: the "runtime start" note with dispatcher_enabled."""
@@ -420,7 +456,7 @@ def runtime_runs(root: Path = RUNS) -> list[dict]:
         if first.get("kind") == "note" and d.get("msg") == "runtime start":
             pol = d.get("policy") or {True: "dispatcher", False: "baseline"}.get(d.get("dispatcher_enabled"))
             out.append({"run_id": tl.parent.name, "path": tl, "started": first["t"],
-                        "dispatcher_enabled": d.get("dispatcher_enabled"),
+                        "dispatcher_enabled": d.get("dispatcher_enabled"), "machine": d.get("machine"),
                         "policy": "dispatcher" if pol not in ("baseline", "pause_all") else pol})
     return sorted(out, key=lambda r: r["started"])
 

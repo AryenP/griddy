@@ -19,24 +19,6 @@ WEB = Path("web")
 RUNS = Path("runs")
 
 
-def list_runs(root: Path = RUNS) -> list[dict]:
-    """Runtime runs (make demo / make baseline) with their mode, from each timeline's first event."""
-    out = []
-    for tl in sorted(root.glob("*/timeline.jsonl")):
-        if tl.parent.is_symlink():
-            continue
-        try:
-            with open(tl) as fh:
-                first = json.loads(fh.readline())
-        except (OSError, json.JSONDecodeError):
-            continue
-        d = first.get("data", {})
-        if first.get("kind") == "note" and d.get("msg") == "runtime start":
-            out.append({"run_id": tl.parent.name, "started": first["t"],
-                        "dispatcher_enabled": d.get("dispatcher_enabled"), "machine": d.get("machine")})
-    return out
-
-
 class PolicyIn(BaseModel):
     objective: Literal["cost", "carbon", "balanced"] | None = None
     power_cap_w: float | None = Field(default=None, description="explicit null clears the cap")
@@ -90,7 +72,16 @@ def make_router(rt) -> APIRouter:
 
     @r.get("/api/runs")
     async def runs():
-        return list_runs()
+        from agent.reporter import runtime_runs
+        return [{k: v for k, v in run.items() if k != "path"} for run in runtime_runs(RUNS)]
+
+    @r.get("/api/runs/{run_id}/series")
+    async def run_series(run_id: str):
+        from agent.reporter import run_path, run_series
+        try:
+            return run_series(run_path(run_id, RUNS))
+        except FileNotFoundError as e:
+            raise HTTPException(404, str(e))
 
     @r.get("/api/state")
     async def state():
@@ -181,23 +172,22 @@ def make_router(rt) -> APIRouter:
 
     @r.get("/api/report")
     async def report(run: str = "latest"):
-        from agent.reporter import build_report, resolve
-        path, _ = resolve(run, RUNS)
-        if not path.is_file():
-            raise HTTPException(404, f"no timeline for run {run!r}")
-        return _dump(build_report(path))
-
-    @r.get("/api/compare")
-    async def compare(dispatched: str | None = None, baseline: str | None = None):
-        from agent.reporter import compare_runs, newest, resolve
+        from agent.reporter import build_report, run_path
         try:
-            d = resolve(dispatched, RUNS)[0] if dispatched else newest(True, RUNS)
-            b = resolve(baseline, RUNS)[0] if baseline else newest(False, RUNS)
+            return _dump(build_report(run_path(run, RUNS)))
         except FileNotFoundError as e:
             raise HTTPException(404, str(e))
-        for p in (d, b):
-            if not p.is_file():
-                raise HTTPException(404, f"no timeline at {p}")
+
+    @r.get("/api/compare")
+    async def compare(dispatched: str | None = None, baseline: str | None = None,
+                      baseline_policy: Literal["baseline", "pause_all"] = "baseline"):
+        """Run ids, or the newest dispatched run vs the newest run of `baseline_policy`."""
+        from agent.reporter import compare_runs, newest, run_path
+        try:
+            d = run_path(dispatched, RUNS) if dispatched else newest(True, RUNS)
+            b = run_path(baseline, RUNS) if baseline else newest(False, RUNS, baseline_policy)
+        except FileNotFoundError as e:
+            raise HTTPException(404, str(e))
         return _dump(compare_runs(d, b))
 
     @r.get("/api/trace")

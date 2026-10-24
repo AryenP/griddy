@@ -77,15 +77,23 @@ def test_dispatcher_toggle_and_state():
     assert c.get("/api/state").json() == {"dispatcher_enabled": False}
 
 
-def test_runs_lists_runtime_runs_only(tmp_path):
+def test_runs_lists_runtime_runs_only(tmp_path, monkeypatch):
     import json as _json
-    from api.routes import list_runs
+
+    import api.routes as routes
     for name, first in [("a", {"t": 1.0, "kind": "note", "data": {"msg": "runtime start", "dispatcher_enabled": True}}),
                         ("b-baseline", {"t": 2.0, "kind": "note", "data": {"msg": "runtime start", "dispatcher_enabled": False}}),
-                        ("c-solve", {"t": 3.0, "kind": "grid", "data": {}})]:
+                        ("c-pause_all", {"t": 3.0, "kind": "note", "data": {"msg": "runtime start", "dispatcher_enabled": False,
+                                                                           "policy": "pause_all", "machine": "m"}}),
+                        ("d-solve", {"t": 4.0, "kind": "grid", "data": {}})]:
         (tmp_path / name).mkdir()
         (tmp_path / name / "timeline.jsonl").write_text(_json.dumps(first) + "\n")
-    assert [(r["run_id"], r["dispatcher_enabled"]) for r in list_runs(tmp_path)] == [("a", True), ("b-baseline", False)]
+    monkeypatch.setattr(routes, "RUNS", tmp_path)
+    c, _ = client()
+    got = c.get("/api/runs").json()
+    assert [(r["run_id"], r["dispatcher_enabled"], r["policy"]) for r in got] == [
+        ("a", True, "dispatcher"), ("b-baseline", False, "baseline"), ("c-pause_all", False, "pause_all")]
+    assert got[2]["machine"] == "m" and "path" not in got[0]
 
 
 def test_receipts_routes_on_real_captured_runs(tmp_path, monkeypatch):
@@ -102,4 +110,23 @@ def test_receipts_routes_on_real_captured_runs(tmp_path, monkeypatch):
     assert r.status_code == 200 and r.json()["run_id"]
     assert c.get("/api/report", params={"run": "nope"}).status_code == 404
     assert c.get("/api/compare").status_code == 404          # no runtime runs in this folder
+    assert c.get("/api/compare", params={"baseline_policy": "pause_all"}).status_code == 404
+    assert c.get("/api/compare", params={"baseline_policy": "other"}).status_code == 422
+    s = c.get("/api/runs/real_timeline_calibrate_20261023/series").json()
+    assert s["run_id"] == "real_timeline_calibrate_20261023" and len(s["power"]) > 10
+    assert all(len(p) == 2 and p[1] >= 0 for p in s["power"]) and s["power"] == sorted(s["power"])
+    assert {"caps", "actions", "shortfalls", "policy", "machine"} <= set(s)
+    assert c.get("/api/runs/nope/series").status_code == 404
+
+
+def test_run_routes_take_run_ids_never_paths(tmp_path, monkeypatch):
+    import api.routes as routes
+    outside = tmp_path / "outside.jsonl"
+    outside.write_text('{"t": 1.0, "kind": "note", "data": {"msg": "runtime start"}}\n')
+    (tmp_path / "runs").mkdir()
+    monkeypatch.setattr(routes, "RUNS", tmp_path / "runs")
+    c, _ = client()
+    for bad in (str(outside), "../outside.jsonl", "..", "/etc/hosts"):
+        assert c.get("/api/report", params={"run": bad}).status_code == 404, bad
+        assert c.get("/api/compare", params={"dispatched": bad, "baseline": bad}).status_code == 404, bad
     assert isinstance(c.get("/api/trace").json(), list)
