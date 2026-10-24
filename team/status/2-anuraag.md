@@ -132,3 +132,10 @@ agent/ imports nothing from controller/). The simulated neighbourhood in a dashe
 its file. PR "2 Anuraag: architecture diagram".
 Next: 15 driver card.
 Blockers / needs: machine 1 links it from README.md and docs/devpost.md.
+## 2026-10-24 06:04 PT — task 15 driver card
+Done: docs/judging/driver-card.md, one printable page: tag check, make preflight / demo / qr, the page URLs,
+every hotkey (dashboard D 1 2 3 R; operator E A N), the four minutes from DEMO.md with the exact clicks and
+what to say, the optional neighbourhood replay with its "simulated" line, and a truthful line for each failure
+(stale feed, Ollama, agent offline, no meter, odd input, Application Insights lag). No numbers beyond what the
+screen shows. PR "2 Anuraag: driver card" (the N hotkey arrives with PR #20).
+Next: 12 failure drills.
