@@ -48,7 +48,8 @@ the same at 50 megawatts, and the request came in the format utilities already s
 Framework; in production the agent gets an Entra Agent ID and approvals land in Teams."
 
 Optional if time remains: **Impossible ask.** "Ask for 90%." The solver shows the floor with chat protected and
-asks whether to go dark on everything else; the shortfall is logged.
+asks the operator to approve going over the cap; the ask says what a no would do to chat (it may then be degraded,
+never without that answer). The shortfall is logged.
 
 ## Failure drills (rehearse Saturday evening)
 - Grid feed down → stale badge, plan on last known data, say it.
