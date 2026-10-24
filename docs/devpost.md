@@ -1,8 +1,9 @@
 # Devpost draft: Brownout
 
-Draft for the Cal Hacks 13.0 submission (due Sun 25 Oct, 8:50 AM PT). Every number in angle brackets
-is filled from the demo Mac's own runs (`make report`, `make compare`) after the final rehearsal; none is
-typed from memory. Remove this paragraph before submitting.
+Draft for the Cal Hacks 13.0 submission (due Sun 25 Oct, 8:50 AM PT). Every "to be measured" is filled
+from the demo Mac's own runs (`make report`, `make compare`) after the final rehearsal; none is typed
+from memory. Measured numbers below come from DECISIONS.md; dated facts under "Why now" are cited in
+RESEARCH.md. Remove this paragraph before submitting.
 
 ## Tagline
 When the grid runs short, the plan for AI data centers is diesel generators. This is the alternative.
@@ -22,8 +23,8 @@ the result in watts.
 ## What it does
 Brownout is a grid-aware compute dispatcher. It reads the live grid (CAISO and ERCOT prices, day-ahead
 curve, load forecast, fuel mix, alerts) with the timestamp and age of every number, schedules each AI
-job over the next 24 hours with a CP-SAT solver against cost, carbon, deadlines and a chat latency SLA,
-executes the current slot on a real machine (pause/resume with checkpoints, concurrency, GPU vs CPU),
+job over the next 24 hours with a CP-SAT solver against cost, carbon, deadlines and a chat SLA
+(time to first token p95 <= 1.0 s, replies streamed), executes the current slot on a real machine (pause/resume with checkpoints, concurrency, GPU vs CPU),
 and measures the result with macOS `powermetrics`, which is independent of our code.
 
 When a utility asks for a cut, in OpenADR JSON or plain words, the agent reads it back, the solver
@@ -35,40 +36,51 @@ minimal relaxation instead of pretending.
 ## The four numbers (measured on the demo Mac, from timelines)
 | | Value | Source |
 |---|---|---|
-| Power reduction during the event | ⟨reduction_pct⟩ % (⟨baseline_w⟩ W → ⟨event_w⟩ W) | `make report` |
-| Time to compliance (10-s mean at or under the cap) | ⟨time_to_compliance_s⟩ s | `make report` |
-| Cost vs dispatcher off, same window length | ⟨cost delta⟩ at the live price | `make compare` |
-| Carbon vs dispatcher off, same window length | ⟨gCO2 delta⟩ at the live fuel mix | `make compare` |
+| Power reduction during the event | to be measured (`reduction_pct`, `baseline_w` → `event_w`) | `make report` |
+| Time to compliance (10-s mean at or under the cap) | to be measured (`time_to_compliance_s`) | `make report` |
+| Cost vs dispatcher off, same window length | to be measured (`delta.cost_usd`) at the live price | `make compare` |
+| Carbon vs dispatcher off, same window length | to be measured (`delta.co2_g`) at the live fuel mix | `make compare` |
 
-Already measured on the demo Mac (Fri 23 Oct, DECISIONS.md): idle 1.35 W; chat +24.8 W at concurrency 4;
-training +19.5 W on GPU, +13.0 W on CPU; batch embeddings +22.8 W on GPU. The solver put training in
-Saturday 14:00–16:00 at an average $5.32/MWh against $36.33/MWh in the slots it skipped (CAISO SP15
-day-ahead, live), solved OPTIMAL in 0.06 s.
+Already measured on the demo Mac (Fri 23 Oct, DECISIONS.md): idle 1.35 W; training +19.5 W on GPU,
++13.0 W on CPU; batch embeddings +22.8 W on GPU; chat +24.8 W at concurrency 4, measured on plain
+qwen3:4b before the switch to qwen3:4b-instruct (chat watts on the instruct model: to be measured). The
+solver put training in Saturday 14:00–16:00 at an average $5.32/MWh against $36.33/MWh in the slots it
+skipped (CAISO SP15 day-ahead, live), solved OPTIMAL in 0.06 s. A 15 W cap at the 23:45 slot boundary:
+measured 18.5 W → 2.17 W at 23:45:04, under the cap within ~4 s, with no input after the cap was posted.
 
 ## Honest scope
-One Mac, 5–40 W. The feeds, the solver, the approvals and the audit trail are the same loop at 50 MW;
-the knobs at that scale are cluster schedulers and power caps instead of a process on a laptop. Watts
-are SoC power as macOS reports it, not a wall meter. The 24-hour carbon curve is the live mix held flat
-(only price varies across slots), and the dashboard says so. Chat p95 at concurrency 4 measured 9.7 s
-against a 2 s SLA on Friday night; ⟨what was changed and the new measurement⟩.
+One MacBook (Apple M2 Pro), roughly 1–30 W. The feeds, the solver, the approvals and the audit trail
+are the same loop at 50 MW; the knobs at that scale are cluster schedulers and power caps instead of a
+process on a laptop. Watts are SoC power (CPU + GPU + ANE) as `powermetrics` reports it, not a wall
+meter. The 24-hour carbon curve is the live mix held flat (only price varies across slots), and the
+dashboard says so. Chat total latency p95 measured 9.67 s at concurrency 4 with 256-token replies on
+Friday night (plain qwen3:4b), against the 2 s SLA we had written down. We changed the promise, not the measurement:
+replies stream, and the SLA is time to first token p95 <= 1.0 s. On qwen3:4b-instruct the worst TTFT
+p95 measured 0.29 s idle and 0.24 s with training on the GPU; total p95 for 256 tokens is 5.0–8.9 s
+idle and 8.3–15.7 s with training, reported beside it and not promised.
 
 ## Responsible design
 - The solver decides, the LLM explains and negotiates, the controller executes. The LLM has no code
   path to any knob.
 - Nothing simulated reaches the screen: every price, watt and dollar is live or measured, with source and age.
 - A human owner approves any deadline slip; refusals are respected and logged with name and time.
-- Every decision is an OpenTelemetry span exported to Azure Application Insights: the audit log.
+- Every agent call is an OpenTelemetry span, exported to Azure Application Insights when configured:
+  the audit log.
+- Plain requests and owner replies are parsed by rules, not the LLM; any LLM sentence that contains a
+  number not in the solver's facts is replaced by the facts verbatim.
 - If the LLM is down, the solver and controller keep running and the UI says "agent offline".
 
 ## How we built it
-Python 3.11, FastAPI, OR-Tools CP-SAT, gridstatus (CAISO, ERCOT), powermetrics, Ollama (chat),
-PyTorch MPS (training with checkpoints), sentence-transformers (batch embeddings), Microsoft Agent
-Framework for the agent layer, OpenTelemetry with the Azure Monitor exporter, Application Insights
+Python 3.11, FastAPI, OR-Tools CP-SAT, gridstatus (CAISO, ERCOT), powermetrics, Ollama with
+qwen3:4b-instruct (chat, streamed), PyTorch MPS (training with checkpoints), sentence-transformers
+(batch embeddings), Microsoft Agent Framework with Foundry for the agent layer when Azure is configured
+(Claude behind the same interface otherwise), OpenTelemetry with the Azure Monitor exporter, Application Insights
 provisioned with `azd`, vanilla JS + Chart.js dashboard. Emission factors: IPCC AR5 lifecycle medians.
 
 ## Challenges
 - macOS 15 `powermetrics` prints GPU power twice per sample; the meter splits on sample headers.
-- PJM needs an API key; CAISO and ERCOT are keyless and are what we demo.
+- PJM needs an API key (`PJM_API_KEY`); CAISO and ERCOT are keyless and are what we demo.
+- Plain `qwen3:4b` always thinks and leaked its reasoning into replies; chat runs on qwen3:4b-instruct.
 - Venue bandwidth: model downloads at ~145 KB/s.
 
 ## What's next
