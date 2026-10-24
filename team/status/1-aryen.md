@@ -79,3 +79,8 @@ Blockers / needs Aryen: none.
 Done: dispatched 1.64 W vs dispatcher-off 21.18 W over the 300-s cap window, 99 % vs 0 % of seconds under the cap, compliance in 7 s; reproduces 02:28. Report in docs/evidence/.
 Next: merge PRs #6 (receipts) and #7 (qr); Anuraag's asks (active cap events in the snapshot, a distinct kind for intake events); DEMO pass + make preflight; tag.
 Blockers / needs Aryen: none.
+
+## 2026-10-24 03:36 PT — evidence at 210c36c (started: make evidence3, three policies)
+Done: pause_all baseline, measured work done, projected deadlines for dispatcher-off runs; README restructured (accordion-style); PRs #6 #7 merged; cap_events + intake kind for Anuraag.
+Next: record the 3-way comparison (ignore / pause everything / Brownout) in DECISIONS and the README proof table.
+Blockers / needs Aryen: none.
