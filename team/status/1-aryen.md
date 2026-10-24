@@ -131,3 +131,13 @@ Next: D (scripted cold-start rehearsal), C (ERCOT end to end); B after the 06:40
 Blockers / needs Aryen (asked once, Aryen is awake): install azd and run azd auth login so machine 1 can provision
 Application Insights (the live Microsoft piece the judges asked for); rotate the Anthropic key; change the Mac
 password; decide judge access to the private repo before Sun 08:50.
+
+## 2026-10-24 04:49 PT — tick: Azure live, cold-start rehearsal
+Done: Application Insights provisioned on Aryen's Azure for Students subscription (rg-brownout-calhacks,
+appi-brownout-calhacks, log-brownout-calhacks, West US 2) with the repo's infra; Azure exporter installed (all
+extras restored after a uv sync dropped torch and pytest); 296 tests pass. Scripted cold start (docs/rehearsal.md):
+live schedule and dashboard 12 s after make demo, every page and read route 200, path probes 404, agent answers
+grounded. Preflight: two bugs queued for Anuraag (task 18). No PRs or [supervisor] issues open.
+Next: verify spans reach Application Insights once .env has the string; C (ERCOT end to end) before 06:30;
+final evidence run 06:40, then B and the morning brief.
+Blockers / needs Aryen: run the one-line command that writes APPLICATIONINSIGHTS_CONNECTION_STRING into .env.
