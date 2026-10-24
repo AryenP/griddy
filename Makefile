@@ -1,6 +1,9 @@
 .PHONY: evidence preflight tag-stable ollama setup demo baseline calibrate chat-sweep solve report compare test probe qr clean
 
 PY ?= uv run
+# sudo for powermetrics: no prompt when the passwordless rule for /usr/bin/powermetrics is installed
+# (team/README.md, "Unattended runs"); otherwise ask once and cache it for this terminal.
+SUDO_PM = sudo -n /usr/bin/powermetrics --samplers cpu_power,gpu_power -i 1000 -n 1 >/dev/null 2>&1 || sudo -v
 RUN ?= latest
 
 setup:
@@ -12,13 +15,13 @@ ollama:         ## start the Ollama server with parallel slots >= chat max_concu
 	@pgrep -x ollama >/dev/null || (mkdir -p runs/logs && OLLAMA_NUM_PARALLEL=$${OLLAMA_NUM_PARALLEL:-4} nohup ollama serve >> runs/logs/ollama-serve.log 2>&1 & sleep 2)
 
 demo: ollama    ## live: grid feeds + powermetrics + workloads + dispatcher + dashboard
-	sudo -v && $(PY) python -m api.app
+	($(SUDO_PM)) && $(PY) python -m api.app
 
 baseline: ollama ## dispatcher off: same jobs, run-everything policy, for the comparison
-	sudo -v && POLICY=baseline $(PY) python -m api.app --headless --duration 600
+	($(SUDO_PM)) && POLICY=baseline $(PY) python -m api.app --headless --duration 600
 
 calibrate: ollama ## measure per-job watt deltas and the idle floor with powermetrics
-	sudo -v && $(PY) python -m controller.feasibility --calibrate $(ARGS)
+	($(SUDO_PM)) && $(PY) python -m controller.feasibility --calibrate $(ARGS)
 
 chat-sweep: ollama ## chat TTFT/total latency by concurrency x max_tokens (idle GPU, then with training)
 	$(PY) python -m controller.feasibility --chat-sweep $(ARGS)
@@ -28,7 +31,7 @@ solve:          ## print the 24-h schedule for the live price curve
 
 EVIDENCE_ARGS ?= --cap-pct 30 --cap-at 120 --cap-for 300 --deadline train=2
 evidence: ollama ## ONE password, ~25 min, Mac otherwise idle: calibrate, dispatcher-off run, dispatched run, same scripted cap, compare
-	sudo -v || exit 1; ( while sudo -n -v 2>/dev/null; do sleep 50; done ) & K=$$!; \
+	($(SUDO_PM)) || exit 1; ( while sudo -n -v 2>/dev/null; do sleep 50; done ) & K=$$!; \
 	$(PY) python -m controller.feasibility --calibrate && \
 	POLICY=baseline $(PY) python -m api.app --headless --duration 450 $(EVIDENCE_ARGS) && \
 	$(PY) python -m api.app --headless --duration 450 $(EVIDENCE_ARGS) && \
