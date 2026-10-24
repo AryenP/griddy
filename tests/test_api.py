@@ -86,3 +86,20 @@ def test_runs_lists_runtime_runs_only(tmp_path):
         (tmp_path / name).mkdir()
         (tmp_path / name / "timeline.jsonl").write_text(_json.dumps(first) + "\n")
     assert [(r["run_id"], r["dispatcher_enabled"]) for r in list_runs(tmp_path)] == [("a", True), ("b-baseline", False)]
+
+
+def test_receipts_routes_on_real_captured_runs(tmp_path, monkeypatch):
+    import shutil
+
+    import api.routes as routes
+    for name in ("real_timeline_calibrate_20261023.jsonl", "real_timeline_solve_20261023.jsonl"):
+        d = tmp_path / name.split(".")[0]
+        d.mkdir()
+        shutil.copy(f"tests/fixtures/{name}", d / "timeline.jsonl")
+    monkeypatch.setattr(routes, "RUNS", tmp_path)
+    c, _ = client()
+    r = c.get("/api/report", params={"run": "real_timeline_solve_20261023"})
+    assert r.status_code == 200 and r.json()["run_id"]
+    assert c.get("/api/report", params={"run": "nope"}).status_code == 404
+    assert c.get("/api/compare").status_code == 404          # no runtime runs in this folder
+    assert isinstance(c.get("/api/trace").json(), list)

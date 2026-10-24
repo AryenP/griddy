@@ -171,6 +171,32 @@ def make_router(rt) -> APIRouter:
             raise HTTPException(404, "no schedule explained yet")
         return _dump(rt.agent.explanation)
 
+    @r.get("/api/report")
+    async def report(run: str = "latest"):
+        from agent.reporter import build_report, resolve
+        path, _ = resolve(run, RUNS)
+        if not path.is_file():
+            raise HTTPException(404, f"no timeline for run {run!r}")
+        return _dump(build_report(path))
+
+    @r.get("/api/compare")
+    async def compare(dispatched: str | None = None, baseline: str | None = None):
+        from agent.reporter import compare_runs, newest, resolve
+        try:
+            d = resolve(dispatched, RUNS)[0] if dispatched else newest(True, RUNS)
+            b = resolve(baseline, RUNS)[0] if baseline else newest(False, RUNS)
+        except FileNotFoundError as e:
+            raise HTTPException(404, str(e))
+        for p in (d, b):
+            if not p.is_file():
+                raise HTTPException(404, f"no timeline at {p}")
+        return _dump(compare_runs(d, b))
+
+    @r.get("/api/trace")
+    async def trace(n: int = 50):
+        import telemetry
+        return telemetry.recent_spans(max(1, min(n, 500)))
+
     @r.post("/api/chat")
     async def chat(body: ChatIn):
         url = f"http://127.0.0.1:{WL['chat']['proxy_port']}/chat"
