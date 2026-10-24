@@ -196,9 +196,12 @@ def _relaxation(inp: Inputs, relax: Relax, limit_s: float, slots: list[datetime]
 
 def solve(sig: GridSignal, jobs: list[Job], policy: Policy, cal: Calibration,
           events: list[CapEvent] | None = None, baseline_w: float | None = None,
-          chat_busy: float | None = None, hard_deadlines: frozenset[str] = frozenset()) -> Schedule:
-    """`hard_deadlines`: jobs whose owner refused a slip; if the model is infeasible, only the cap
-    (or other jobs' deadlines) may bend for them."""
+          chat_busy: float | None = None, hard_deadlines: frozenset[str] = frozenset(),
+          exceed_cap_approved: bool = False) -> Schedule:
+    """If the model is infeasible, two honest options go to the negotiator (shortfalls): slip deadlines
+    under the cap, or exceed the cap (`hard_deadlines` = owners refused a slip). What RUNS meanwhile holds
+    the utility's cap and lets deadlines slip, unless the operator approved going over the cap for these
+    events (`exceed_cap_approved`); the cap bends without approval only if nothing at all fits under it."""
     t0 = time.time()
     slots = [s for s, _ in sig.price_curve]
     prices = [p for _, p in sig.price_curve]
@@ -221,10 +224,20 @@ def solve(sig: GridSignal, jobs: list[Job], policy: Policy, cal: Calibration,
         hard = frozenset(hard_deadlines)
         shortfalls = (_relaxation(inp, Relax(deadlines=True, fixed=hard), policy.solver_time_limit_s, slots, policy.slot_minutes)
                       + _relaxation(inp, Relax(cap=True), policy.solver_time_limit_s, slots, policy.slot_minutes))
-        rb = build(inp, Relax(deadlines=True, cap=True, fixed=hard))
-        rs, rst = _run(rb, policy.solver_time_limit_s)
+        cap_mode = "over the cap: approved by the operator"
+        rb, rs, rst = None, None, None
+        if not exceed_cap_approved:                      # the safe default: hold the cap, deadlines slip
+            rb = build(inp, Relax(deadlines=True))
+            rs, rst = _run(rb, policy.solver_time_limit_s)
+            cap_mode = "cap held; deadlines slip until an approval says otherwise"
+        if rst not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
+            rb = build(inp, Relax(deadlines=True, cap=True, fixed=hard))
+            rs, rst = _run(rb, policy.solver_time_limit_s)
+            if not exceed_cap_approved:
+                cap_mode = "over the cap without approval: nothing fits under it (minimum load exceeds the cap)"
         assign, watts = _extract(inp, rb, rs)
         status, obj, relaxed = "INFEASIBLE -> minimal relaxation", rs.ObjectiveValue(), True
+        notes = notes + [f"running plan: {cap_mode}"]
     else:
         assign, watts = greedy(inp)
         status, obj = f"GREEDY (CP-SAT {solver.StatusName(st)} at {policy.solver_time_limit_s}s limit)", 0.0

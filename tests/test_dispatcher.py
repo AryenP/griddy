@@ -130,15 +130,27 @@ async def test_solve_in_a_thread_keeps_the_runtimes_sigint_handler():
         await asyncio.wait_for(got.wait(), 2)
     finally:
         loop.remove_signal_handler(sg.SIGINT)
-def test_refused_slip_keeps_deadline_and_bends_the_cap():
+def test_refused_slip_holds_the_cap_until_the_operator_approves_going_over():
     # train needs 90 min of GPU before 2 h; under a 10 W cap only CPU training fits (1 W idle + 6 W), too slow
     dl = SLOTS[8]
     capped = POLICY.model_copy(update={"power_cap_w": 10.0})
     free = solve(signal([50.0] * 96), jobs(train_deadline=dl), capped, CAL, chat_busy=0.0)
     assert free.relaxed and any(f.kind == "deadline" and f.job_id == "train" for f in free.shortfalls)
+    assert all(w <= 10.0 + 1e-6 for w in free.planned_w)          # nobody approved anything: cap holds
+    # owner refused: the deadline may not bend in the options offered, but until the operator approves
+    # going over, the running plan still holds the cap (train slips meanwhile)
     kept = solve(signal([50.0] * 96), jobs(train_deadline=dl), capped, CAL, chat_busy=0.0,
                  hard_deadlines=frozenset({"train"}))
     assert not any(f.kind == "deadline" and f.job_id == "train" for f in kept.shortfalls)
     assert any(f.kind == "cap" for f in kept.shortfalls)
-    assert not kept.deadline_misses                       # the refused deadline holds
-    assert max(kept.planned_w) > 10.0                      # by going over the cap, which needs approval
+    assert all(w <= 10.0 + 1e-6 for w in kept.planned_w) and kept.deadline_misses
+    assert any("cap held" in e for e in kept.explanations)
+    approved = solve(signal([50.0] * 96), jobs(train_deadline=dl), capped, CAL, chat_busy=0.0,
+                     hard_deadlines=frozenset({"train"}), exceed_cap_approved=True)
+    assert not approved.deadline_misses and max(approved.planned_w) > 10.0
+    assert any("approved by the operator" in e for e in approved.explanations)
+
+
+def test_cap_bends_without_approval_only_when_nothing_fits():
+    s = solve(signal([50.0] * 96), jobs(), POLICY.model_copy(update={"power_cap_w": 0.5}), CAL, chat_busy=0.0)
+    assert any("nothing fits under it" in e for e in s.explanations)

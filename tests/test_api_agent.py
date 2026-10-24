@@ -46,17 +46,22 @@ async def test_operator_text_to_owner_refusal_to_operator_approval(rig):
     assert [a.job_id for a in asks] == ["train"] and asks[0].owner == "ml"
     assert e.plan.needs_approval == [asks[0].id]
 
-    # 1:45 the owner refuses in words: the deadline turns hard, the cap bends, the operator is asked
+    # 1:45 the owner refuses in words: the deadline turns hard in the options, the operator is asked,
+    # and until the operator answers the running plan keeps holding the cap (train slips meanwhile)
     decision, sched = await agent.reply(asks[0].id, "no, this has to finish by 9 AM Monday", "owner")
     assert decision.decision == "refuse" and "9 AM Monday" in decision.reason
-    assert "train" in e.hard_deadlines and not sched.deadline_misses
+    assert "train" in e.hard_deadlines
     assert any(f.kind == "cap" for f in sched.shortfalls)
+    assert all(w <= c + 1e-6 for w, c in zip(sched.planned_w, sched.caps_w) if c is not None)
     ops = agent.pending()
     assert [a.job_id for a in ops] == [CAP_JOB] and ops[0].owner == "ops"
-
     assert "9 AM Monday" in ops[0].message or "refused" in ops[0].message.lower()   # the owner's reason carries over
-    decision, _ = await agent.reply(ops[0].id, "yes", "judge")
+
+    # the operator approves going over the cap: only now does the plan exceed it, and the deadline holds
+    decision, sched = await agent.reply(ops[0].id, "yes", "judge")
     assert decision.decision == "approve" and agent.approvals[ops[0].id].status == "approved"
+    assert not sched.deadline_misses
+    assert any(w > c + 1e-6 for w, c in zip(sched.planned_w, sched.caps_w) if c is not None)
     kinds = [ev.kind for ev in Timeline.read(tl.path)]
     assert kinds.count("approval") >= 5 and "event" in kinds
 
@@ -90,3 +95,17 @@ async def test_operator_question_answered_from_live_state(rig):
     assert ans.text and not ans.llm_used
     refused = await agent.ask("pause chat now")
     assert refused.text and not refused.llm_used
+
+
+
+async def test_operator_refusal_keeps_the_cap_and_is_not_asked_again(rig):
+    e, agent, _, _ = rig
+    await e.on_signal(signal([50.0] * 96))
+    await agent.request("grid alert, I need 50% off for the next 2 hours", "judge")
+    await agent.reply(agent.pending()[0].id, "no, it has to finish on time", "owner")
+    op = agent.pending()[0]
+    _, sched = await agent.reply(op.id, "no, the utility's limit comes first", "judge")
+    assert agent.approvals[op.id].status == "refused" and not agent.pending()
+    await e.resolve("re-check")
+    assert not agent.pending()                                   # same caps: the operator is not asked again
+    assert all(w <= c + 1e-6 for w, c in zip(e.schedule.planned_w, e.schedule.caps_w) if c is not None)
