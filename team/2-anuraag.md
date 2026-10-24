@@ -10,6 +10,15 @@ CDN version). No build step. Must work at phone width.
 in `core/types.py`. Until the server runs, develop against `tests/fixtures/real_timeline_*.jsonl` fed in
 from the browser console (no replay mode in the code).
 
+## Start now (Sat 01:00, from machine 1)
+State: PR #1 (dashboard) is merged. Main now has guardrails: a lane-guard hook (needs `uv run python
+scripts/team.py whoami --save` once), CI on every PR, branch protection, and your own status file
+`team/status/2-anuraag.md` (create it on first use; format in team/README.md rule 9).
+1. `git checkout main && git pull`, then `uv run python scripts/team.py whoami --save` (prints "You are 2 Anuraag").
+2. Do the follow-ups below on a branch `anurag/followups`, PR into main, CI green.
+3. Then phase-1 tasks 2–4 below, one branch and one PR each (`anurag/phone-pages`, `anurag/receipts`,
+   `anurag/polish`); then Phase 2. Add a status entry before every PR.
+
 ## Follow-ups from machine 1 (do these first, Sat 00:15)
 - Chat SLA is now on **time to first token**: show `ttft_p95_60s` against `policy.sla.chat_ttft_p95_s` (1.0 s)
   as the SLA tile, with total latency `p95_60s` beside it labelled "total (depends on reply length)".

@@ -1,11 +1,12 @@
-# Brownout — handoff (Fri 23 Oct, 11:30 PM PT)
+# Brownout — handoff (updated Sat 24 Oct, 1:00 AM PT)
 
 Two machines, one repo (`github.com/AryenP/abc`, private). Read `CLAUDE.md`, `PLAN.md`, `SPEC.md`,
 `DECISIONS.md` first; this file says where things stand and who owns what.
 
 ## Where it stands
-M0–M3 are done, verified on the demo Mac, committed on `main`. Aryen decided at 11:30 PM to keep
-going into M4 tonight (overrides KICKOFF.md's "do not start M4 tonight").
+M0–M4 are done and verified on the demo Mac (`demo-stable-1`). Every machine starts from KICKOFF.md,
+then the "Start now" block in its `team/<n>-<name>.md`. Machines 3 and 4 have finished phase 1 on
+branches; their first job is a rebased PR each.
 
 | Milestone | Evidence (all on the demo Mac) |
 |---|---|

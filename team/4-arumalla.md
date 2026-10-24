@@ -41,6 +41,24 @@ Every call: one OpenTelemetry span (`opentelemetry.trace.get_tracer("brownout.ag
 tokens. Offline (no key, API down): every function still returns a valid result: `clarify`/`unclear` with
 "agent offline", or the solver's facts joined plainly, with `llm_used=False`.
 
+## Start now (Sat 01:00, from machine 1)
+State: all four phase-1 tasks are done but unmerged in one commit on `arumalla/agent-layer` (llm, intake,
+negotiator, explainer, tests, OpenADR fixture). No PR is open. Main has moved 9 commits (guardrails, CI,
+branch protection, chat model now qwen3:4b-instruct, `Comparison` type, traffic-aware chat planning).
+1. `git fetch origin && git checkout arumalla/agent-layer`, then `uv run python scripts/team.py whoami --save`
+   (prints "You are 4 Arumalla").
+2. Then: `git fetch origin && git rebase origin/main` on your branch. If `DECISIONS.md` conflicts, keep both
+sides' lines (main's first, yours after); it is append-only, nothing is lost. `make test`, `uv run python
+scripts/team.py check` (must print ok), `git push --force-with-lease`.
+3. CI runs on Ubuntu with no API keys: every test must pass offline (recorded fixtures, `llm_used=False`
+   paths). Nothing may call the network in tests.
+4. Open ONE PR from `arumalla/agent-layer`: "4 Arumalla: agent layer phase 1". CI must be green. Machine 1
+   wires it into `/request`, `/openadr/event`, approvals, `/api/explain` once merged.
+5. Create `team/status/4-arumalla.md` with an entry, then start Phase 2 below (task 5: injection-proof intake;
+   share cases with machine 3's `evals/`).
+API access: use your own Anthropic API key, or the Foundry endpoint machine 3 provisions in their phase 2.
+Never paste keys in Slack, the repo or a PR.
+
 ## Tasks, in order
 1. **`agent/llm.py`** with both backends and the offline path. Done when: `get_llm().text(...)` answers with a
    key, raises/flags offline without one; spans visible with the console exporter.

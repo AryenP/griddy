@@ -9,6 +9,23 @@
 **Inputs:** timelines (`runs/<id>/timeline.jsonl`; real ones in `tests/fixtures/real_timeline_*.jsonl`).
 Event kinds and fields: HANDOFF.md + `core/types.py`. **Output types:** `Report` in `core/types.py`.
 
+## Start now (Sat 01:00, from machine 1)
+State: all five phase-1 tasks are done but unmerged, stacked on one branch: `krish/submission` contains
+emission factors, reporter, compare, telemetry and the submission docs (the other four `krish/*` branches
+are subsets of it). No PR is open. Main has moved 11 commits (guardrails, CI, branch protection, chat on
+qwen3:4b-instruct with a TTFT SLA, traffic-aware planning, a `Comparison` type in core/types.py).
+1. `git fetch origin && git checkout krish/submission`, then `uv run python scripts/team.py whoami --save`
+   (prints "You are 3 Krish").
+2. Then: `git fetch origin && git rebase origin/main` on your branch. If `DECISIONS.md` conflicts, keep both
+sides' lines (main's first, yours after); it is append-only, nothing is lost. `make test`, `uv run python
+scripts/team.py check` (must print ok), `git push --force-with-lease`.
+3. Make `agent/reporter.py` / `scripts/compare.py` return the `Report` and `Comparison` types at the bottom of
+   core/types.py exactly (fields there are the contract machine 1 serves at `/api/report` and `/api/compare`).
+   Chat latency in reports: use `ttft_p95_60s` for the SLA (`policy.sla.chat_ttft_p95_s`), `p95_60s` as total.
+4. Open ONE PR from `krish/submission`: "3 Krish: phase 1 (emission factors, reporter, compare, telemetry,
+   submission)". CI must be green. After it merges, delete the four subset branches.
+5. Create `team/status/3-krish.md` with an entry, then start Phase 2 below (task 6: Azure for the agent).
+
 ## Tasks, in order
 1. **Emission factors, cited.** Replace `emission_factors_gco2_per_kwh` in `config/isos.yaml` with a citable
    table (IPCC AR5 lifecycle medians or EPA eGRID), source + year in a comment, names covering CAISO and
