@@ -42,7 +42,8 @@ def table(c: Comparison, runs: dict[str, Run]) -> str:
     under = {k: share_under(runs[k], r.window_start, r.window_end, cap) for k, r in (("dispatched", d), ("baseline", b))}
     lines = [
         f"# Dispatched vs baseline over {c.window_s:.0f} s", "",
-        f"Dispatched run `{d.run_id}` vs dispatcher-off run `{b.run_id}`. Computed from their timelines only "
+        f"Dispatched run `{d.run_id}` vs `{runs['baseline'].policy or 'dispatcher-off'}` run `{b.run_id}`. "
+        "Computed from their timelines only "
         "(powermetrics watts; each run priced at the live price and fuel mix it had).", "",
         "| Measure | Dispatched | Baseline | Dispatched minus baseline |", "|---|---|---|---|",
         f"| Cost at live price | ${d.cost_usd:.6f} | ${b.cost_usd:.6f} | {_d(c, 'cost_usd', '.6f')} |",
@@ -57,7 +58,11 @@ def table(c: Comparison, runs: dict[str, Run]) -> str:
         f"| Chat total-latency p95, worst trailing 60 s (reported, not an SLA) | "
         f"{_f(tot['dispatched'], '.2f', ' s')} | {_f(tot['baseline'], '.2f', ' s')} | |",
         f"| Measured seconds at or under the cap | {_f(_pct(under['dispatched']), '.0f', ' %')} | "
-        f"{_f(_pct(under['baseline']), '.0f', ' %')} | {_d(c, 'under_cap_pct', '.0f', ' points')} |", ""]
+        f"{_f(_pct(under['baseline']), '.0f', ' %')} | {_d(c, 'under_cap_pct', '.0f', ' points')} |",
+        f"| Training done in the window (steps, measured) | {_f(d.work_done.get('train'), '.0f')} | "
+        f"{_f(b.work_done.get('train'), '.0f')} | {_d(c, 'work_train', '.0f')} |",
+        f"| Batch done in the window (items, measured) | {_f(d.work_done.get('batch'), '.0f')} | "
+        f"{_f(b.work_done.get('batch'), '.0f')} | {_d(c, 'work_batch', '.0f')} |", ""]
     lines += ["## Notes", ""] + [f"- {n}" for n in c.notes] + [""]
     caveats = [f"- {label}: {s}" for label, r in (("dispatched", d), ("baseline", b)) for s in r.shortfalls]
     if caveats:
@@ -92,14 +97,16 @@ def chart(c: Comparison, runs: dict[str, Run], out: Path) -> Path:
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--dispatched", help="run id or timeline path (default: newest dispatched run)")
-    ap.add_argument("--baseline", help="run id or timeline path (default: newest baseline run)")
+    ap.add_argument("--baseline", help="run id or timeline path (default: newest run of --baseline-policy)")
+    ap.add_argument("--baseline-policy", default="baseline", choices=["baseline", "pause_all"],
+                    help="which dispatcher-off policy to compare against when --baseline is not given")
     ap.add_argument("--runs", default=str(RUNS), help="where runs live (default: runs/)")
     ap.add_argument("--out", default="reports")
     a = ap.parse_args(argv)
     root = Path(a.runs)
     try:
         paths = {"dispatched": resolve(a.dispatched, root)[0] if a.dispatched else newest(True, root),
-                 "baseline": resolve(a.baseline, root)[0] if a.baseline else newest(False, root)}
+                 "baseline": resolve(a.baseline, root)[0] if a.baseline else newest(False, root, a.baseline_policy)}
     except FileNotFoundError as e:
         ap.error(f"{e}; or pass --dispatched/--baseline")
     for k, p in paths.items():

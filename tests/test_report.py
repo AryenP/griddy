@@ -180,3 +180,40 @@ def test_runtime_runs_and_newest(tmp_path):
     assert reporter.newest(True, tmp_path).parent.name == "c"
     assert reporter.newest(False, tmp_path).parent.name == "b-baseline"
     assert reporter.resolve("c", tmp_path) == ((tmp_path / "c" / "timeline.jsonl").resolve(), "c")
+
+
+def _tl(tmp_path, events, policy):
+    """TEST FIXTURE: a tiny hand-written timeline (not a measurement) to pin the arithmetic."""
+    import json
+    d = tmp_path / f"run-{policy}"
+    d.mkdir()
+    lines = [{"t": 0.0, "kind": "note", "data": {"msg": "runtime start", "dispatcher_enabled": policy == "dispatcher",
+                                                "policy": policy}}] + events
+    (d / "timeline.jsonl").write_text("\n".join(json.dumps(x) for x in lines) + "\n")
+    return d / "timeline.jsonl"
+
+
+def _st(t, job, **kw):
+    return {"t": t, "kind": "state", "data": {"job": job, "state": "running", "device": "gpu", **kw}}
+
+
+def test_work_done_counts_progress_inside_the_window(tmp_path):
+    from agent.reporter import Run, work_done
+    p = _tl(tmp_path, [_st(5, "train", step=100, rate=10.0), _st(15, "train", step=200, rate=10.0),
+                       _st(25, "train", step=300, rate=10.0)], "baseline")
+    assert work_done(Run.load(p), 10, 25) == {"train": 200.0}
+
+
+def test_pause_all_deadline_is_projected_from_its_own_policy(tmp_path, monkeypatch):
+    from agent import reporter
+    from agent.reporter import Run, deadlines
+    monkeypatch.setattr(reporter.config, "jobs", {"jobs": [{"id": "train", "target_steps": 1000, "deadline": None}]})
+    cap = {"t": 1.0, "kind": "event", "data": {"id": "cap-x", "start": "1970-01-01T00:00:10+00:00",
+                                                "duration_s": 100, "target_w": 5.0, "source": "ui"}}
+    job = {"t": 2.0, "kind": "policy", "data": {"reason": "job change", "job": "train",
+                                                 "changes": {"deadline": "1970-01-01T00:02:30+00:00"}}}
+    ev = [cap, job, _st(5, "train", step=400, rate=10.0), _st(20, "train", step=400, rate=10.0, state="paused")]
+    paused = Run.load(_tl(tmp_path, ev + [{"t": 30, "kind": "power", "data": {"t": 30, "combined_w": 2.0}}], "pause_all"))
+    met, why = deadlines(paused, 30)["train"]
+    # paused until the cap ends at 110 s, then 600 steps at 10/s -> 170 s > due 150 s
+    assert met is False and "projected" in why

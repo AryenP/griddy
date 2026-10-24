@@ -120,6 +120,16 @@ class Run:
         return self.start_note.get("dispatcher_enabled") if self.start_note else None
 
     @property
+    def policy(self) -> str | None:
+        """The policy the run executed: dispatcher | baseline (ignore the call) | pause_all. Runs logged
+        before the policy field existed are inferred from dispatcher_enabled."""
+        if not self.start_note:
+            return None
+        if self.start_note.get("policy"):
+            return "dispatcher" if self.start_note["policy"] not in ("baseline", "pause_all") else self.start_note["policy"]
+        return {True: "dispatcher", False: "baseline"}.get(self.start_note.get("dispatcher_enabled"))
+
+    @property
     def cap(self) -> TimelineEvent | None:
         """The run's first cap event: the event window a report is about."""
         return self.caps[0] if self.caps else None
@@ -246,9 +256,64 @@ def due_dates(run: Run, end: float) -> dict[str, float]:
     return {j: d for j, d in due.items() if d is not None}
 
 
+PROGRESS = {"train": "step", "batch": "items_done"}   # the field each workload counts its work in
+
+
+def _progress_at(run: Run, job: str, t: float) -> tuple[float, float] | None:
+    """(time, units done) from the job's newest state at or before t."""
+    key = PROGRESS.get(job)
+    st = [e for e in run.states if e.data.get("job") == job and e.t <= t and e.data.get(key) is not None]
+    return (st[-1].t, float(st[-1].data[key])) if st else None
+
+
+def work_done(run: Run, start: float, end: float) -> dict[str, float]:
+    """Measured units of work each job completed inside [start, end] (train steps, batch items): its count
+    at the end minus its count at the start (or at its first report inside the window)."""
+    out = {}
+    for job, key in PROGRESS.items():
+        b = _progress_at(run, job, end)
+        if b is None:
+            continue
+        a = _progress_at(run, job, start)
+        if a is None:
+            first = next((e for e in run.states if e.data.get("job") == job and start <= e.t <= end
+                          and e.data.get(key) is not None), None)
+            a = (first.t, float(first.data[key])) if first else b
+        out[job] = b[1] - a[1]
+    return out
+
+
+def _projected(run: Run, job: str, due: float, end: float) -> tuple[bool, str] | None:
+    """For a run that did not follow the dispatcher's plan: when would this job finish, at the GPU rate it
+    measured, if the run's own policy carried on? pause_all keeps jobs paused until the cap ends."""
+    now = _progress_at(run, job, end)
+    if now is None:
+        return None
+    rates = [float(e.data["rate"]) for e in run.states if e.data.get("job") == job and e.data.get("state") == "running"
+             and e.data.get("device") == "gpu" and e.data.get("rate")]
+    total = next((float(e.data["total"]) for e in reversed(run.states)
+                  if e.data.get("job") == job and e.data.get("total") is not None), None)
+    if job == "train":
+        total = next((float(j["target_steps"]) for j in config.jobs.get("jobs", [])
+                      if j["id"] == "train" and j.get("target_steps")), total)
+    if not rates or total is None:
+        return None
+    rate = sum(rates[-20:]) / len(rates[-20:])
+    resume = end
+    if run.policy == "pause_all" and run.cap is not None:
+        cap_end = run.cap_start() + float(run.cap.data["duration_s"])
+        if cap_end > end:
+            resume = cap_end
+    finish = resume + max(0.0, total - now[1]) / rate
+    return finish <= due, (f"due {_fmt(due)}; projected {_fmt(finish)} from {total - now[1]:.0f} units left at the "
+                           f"measured {rate:.1f}/s, resuming {_fmt(resume)} under this run's policy")
+
+
 def deadlines(run: Run, end: float) -> dict[str, tuple[bool, str]]:
     """Per job with a deadline: (met, basis). Measured when the job finished or the deadline passed
-    inside the run; otherwise whether the run's latest schedule (as of `end`) still meets it."""
+    inside the run. Otherwise, for a dispatched run, whether its latest schedule (as of `end`) still
+    meets it; for a run that did not follow that schedule (baseline, pause_all), a projection from its
+    own measured progress and rate under its own policy."""
     latest = next((s for s in reversed(run.schedules) if s.t <= end), None)
     planned_miss = {m["job_id"] for m in (latest.data.get("deadline_misses", []) if latest else [])}
     out = {}
@@ -259,6 +324,10 @@ def deadlines(run: Run, end: float) -> dict[str, tuple[bool, str]]:
             out[jid] = (done <= d, f"finished {_fmt(done)}, due {_fmt(d)}")
         elif d <= end:
             out[jid] = (False, f"due {_fmt(d)}, passed unfinished")
+        elif run.policy in ("baseline", "pause_all"):
+            p = _projected(run, jid, d, end)
+            if p is not None:
+                out[jid] = p
         elif latest is not None:
             out[jid] = (jid not in planned_miss,
                         f"due {_fmt(d)}; not finished yet, judged on the latest schedule {latest.data.get('id', '')}")
@@ -320,7 +389,7 @@ def build_report(timeline_path: str | Path, window: tuple[float, float] | None =
         reduction_pct=reduction, time_to_compliance_s=ttc, energy_wh=wh, cost_usd=usd, co2_g=co2,
         deadlines={j: met for j, (met, _) in deadlines(run, end).items()},
         approvals=approvals(run, end), chat_p95_before_s=before, chat_p95_during_s=during,
-        shortfalls=shortfalls + notes,
+        shortfalls=shortfalls + notes, work_done=work_done(run, start, end),
     )
 
 
@@ -349,16 +418,19 @@ def runtime_runs(root: Path = RUNS) -> list[dict]:
             continue
         d = first.get("data", {})
         if first.get("kind") == "note" and d.get("msg") == "runtime start":
+            pol = d.get("policy") or {True: "dispatcher", False: "baseline"}.get(d.get("dispatcher_enabled"))
             out.append({"run_id": tl.parent.name, "path": tl, "started": first["t"],
-                        "dispatcher_enabled": d.get("dispatcher_enabled")})
+                        "dispatcher_enabled": d.get("dispatcher_enabled"),
+                        "policy": "dispatcher" if pol not in ("baseline", "pause_all") else pol})
     return sorted(out, key=lambda r: r["started"])
 
 
-def newest(dispatcher_enabled: bool, root: Path = RUNS) -> Path:
-    runs = [r for r in runtime_runs(root) if r["dispatcher_enabled"] is dispatcher_enabled]
+def newest(dispatcher_enabled: bool, root: Path = RUNS, policy: str | None = None) -> Path:
+    """Newest dispatched run, or newest run of a dispatcher-off `policy` (default `baseline`)."""
+    want = "dispatcher" if dispatcher_enabled else (policy or "baseline")
+    runs = [r for r in runtime_runs(root) if r["policy"] == want]
     if not runs:
-        what = "dispatched (`make demo`)" if dispatcher_enabled else "baseline (`make baseline`)"
-        raise FileNotFoundError(f"no {what} run under {root}/")
+        raise FileNotFoundError(f"no {want} run under {root}/")
     return runs[-1]["path"]
 
 
@@ -404,6 +476,8 @@ def compare_runs(dispatched: str | Path, baseline: str | Path) -> Comparison:
              "deadlines_met": (float(sum(d.deadlines.values())) if d.deadlines else None,
                                float(sum(b.deadlines.values())) if b.deadlines else None),
              "under_cap_pct": tuple(None if under[k] is None else 100 * under[k] for k in ("dispatched", "baseline"))}
+    for job in PROGRESS:
+        pairs[f"work_{job}"] = (d.work_done.get(job), b.work_done.get(job))
     delta = {k: x - y for k, (x, y) in pairs.items() if x is not None and y is not None}
     return Comparison(dispatched=d, baseline=b, window_s=span, delta=delta, notes=notes)
 

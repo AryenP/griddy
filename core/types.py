@@ -265,7 +265,7 @@ class SlotPlan(BaseModel):
 
     id: str = Field(default_factory=lambda: new_id("plan"))
     t: float = Field(default_factory=now)
-    mode: Literal["dispatcher", "baseline"]
+    mode: Literal["dispatcher", "baseline", "pause_all"]
     schedule_id: str | None = None
     slot_index: int | None = None
     slot_start: datetime | None = None
@@ -348,6 +348,8 @@ class Report(BaseModel):
     chat_p95_before_s: float | None = None
     chat_p95_during_s: float | None = None
     shortfalls: list[str] = Field(default_factory=list)
+    work_done: dict[str, float] = Field(default_factory=dict,
+                                        description="measured progress inside the window: train steps, batch items")
     narrative: str | None = None         # optional LLM prose over these numbers; numbers come first
 
 
