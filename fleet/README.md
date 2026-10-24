@@ -18,6 +18,7 @@ installed. The program uses only Python's own standard library.
 1. Get Python if `python --version` does not work: install it from python.org (tick "Add python.exe to PATH").
 2. `git pull` in the repo folder.
 3. Get the Mac's address from Aryen. It looks like `http://10.0.6.240:8080`.
+   If Aryen gives you a fleet token, add `--token <token>` to both commands below.
 4. In Windows Settings > System > Power, set Power mode to "Best performance" (a bigger, clearer swing).
    Then measure your laptop once, unplugged. It takes about 6 minutes, because the battery reading only
    updates about once a minute (the fan may spin up):

@@ -35,6 +35,7 @@ class Settings(BaseModel):
     slack_app_token: str = os.getenv("SLACK_APP_TOKEN", "")
     pjm_api_key: str = os.getenv("PJM_API_KEY", "")
     calibration_path: str = os.getenv("CALIBRATION_PATH", "runs/calibration.json")
+    fleet_token: str = os.getenv("FLEET_TOKEN", "")   # when set, laptops must send it (X-Brownout-Fleet-Token)
 
     @property
     def use_azure_agent(self) -> bool:

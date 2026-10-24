@@ -165,3 +165,24 @@ async def test_the_mac_waits_for_slow_laptop_meters(rig):
         f.beat("surface1", {"watts": 5.0, "done_mb": 0.0}, now=clock["t"])
         e.on_power(PowerReading(t=clock["t"], combined_w=e.plan.planned_w + 6))
     assert e.background_drift() == pytest.approx(6.0, abs=0.1)
+
+
+def test_site_routes_need_the_token_when_one_is_set(tmp_path, monkeypatch):
+    # Krish K1 #4: with FLEET_TOKEN set, a phone on the venue network cannot post a laptop's watts
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+
+    from api.routes import make_router
+    from core.config import settings
+    monkeypatch.setattr(settings, "fleet_token", "s3cret-for-test")
+
+    class Rt:
+        fleet = fleet(tmp_path)
+    app = FastAPI()
+    app.include_router(make_router(Rt()))
+    c = TestClient(app)
+    assert c.post("/api/sites/surface1/beat", json={"watts": 3.0}).status_code == 401
+    assert c.post("/api/sites/surface1/beat", json={"watts": 3.0}, headers={"X-Brownout-Fleet-Token": "nope"}).status_code == 401
+    ok = c.post("/api/sites/surface1/beat", json={"watts": 3.0}, headers={"X-Brownout-Fleet-Token": "s3cret-for-test"})
+    assert ok.status_code == 200
+    assert c.post("/api/sites/surface1/calibration", json=LAPTOP_CAL).status_code == 401

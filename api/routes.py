@@ -1,17 +1,18 @@
 """HTTP routes (HANDOFF.md API contract). Thin: validate, hand to the runtime, return its result."""
 from __future__ import annotations
 
+import hmac
 import json
 from datetime import datetime
 from pathlib import Path
 from typing import Literal
 
 import httpx
-from fastapi import APIRouter, HTTPException, WebSocket
+from fastapi import APIRouter, Header, HTTPException, WebSocket
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
-from core.config import available_isos
+from core.config import available_isos, settings
 from core.types import CapEvent
 from workloads.base import WL
 
@@ -114,14 +115,24 @@ def make_router(rt) -> APIRouter:
         except FileNotFoundError as e:
             raise HTTPException(404, str(e))
 
+    def _fleet_auth(token: str | None) -> None:
+        """Laptops' watts count against the cap: with FLEET_TOKEN set, only a laptop that knows it may post
+        (Krish K1 #4: the venue network has judges' phones on it)."""
+        want = settings.fleet_token
+        if want and not hmac.compare_digest(token or "", want):
+            raise HTTPException(401, "missing or wrong X-Brownout-Fleet-Token")
+
     @r.post("/api/sites/{site_id}/beat")
-    async def site_beat(site_id: str, body: SiteBeat):
+    async def site_beat(site_id: str, body: SiteBeat, x_brownout_fleet_token: str | None = Header(default=None)):
+        _fleet_auth(x_brownout_fleet_token)
         if site_id not in rt.fleet.sites:
             raise HTTPException(404, f"{site_id!r} is not a site in config/fleet.yaml")
         return rt.fleet.beat(site_id, body.model_dump())
 
     @r.post("/api/sites/{site_id}/calibration")
-    async def site_calibration(site_id: str, body: SiteCalibration):
+    async def site_calibration(site_id: str, body: SiteCalibration,
+                               x_brownout_fleet_token: str | None = Header(default=None)):
+        _fleet_auth(x_brownout_fleet_token)
         if site_id not in rt.fleet.sites:
             raise HTTPException(404, f"{site_id!r} is not a site in config/fleet.yaml")
         return rt.fleet.calibrate(site_id, body.model_dump())
