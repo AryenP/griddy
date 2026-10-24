@@ -16,6 +16,8 @@ from the browser console (no replay mode in the code).
   `policy.sla.chat_p95_s` no longer exists.
 - `web/chat.html` should use `POST /api/chat/stream` (NDJSON deltas) so the reply appears as it is written.
 - Snapshot now has `job_specs` (owner, deadline) and `quote` (null until Saturday): see HANDOFF.md.
+- `Schedule.chat_busy_streams` is the chat traffic the plan assumed (null = full concurrency) and chat status has
+  `busy_60s`; show both on the chat card so planned vs actual chat load is visible.
 
 ## Tasks, in order
 1. **Dashboard** `web/index.html`, `web/app.js`, `web/style.css` (SPEC §10). Header: the claim ("When the

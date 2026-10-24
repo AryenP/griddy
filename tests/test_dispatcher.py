@@ -96,3 +96,18 @@ def test_deterministic():
     a = solve(signal(prices), jobs(), POLICY, CAL)
     b = solve(signal(prices), jobs(), POLICY, CAL)
     assert a.assignments == b.assignments
+
+
+def test_idle_chat_keeps_full_concurrency_under_cap_busy_chat_does_not():
+    # cap 16 W: 1 W idle + train 12 W fits only if chat draws little. Chat is 2 W per stream (8 W at 4).
+    capped = POLICY.model_copy(update={"power_cap_w": 16.0})
+    quiet = solve(signal([50.0] * 96), jobs(), capped, CAL, chat_busy=0.2)
+    assert all(a.concurrency == 4 for a in quiet.assignments["chat"])
+    assert any(a.run for a in quiet.assignments["train"])
+    assert all(w <= 16.0 + 1e-6 for w in quiet.planned_w)
+    assert quiet.chat_busy_streams == 0.2
+    busy = solve(signal([50.0] * 96), jobs(), capped, CAL, chat_busy=4.0)
+    assert all(w <= 16.0 + 1e-6 for w in busy.planned_w)
+    # with 4 busy streams chat alone is 8 W: train (12 W GPU / 6 W CPU) can only fit by squeezing chat
+    on = [i for i, a in enumerate(busy.assignments["train"]) if a.run]
+    assert all(busy.assignments["chat"][i].concurrency < 4 or busy.assignments["train"][i].device == "cpu" for i in on)

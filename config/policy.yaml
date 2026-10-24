@@ -16,3 +16,6 @@ operator: ops
 slot_minutes: 15
 horizon_hours: 24
 solver_time_limit_s: 2
+# Re-solve when measured reality drifts from the plan (SPEC §5), at most once per min_interval_s.
+# Watts drift = |measured 60 s mean - planned| > max(watts_drift_pct % of planned, watts_drift_min_w).
+replan: {chat_busy_delta: 0.5, watts_drift_pct: 20, watts_drift_min_w: 2.0, min_interval_s: 60}
