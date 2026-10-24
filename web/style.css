@@ -35,8 +35,6 @@ button { cursor: pointer; font-weight: 650; }
 button:disabled { opacity: 0.55; cursor: default; }
 button.primary { background: var(--action); border-color: var(--action); color: #fff; }
 :focus-visible { outline: 3px solid var(--price); outline-offset: 2px; }
-.toggle { font-weight: 750; background: var(--ok); border-color: var(--ok); color: #04110f; }
-.toggle.off { background: var(--bad); border-color: var(--bad); color: #fff; }
 .keys { color: var(--muted); font-size: 0.85rem; width: 100%; text-align: right; }
 kbd { border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; font: 0.85em ui-monospace, monospace; color: var(--text); }
 
@@ -47,16 +45,12 @@ kbd { border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4p
 
 main { display: grid; gap: 16px; }
 .row { display: grid; gap: 16px; }
-.numbers { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
-.jobs { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
 .bottom { grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); }
 
-.tile, .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; min-width: 0; }
-.numbers .tile { min-height: 172px; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; min-width: 0; }
 .label { color: var(--muted); font-size: 0.95rem; }
 .cap { color: var(--muted); font-size: 0.85rem; margin: -4px 0 8px; }
 .value { font-size: 2.6rem; font-weight: 750; font-variant-numeric: tabular-nums; line-height: 1.15; margin: 4px 0; }
-.big .value { font-size: 3.8rem; color: #fff; }
 .value.bad { color: var(--bad); }
 .value.stale, .stale { opacity: 0.5; }
 .value small { font-size: 0.45em; font-weight: 650; color: var(--muted); margin-left: 0.25em; }
@@ -75,8 +69,6 @@ main { display: grid; gap: 16px; }
 .sw.cap { background: rgba(255,91,91,.28); border: 1px solid var(--bad); }
 .sw.now { background: rgba(255,255,255,.25); outline: 2px solid #fff; }
 
-.jobs .tile { min-height: 250px; }
-.job { border-top: 4px solid var(--c); }
 .job-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
 .kv { font-size: 1rem; margin: 2px 0; }
 .kv b { color: var(--muted); font-weight: 650; margin-right: 6px; }
@@ -104,7 +96,6 @@ li.bad, .log li.bad, .bad-text { color: #ffc2c7; }
   h1 { font-size: 1.5rem; }
   .claim p { font-size: 1rem; }
   .value { font-size: 2rem; }
-  .big .value { font-size: 2.6rem; }
     .keys { display: none; }
 }
 
