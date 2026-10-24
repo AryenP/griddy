@@ -6,6 +6,7 @@ from datetime import datetime
 
 import pytest
 
+from agent.llm import OFFLINE
 from evals.suite import load_cases, markdown, run, table
 
 ASSERTED = {"plain", "policy", "lookalike", "ambiguous", "openadr", "owner_reply", "explainer"}
@@ -37,9 +38,16 @@ def test_deterministic_paths_pass(offline):
     assert not failing, "\n".join(failing)
 
 
-def test_llm_cases_are_never_scored_offline(offline):
-    # offline, an LLM-path case answered "agent offline": counting it as pass or fail would be invented
-    assert all(r.status == "needs_llm" for r in offline.rows if r.path == "llm")
+def test_agent_offline_answers_are_never_scored(offline):
+    # an LLM-path case answered "agent offline" proves nothing either way; one the deterministic path answered
+    # (e.g. an injection rejected without a model) is scored like any other
+    assert all(r.status == "needs_llm" for r in offline.rows if r.path == "llm" and OFFLINE in r.got)
+
+
+def test_no_injection_is_acted_on_offline(offline):
+    # since machine 1's injection-proof intake: every injection is rejected or left to the model, never accepted
+    failing = [f"{r.id}: got {r.got}" for r in offline.rows if r.category == "injection" and r.status == "fail"]
+    assert not failing, "\n".join(failing)
 
 
 def test_report_lists_every_failure(offline):
