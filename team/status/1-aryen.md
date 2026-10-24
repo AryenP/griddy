@@ -1,19 +1,25 @@
-# Brief (Sat 09:50 PT, machine 1). Newest entries are at the bottom; this block is the summary.
+# Brief (Sat 10:12 PT, machine 1). Newest entries are at the bottom; this block is the summary.
 - **Evidence of record (DECISIONS 09:46):** the 09:15 three-policy run, clean (no power gaps). Ignore the call
   20.85 W, 0 % of seconds under the cap; pause everything 0.80 W, 99 %, 19 train steps; Brownout 14.34 W, 93 %,
   compliant in 12 s, 1575 steps (about 83x pause everything). In README and Devpost, reports in docs/evidence/.
   Caveat stated: that calibration read idle at 3.81 W (0.80 W measured with everything paused).
-- **Tag:** demo-stable-3 (09:48): tests, data scan, and a live check of the neighbourhood fixes (cut sized for the
-  peak, line at most 90 %, no diesel, cut withdrawn at the end).
-- **New overnight:** live load trace and percent-below-baseline on the dashboard; laptop fleet (Windows battery
-  meters, ~1 reading a minute, optional FLEET_TOKEN); a SIMULATED neighbourhood line around the real sites,
-  labelled everywhere (DECISIONS 05:45); two grids live in one run; Application Insights provisioned.
-- **Team:** machine 2 merged 9 PRs; machine 3's reviews (K1-K7) found real bugs, all fixed or flagged; machine 4
-  supervises every 10 min.
-- **Needs Aryen today:** the one-line .env command for the Application Insights connection string; the Microsoft
-  workshop quote at 10 AM (config/site.yaml); judges' access to the private repo before Sun 08:50; a decision on
-  the Azure AI Foundry deployment (machine 1 will show what it creates first); rotate the Anthropic key; change the
-  Mac password. After the hackathon, turn sleep back on: `sudo pmset -a disablesleep 0`.
+- **Chat during a cap FAILED its first run (DECISIONS 10:00, run 20261024-094941):** cap 19.68 W, mean 26.46 W,
+  never under; time to first token 0.20 s before, 4.56 s worst during (SLA 1 s). The plan cut chat to 1 stream on
+  its own and priced chat per stream (one busy stream draws most of what four do). Fixed in b06cd51: chat keeps
+  full concurrency until the operator says no; chat watts come from a measured curve. **Not measured yet**: needs
+  Aryen's sudo for `make calibrate` then `make evidence-chat` (~15 min, Mac idle). No page claims chat keeps its
+  SLA under a cap.
+- **Tag:** demo-stable-3 (09:48). It predates b06cd51; re-tag after the chat re-run and a live check.
+- **Azure Foundry:** `azd provision --preview` (read-only) with it off: no new resources. Switched on: it would
+  create an AI Services account, a gpt-4o-mini deployment (GlobalStandard, capacity 10) and a project in West US 2.
+  Model quota not checked (no `az` CLI). Nothing provisioned; waits for Aryen's yes.
+- **Team:** no open PRs or [supervisor] issues at 10:15. Machine 2 last active 06:04 (queue: 21, 22, 12, 20);
+  machine 3 last 08:42 (queue: K6 now, K10 review the chat fix, K11 judge Q13, K9 waits for the demo);
+  machine 4 last 05:46.
+- **Needs Aryen:** (1) `sudo -v` in a terminal, then machine 1 runs `make calibrate` and `make evidence-chat`;
+  (2) the .env command for the Application Insights connection string; (3) the workshop quote (config/site.yaml);
+  (4) judges' access to the private repo before Sun 08:50; (5) yes/no on the Foundry deployment; (6) rotate the
+  Anthropic key; (7) change the Mac password. After the hackathon: `sudo pmset -a disablesleep 0`.
 
 # Status: 1 Aryen
 
@@ -238,3 +244,12 @@ Re-run of the final evidence (make evidence3): lid open, on battery at 100% (mac
 Done: the 09:15 three-policy run recorded (DECISIONS 09:46), README and Devpost tables updated, reports in
 docs/evidence/; live check of the neighbourhood fixes passed; tagged demo-stable-3.
 Next: chat traffic under a cap (recorded), Krish's Surface as a second real site, demo script and screenshots.
+
+## 2026-10-24 10:12 PT — chat under a cap: failed run recorded, fix in, re-run waits
+Done: run 20261024-094941 recorded as a failure (789b777, DECISIONS 10:00, docs/evidence/20261024-094941.md).
+Fix b06cd51: chat keeps full concurrency unless the operator says no (approvals.chat_degrade); chat watts follow a
+measured curve by busy streams (calibration measures 1, 2, 4); the operator ask says what a no does to chat; the
+no-fit fallback no longer pushes further over the cap for a refused slip. 378 tests pass. DECISIONS entry after
+10:00; DEMO impossible-ask wording. Krish queued K10/K11. Foundry preview read-only: 3 resources if switched on.
+Next: when sudo is back, `make calibrate` (chat curve) then `make evidence-chat`, Mac idle; then re-tag.
+Blockers / needs: Aryen — `sudo -v` (powermetrics); the other needs-Aryen lines in the brief.
