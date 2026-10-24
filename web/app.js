@@ -162,7 +162,7 @@ function renderHood() {
     <span class="src">${note}</span></li>`;
   setHTML($("hood-parts"), html`
     ${part("Homes and offices", kw(d.homes_kw), "simulated", d.homes_kw == null ? "no load forecast from the grid feed yet" : "shape of today's real load forecast")}
-    ${part("Solar farm", d.solar_kw ? `−${fixed(d.solar_kw, 0)} kW` : "0 kW", "simulated", "clear-day profile")}
+    ${part("Solar farm", d.solar_kw ? `−${fixed(d.solar_kw, 0)} kW` : "0 kW", "simulated", d.solar_source || "clear-day profile")}
     ${part(`${d.dc_count} data centers`, kw(d.dc_kw), "simulated", `their flexible ${fixed(100 * (h.dc_flexible_share || 0), 0)}% follows our sites: ${fixed(100 * d.response, 0)}% of their usual load`)}
     ${part("Our sites", d.ours_w == null ? "—" : `${fixed(d.ours_w, 1)} W`, "measured", "this Mac and any laptops, from their own meters")}
     ${part("Diesel generator", kw(d.diesel_kw), "simulated", d.diesel_kw > 0 ? "running: the line cannot carry the rest" : "off", d.diesel_kw > 0 ? "on" : "")}`);

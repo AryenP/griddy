@@ -1,7 +1,9 @@
 """The SIMULATED neighbourhood line (neighbourhood/model.py). Test doubles here are labelled: a fake executor
 holding a load-forecast signal and measured-watts samples stands in for the runtime."""
+import time
 from collections import deque
 from datetime import datetime, timedelta
+from pathlib import Path
 
 import pytest
 
@@ -167,3 +169,29 @@ def test_no_cut_is_sent_when_our_sites_have_nothing_to_shed(tmp_path):
         n.tick(now=t0 + s)
     assert n.pending_cap is None and n.cap_id is None and n.last["cut_skipped"] and n.last["nothing_to_shed"]
     assert n.last["diesel_kwh"] == pytest.approx(n.last["diesel_off_kwh"])   # nothing shed, same diesel
+
+
+def _real_solar_profile():
+    """A REAL CAISO day of solar (tests/fixtures/caiso_solar_20261023.csv, a saved pull; test data only)."""
+    import pandas as pd
+
+    from grid.watcher import solar_by_hour
+    df = pd.read_csv(Path(__file__).parent / "fixtures" / "caiso_solar_20261023.csv", comment="#")
+    return solar_by_hour([df], "US/Pacific")
+
+
+def test_solar_follows_the_isos_measured_output_when_the_feed_has_it(tmp_path):
+    profile, days = _real_solar_profile()
+    assert days == "2026-10-23: 24 h" and max(profile) > 15000 and profile[2] == 0.0      # ~20 GW at noon, 0 at night
+    n = hood(tmp_path)
+    n.ex.signal = GridSignal(iso="CAISO", location="fixture", price_now=50.0, load_forecast=FORECAST,
+                             solar_by_hour_mw=profile, solar_by_hour_days=days)
+    peak_h = max(range(24), key=lambda h: profile[h])
+    assert n.solar_kw(peak_h + 0.5, n.ex.signal) == pytest.approx(260.0)          # its peak hour at solar_kw
+    assert n.solar_kw(2.5, n.ex.signal) == 0.0
+    assert n.solar_kw(17.5, n.ex.signal) == pytest.approx(260.0 * profile[17] / max(profile))
+    st = n.tick(now=time.time())
+    assert st["solar_source"] == "shape of CAISO's measured solar output (2026-10-23: 24 h)" and "solar: shape of" in st["inputs"]
+    n.ex.signal = GridSignal(iso="CAISO", location="fixture", price_now=50.0, load_forecast=FORECAST)
+    assert "clear-day profile (no solar feed yet)" in n.tick(now=time.time())["inputs"]
+

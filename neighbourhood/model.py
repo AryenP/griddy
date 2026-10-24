@@ -4,7 +4,9 @@ Simulated, and labelled so on screen (Aryen's decision, Sat 05:35): the homes an
 twenty data centers, the line's limit and a diesel generator. Driven by real inputs where one exists:
   - homes and offices: the shape of today's real ISO load forecast (GridSignal.load_forecast), scaled so the
     day's lowest hour at `homes_offices_kw[0]` and its peak at `homes_offices_kw[1]`;
-  - solar: a clear-day profile between `solar_day` hours (simulated outright);
+  - solar: the shape of the ISO's measured solar output by hour (GridSignal.solar_by_hour_mw, from the live fuel
+    mix: today's hours so far, yesterday's for the rest), its peak hour at `solar_kw`; a clear-day profile between
+    `solar_day` hours only while that feed is missing (the panel says which);
   - data centers: each has a fixed size; its flexible share follows OUR sites' measured response, i.e. our
     fleet's measured watts as a fraction of its 60-s baseline before the cap. Brownout on: our machines shed
     and the simulated ones follow. Brownout off: our machines keep running and so do they.
@@ -115,11 +117,30 @@ class Neighbourhood:
         span = max(mws) - min(mws)
         return float(hi) if span <= 0 else lo + (hi - lo) * (mw - min(mws)) / span
 
-    def solar_kw(self, hour: float) -> float:
+    @staticmethod
+    def _solar_profile(sig: GridSignal | None) -> list[float]:
+        p = [v or 0.0 for v in (sig.solar_by_hour_mw if sig else [])]
+        return p if len(p) == 24 and max(p) > 0 else []
+
+    def solar_kw(self, hour: float, sig: GridSignal | None = None) -> float:
+        """The farm's output at `hour`: the ISO's measured solar shape (hourly means at each hour's middle,
+        linear between), its peak hour at `solar_kw`; the clear-day profile only when there is no feed."""
+        peak = float(self.cfg.get("solar_kw", 0))
+        p = self._solar_profile(sig)
+        if p:
+            x = (hour - 0.5) % 24
+            i = int(x)
+            f = x - i
+            return peak * (p[i] * (1 - f) + p[(i + 1) % 24] * f) / max(p)
         rise, fall = self.cfg.get("solar_day", [6.5, 18.5])
         if not rise < hour < fall:
             return 0.0
-        return float(self.cfg.get("solar_kw", 0)) * math.sin(math.pi * (hour - rise) / (fall - rise))
+        return peak * math.sin(math.pi * (hour - rise) / (fall - rise))
+
+    def solar_source(self, sig: GridSignal | None) -> str:
+        if self._solar_profile(sig):
+            return f"shape of {sig.iso}'s measured solar output ({sig.solar_by_hour_days})"
+        return "clear-day profile (no solar feed yet)"
 
     def response(self, now: float) -> tuple[float, float | None]:
         """Our sites' measured response: 10-s mean of measured watts over their pre-cap baseline (1.0 = as usual).
@@ -146,8 +167,9 @@ class Neighbourhood:
         if self.scenario_start is not None and not running:
             self.stop(now, finished=True)
         hour = self.hour(now)
-        homes = self.homes_kw(hour, self.ex.signal, now)
-        solar = self.solar_kw(hour)
+        sig = self.ex.signal
+        homes = self.homes_kw(hour, sig, now)
+        solar = self.solar_kw(hour, sig)
         r, ours_w = self.response(now)
         ours_kw = (ours_w or 0.0) / 1000
         dc = self.dc_kw(r)
@@ -170,7 +192,9 @@ class Neighbourhood:
                  "diesel_kwh": self.diesel_kwh, "diesel_off_kwh": self.diesel_off_kwh, "cap_id": self.cap_id,
                  "cap_baseline_w": self.cap_baseline_w, "nothing_to_shed": self.nothing_to_shed or self.cut_skipped,
                  "cut_skipped": self.cut_skipped,
-                 "inputs": "homes: shape of today's ISO load forecast; data centers: our sites' measured response"}
+                 "solar_source": self.solar_source(sig),
+                 "inputs": "homes: shape of today's ISO load forecast; solar: " + self.solar_source(sig)
+                           + "; data centers: our sites' measured response"}
         self.last = state
         self.history.append(state)
         if running or now - self._last_log >= 10:
@@ -186,7 +210,7 @@ class Neighbourhood:
         flex_total = sum(self.dc_sizes) * self.flex
         h1 = self.scenario()["hours"][1]
         ahead = [self.hour(now) + k * (h1 - self.hour(now)) / 50 for k in range(51)]
-        net = [(self.homes_kw(h, self.ex.signal, now) or homes) - self.solar_kw(h) for h in ahead]
+        net = [(self.homes_kw(h, self.ex.signal, now) or homes) - self.solar_kw(h, self.ex.signal) for h in ahead]
         worst = max([homes - solar] + net)
         fixed = worst + ours_kw + sum(self.dc_sizes) * (1 - self.flex)
         r_needed = (target - fixed) / flex_total if flex_total else 0.0

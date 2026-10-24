@@ -122,6 +122,9 @@ class GridSignal(BaseModel):
     carbon_curve: list[Point] = Field(default_factory=list)
     carbon_curve_is_proxy: bool = False
     fuel_mix_mw: dict[str, float] = Field(default_factory=dict)
+    solar_by_hour_mw: list[float | None] = Field(default_factory=list,
+                                                 description="measured solar MW by local hour: today so far, yesterday after")
+    solar_by_hour_days: str = Field(default="", description="which day each part of solar_by_hour_mw comes from")
     alerts: list[str] = Field(default_factory=list)
     feed_age_s: float = 0.0
     stale: bool = False
