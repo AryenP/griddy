@@ -110,8 +110,12 @@ function renderLoad() {
       sub = `cap ${fixed(b.w, 1)} W ${since}` + (st.ttc != null ? ` · compliant ${dur(st.ttc)} after it began` : "");
     } else {
       text = `Over the cap by ${fixed(st.mean - b.w, 1)} W`; cls = "over";
+      // A streaming reply draws most of the GPU for a few seconds (DECISIONS, Sat 10:00); chat keeps full speed
+      // unless the operator says otherwise, so say so rather than "adjusting".
+      const chat = S.jobs.chat, serving = chat && chat.inflight > 0 ? `chat is serving ${plural(chat.inflight, "request")} at full speed (slowing chat is the operator's call)` : "";
       const why = S.dispatcherEnabled === false ? "dispatcher off: nothing holds the cap"
-        : S.plan && S.plan.needs_approval && S.plan.needs_approval.length ? "waiting for an approval" : "the plan is adjusting";
+        : [serving, S.plan && S.plan.needs_approval && S.plan.needs_approval.length ? "waiting for an approval" : serving ? "" : "the plan is adjusting"]
+          .filter(Boolean).join(" · ");
       sub = `for ${dur(now - (st.overSince != null ? st.overSince : b.start))} · cap ${fixed(b.w, 1)} W ${since} · ${why}`;
     }
   }
