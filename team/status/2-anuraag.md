@@ -77,3 +77,14 @@ evals on current main: 74 pass, 0 fail, 16 need a model, injections 12/12 (docs/
 PR "2 Anuraag: judging docs".
 Next: 10 proof page; 16 load outside the plan after PR #10 merges.
 Blockers / needs: the operator/FDE quote (Aryen).
+
+## 2026-10-24 05:58 PT — task 19 operator page: replay the evening peak (simulated)
+Done: a "Simulated neighbourhood" block on operator.html (dashed edge, SIMULATED badge, one line on what is
+real): a button and the N hotkey POST /api/neighbourhood start/stop; from the `neighbourhood` WS events
+(only those with simulated: true) it shows the simulated clock, line loading of limit_kw, diesel kW, diesel kWh
+vs Brownout off and kWh avoided, and our sites' measured watts; STALE after 15 s. The cut it triggers is a
+real CapEvent, so Active cap events and time to compliance are unchanged. /api/neighbourhood added to
+CONTRACT_ROUTES; a test asserts every number is labelled simulated or measured. Rendered at 375 and 1440 px
+from contract-shaped messages (no horizontal scroll). PR "2 Anuraag: neighbourhood replay".
+Next: 14 architecture diagram with the simulated neighbourhood, then 15 driver card.
+Blockers / needs: a run against make demo on the demo Mac (this cloud session has no calibration or meter).
