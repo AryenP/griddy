@@ -302,3 +302,14 @@ longer exists, so the operator page's replay button now fails.
 3. docs/judging/*: the neighbourhood is gone; say what the replays are (real recorded data, cited reports, live response).
 Done when: from the phone, a judge starts the Uri replay and the dashboard and phone both show it; no page says simulated.
 
+### 26. Match your pages to the new look Aryen picked (Sat Sat 16:44), after task 25
+Aryen chose the design: `/` is now a 3D grid world for the judge (web/world.css, world.js) and every graph moved to
+`/info.html` (web/info.css), styled after two references he picked (the hightopo "Power Grid 3D Visualization" and
+Brian E's "Home Power Grid Monitoring" on Dribbble). Your #23/#24 design system went a different way, so do not
+merge them as they are. Instead, bring chat, owner, operator and proof to the same look, in your lane
+(style.css and your pages): near-black page with a faint green glow, dark cards with 22 px radius and a hairline
+border, Inter (one family), big thin numbers, small muted uppercase labels, one mint accent (#7df0bf) for live and
+measured, amber for warnings, red only for limits; and the same pill navigation as info.html's `.i-nav`
+(Grid · Info · Proof). Keep every source line; make it small and faint rather than removing it.
+Done when: the four pages and info.html look like one product at 375 px and 1440 px; tests pass; screenshots in the PR.
+
