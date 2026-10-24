@@ -1,0 +1,187 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" width="1200" height="800" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" role="img" aria-labelledby="t d">
+  <title id="t">Brownout architecture</title>
+  <desc id="d">Live ISO feeds go to the grid watcher, the CP-SAT solver, the schedule, the executor, the knobs and the workloads on the Mac. powermetrics measures the watts into the timeline. The LLM agent sits beside the solver with arrows only to intake, explanations and negotiation, and no arrow to a knob. A simulated neighbourhood, in a dashed box, takes our measured response and sends the utility's cut to the real dispatcher.</desc>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#33404f"/></marker>
+    <marker id="ap" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#6b3fb0"/></marker>
+    <marker id="as" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#6b7686"/></marker>
+    <style>
+      .box { fill: #f6f8fb; stroke: #33404f; stroke-width: 1.5; }
+      .who { fill: #ffffff; stroke: #33404f; stroke-width: 1.2; }
+      .agent { fill: #f4effc; stroke: #6b3fb0; stroke-width: 1.5; }
+      .knob { fill: #fdf1f0; stroke: #b4352b; stroke-width: 1.5; }
+      .meas { fill: #eef8f2; stroke: #1f7a4a; stroke-width: 1.5; }
+      .sim { fill: #f7f7f7; stroke: #6b7686; stroke-width: 1.5; stroke-dasharray: 7 5; }
+      .h { font-size: 15px; font-weight: 700; fill: #17202b; }
+      .f { font-size: 11.5px; fill: #5a2f99; font-weight: 600; }
+      .n { font-size: 12px; fill: #3c4856; }
+      .l { font-size: 12px; fill: #17202b; }
+      .lp { font-size: 12px; fill: #5a2f99; }
+      .ls { font-size: 12px; fill: #4e5866; font-style: italic; }
+      .w { stroke: #33404f; stroke-width: 1.6; fill: none; marker-end: url(#a); }
+      .wp { stroke: #6b3fb0; stroke-width: 1.6; fill: none; marker-end: url(#ap); }
+      .ws { stroke: #6b7686; stroke-width: 1.6; fill: none; stroke-dasharray: 6 4; marker-end: url(#as); }
+    </style>
+  </defs>
+  <rect width="1200" height="800" fill="#ffffff"/>
+
+  <text x="38" y="34" font-size="22" font-weight="700" fill="#17202b">Brownout: the solver decides, the LLM explains and negotiates, the controller executes</text>
+
+  <!-- people -->
+  <rect class="who" x="320" y="58" width="190" height="62" rx="8"/>
+  <text class="h" x="332" y="80">Utility / operator</text>
+  <text class="n" x="332" y="97">words, dictation, OpenADR 3.1</text>
+  <text class="f" x="332" y="112">web/operator.html</text>
+
+  <rect class="who" x="530" y="58" width="190" height="62" rx="8"/>
+  <text class="h" x="542" y="80">Job owners, operator</text>
+  <text class="n" x="542" y="97">approve or refuse a slip</text>
+  <text class="f" x="542" y="112">web/owner.html</text>
+
+  <rect class="who" x="740" y="58" width="190" height="62" rx="8"/>
+  <text class="h" x="752" y="80">Readers</text>
+  <text class="n" x="752" y="97">dashboard, "ask why"</text>
+  <text class="f" x="752" y="112">web/index.html</text>
+
+  <rect class="who" x="1010" y="58" width="148" height="62" rx="8"/>
+  <text class="h" x="1020" y="80">Chat users</text>
+  <text class="n" x="1020" y="97">the service we protect</text>
+  <text class="f" x="1020" y="112">web/chat.html</text>
+
+  <!-- the agent, beside the solver -->
+  <rect class="agent" x="300" y="146" width="650" height="138" rx="10"/>
+  <text class="h" x="314" y="168" fill="#5a2f99">LLM agent</text>
+  <text class="f" x="394" y="168">agent/llm.py: Microsoft Agent Framework / Foundry, or Claude</text>
+  <rect class="agent" x="320" y="202" width="190" height="58" rx="7" fill="#ffffff"/>
+  <text class="h" x="332" y="223">Intake</text>
+  <text class="f" x="332" y="239">agent/intake.py</text>
+  <text class="n" x="332" y="254">rules first, LLM for messy text</text>
+  <rect class="agent" x="530" y="202" width="190" height="58" rx="7" fill="#ffffff"/>
+  <text class="h" x="542" y="223">Negotiation</text>
+  <text class="f" x="542" y="239">agent/negotiator.py</text>
+  <text class="n" x="542" y="254">asks, reads the reply</text>
+  <rect class="agent" x="740" y="202" width="190" height="58" rx="7" fill="#ffffff"/>
+  <text class="h" x="752" y="223">Explanations</text>
+  <text class="f" x="752" y="239">agent/explainer.py</text>
+  <text class="n" x="752" y="254">rejects invented numbers</text>
+
+  <!-- people <-> agent -->
+  <path class="w" d="M415 120V200"/>
+  <path class="w" d="M600 120V200"/>
+  <text class="l" x="568" y="138">reply</text>
+  <path class="w" d="M650 202V122"/>
+  <text class="l" x="656" y="138">ask</text>
+  <path class="wp" d="M835 202V122"/>
+  <text class="lp" x="841" y="138">plain words</text>
+  <path class="w" d="M1084 120V328"/>
+
+  <!-- the dispatch pipeline -->
+  <rect class="box" x="38" y="330" width="148" height="90" rx="8"/>
+  <text class="h" x="48" y="352">ISO feeds</text>
+  <text class="n" x="48" y="370">CAISO, ERCOT, PJM:</text>
+  <text class="n" x="48" y="386">prices, forecast, fuel</text>
+  <text class="n" x="48" y="402">mix (gridstatus)</text>
+  <rect class="box" x="200" y="330" width="148" height="90" rx="8"/>
+  <text class="h" x="210" y="352">GridWatcher</text>
+  <text class="f" x="210" y="370">grid/watcher.py</text>
+  <text class="n" x="210" y="387">$/MWh, gCO2/kWh,</text>
+  <text class="n" x="210" y="403">feed age</text>
+  <rect class="box" x="362" y="330" width="148" height="90" rx="8" stroke-width="2.5"/>
+  <text class="h" x="372" y="352">CP-SAT solver</text>
+  <text class="f" x="372" y="370">dispatcher/solve.py</text>
+  <text class="n" x="372" y="387">24 h × 15 min,</text>
+  <text class="n" x="372" y="403">deterministic</text>
+  <rect class="box" x="524" y="330" width="148" height="90" rx="8"/>
+  <text class="h" x="534" y="352">Schedule</text>
+  <text class="f" x="534" y="370">core/types.py</text>
+  <text class="n" x="534" y="387">slots, watts, caps,</text>
+  <text class="n" x="534" y="403">shortfalls, facts</text>
+  <rect class="box" x="686" y="330" width="148" height="90" rx="8"/>
+  <text class="h" x="696" y="352">Executor</text>
+  <text class="f" x="696" y="370">controller/execute.py</text>
+  <text class="n" x="696" y="387">runs the current slot,</text>
+  <text class="n" x="696" y="403">holds the cap</text>
+  <rect class="knob" x="848" y="330" width="148" height="90" rx="8"/>
+  <text class="h" x="858" y="352">Knobs</text>
+  <text class="f" x="858" y="370">controller/knobs.py</text>
+  <text class="n" x="858" y="387">pause/resume, threads,</text>
+  <text class="n" x="858" y="403">concurrency, GPU/CPU</text>
+  <rect class="box" x="1010" y="330" width="148" height="90" rx="8"/>
+  <text class="h" x="1020" y="352">Workloads</text>
+  <text class="f" x="1020" y="370">workloads/*.py</text>
+  <text class="n" x="1020" y="387">chat (Ollama), train</text>
+  <text class="n" x="1020" y="403">(MPS), batch embeds</text>
+  <path class="w" d="M186 375H198"/>
+  <path class="w" d="M348 375H360"/>
+  <path class="w" d="M510 375H522"/>
+  <path class="w" d="M672 375H684"/>
+  <path class="w" d="M834 375H846"/>
+  <path class="w" d="M996 375H1008"/>
+
+  <!-- agent <-> solver: data in, facts out (no arrow from the agent reaches the executor or a knob) -->
+  <path class="wp" d="M415 260V328"/>
+  <text class="lp" x="340" y="312">cap / policy</text>
+  <path class="w" d="M480 330V300H590V262"/>
+  <text class="l" x="490" y="294">shortfall</text>
+  <path class="wp" d="M650 260V312H500V328"/>
+  <text class="lp" x="600" y="326">decision</text>
+  <path class="w" d="M662 330V296H810V262"/>
+  <text class="l" x="740" y="290">facts</text>
+
+  <text x="756" y="438" font-size="12.5" font-weight="700" fill="#b4352b">agent/ returns data only:</text>
+  <text x="756" y="453" font-size="12.5" font-weight="700" fill="#b4352b">no code path to the executor or a knob</text>
+
+  <!-- measured power and the timeline -->
+  <rect class="meas" x="848" y="458" width="310" height="72" rx="8"/>
+  <text class="h" x="860" y="480" fill="#145a35">Meter: measured, never estimated</text>
+  <text class="f" x="860" y="498">meter/powermetrics.py</text>
+  <text class="n" x="860" y="516">sudo powermetrics, 1 Hz (laptops: fleet/)</text>
+  <path class="w" d="M1084 420V456"/>
+  <text class="l" x="1090" y="444">watts</text>
+
+  <rect class="box" x="530" y="578" width="280" height="96" rx="8"/>
+  <text class="h" x="542" y="600">Timeline</text>
+  <text class="f" x="542" y="618">runs/&lt;id&gt;/timeline.jsonl</text>
+  <text class="n" x="542" y="636">every grid sample, plan, action,</text>
+  <text class="n" x="542" y="652">approval and watt (core/timeline.py)</text>
+  <text class="n" x="542" y="668">+ OpenTelemetry → App Insights</text>
+  <path class="w" d="M740 420V576"/>
+  <text class="l" x="746" y="500">actions</text>
+  <path class="w" d="M1000 530V556H790V576"/>
+
+  <rect class="box" x="840" y="578" width="318" height="96" rx="8"/>
+  <text class="h" x="852" y="600">Receipts</text>
+  <text class="f" x="852" y="618">agent/reporter.py, scripts/compare.py</text>
+  <text class="n" x="852" y="636">dashboard, proof page, reports:</text>
+  <text class="n" x="852" y="652">read from the timeline only</text>
+  <path class="w" d="M810 626H838"/>
+
+  <!-- the simulated neighbourhood -->
+  <rect class="sim" x="38" y="470" width="462" height="250" rx="10"/>
+  <text class="h" x="54" y="494" fill="#4e5866">SIMULATED neighbourhood</text>
+  <text class="f" x="54" y="512">neighbourhood/model.py, config/neighbourhood.yaml</text>
+  <rect x="54" y="528" width="205" height="48" rx="6" fill="#ffffff" stroke="#6b7686" stroke-dasharray="4 3"/>
+  <text class="n" x="64" y="548">homes and offices</text>
+  <text class="n" x="64" y="566">(today's ISO forecast shape)</text>
+  <rect x="279" y="528" width="205" height="48" rx="6" fill="#ffffff" stroke="#6b7686" stroke-dasharray="4 3"/>
+  <text class="n" x="289" y="548">solar farm, 260 kW</text>
+  <text class="n" x="289" y="566">clear-day profile</text>
+  <rect x="54" y="588" width="205" height="48" rx="6" fill="#ffffff" stroke="#6b7686" stroke-dasharray="4 3"/>
+  <text class="n" x="64" y="608">20 data centers, 8–30 kW</text>
+  <text class="n" x="64" y="626">follow our measured response</text>
+  <rect x="279" y="588" width="205" height="48" rx="6" fill="#ffffff" stroke="#6b7686" stroke-dasharray="4 3"/>
+  <text class="n" x="289" y="608">line limit 1000 kW</text>
+  <text class="n" x="289" y="626">call for a cut at 95 %</text>
+  <rect x="54" y="648" width="430" height="48" rx="6" fill="#ffffff" stroke="#6b7686" stroke-dasharray="4 3"/>
+  <text class="n" x="64" y="668">diesel generator, 600 kW: covers what the line cannot carry</text>
+  <text class="n" x="64" y="686">and is counted again with Brownout off ("diesel avoided")</text>
+
+  <!-- into and out of the simulation -->
+  <path class="ws" d="M1158 494H1182V752H270V722"/>
+  <text class="ls" x="560" y="744">our sites' measured response (the only real input besides the forecast)</text>
+  <path class="ws" d="M436 470V422"/>
+  <text class="ls" x="226" y="452">utility's cut: a real CapEvent</text>
+  <text class="ls" x="226" y="466">to the real dispatcher</text>
+
+  <text class="n" x="38" y="788">Solid boxes are real: live ISO data or measured on the demo Mac. The dashed box is simulated and labelled "simulated" on every page.</text>
+</svg>
