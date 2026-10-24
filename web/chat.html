@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Brownout chat</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="phone">
+  <header class="phone-top">
+    <h1>Brownout chat</h1>
+    <p class="cap">A real model on the demo Mac, served under the dispatcher. Each reply shows its time to first token and total time, measured by the server.</p>
+    <div class="src" id="model">model: asking the server</div>
+  </header>
+
+  <main>
+    <ol id="thread" class="thread"><li class="empty">Say something. The reply appears as the model writes it.</li></ol>
+    <form id="form" class="composer">
+      <textarea id="msg" rows="2" placeholder="Ask anything" maxlength="2000" required></textarea>
+      <button id="send" class="primary" type="submit">Send</button>
+    </form>
+  </main>
+
+  <script src="common.js"></script>
+  <script src="chat.js"></script>
+</body>
+</html>
