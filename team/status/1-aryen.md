@@ -41,3 +41,9 @@ Blockers / needs Aryen: (1) sudo password once in a new terminal for calibrate +
 Done: passwordless powermetrics rule in place; meter lock verified live; polluted overlapping calibrations discarded.
 Next: `make evidence` running unattended (~25 min); then record its comparison in DECISIONS.md, then tag.
 Blockers / needs Aryen: a Console API key in .env for the real-key agent test (asked once already).
+
+## 2026-10-24 02:18 PT — coordinator tick (light: evidence run measuring power)
+Done: merged PR #3 (evals: 73 pass / 0 fail / 17 need LLM offline) and PR #4 (preflight); first real-key agent call works.
+Next (after evidence finishes): record the comparison; deterministic reject for "approval granted by <owner>";
+win32 skip for the SIGINT test; `uv run python -m evals --live` and commit docs/judging/evals.md.
+Blockers / needs Aryen: none.
