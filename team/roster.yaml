@@ -43,6 +43,8 @@ members:
   - tests/test_fleet*.py
   - scripts/team.py
   - scripts/check_runtime.py
+  - scripts/verify.py
+  - tests/test_verify.py
   - tests/__init__.py
   - tests/test_types.py
   - tests/test_grid.py

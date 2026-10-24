@@ -1,4 +1,4 @@
-.PHONY: evidence evidence3 evidence-chat evidence-chat-judge preflight tag-stable ollama setup demo baseline calibrate chat-sweep solve report compare test probe qr clean
+.PHONY: verify evidence evidence3 evidence-chat evidence-chat-judge preflight tag-stable ollama setup demo baseline calibrate chat-sweep solve report compare test probe qr clean
 
 PY ?= uv run
 # sudo for powermetrics: no prompt when the passwordless rule for /usr/bin/powermetrics is installed
@@ -61,6 +61,9 @@ evidence3: ollama ## unattended (~30 min): calibrate, then ignore-the-call, paus
 	BROWNOUT_CHECKPOINT_DIR=$$E/dispatched $(PY) python -m api.app --headless --duration 450 $(EVIDENCE3_ARGS) && \
 	$(PY) python scripts/compare.py --baseline-policy baseline && \
 	$(PY) python scripts/compare.py --baseline-policy pause_all; s=$$?; kill $$K 2>/dev/null; exit $$s
+
+verify:         ## recompute every published number from the raw timelines in docs/evidence/runs (no Mac, no sudo, no network)
+	$(PY) python scripts/verify.py $(ARGS)
 
 report:         ## render compliance report + charts from a timeline
 	$(PY) python -m agent.reporter --run $(RUN)

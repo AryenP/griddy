@@ -21,6 +21,7 @@ run_series(path) -> one run's measured watts, caps, actions and shortfalls for d
 from __future__ import annotations
 
 import argparse
+import gzip
 import bisect
 import json
 import re
@@ -48,8 +49,10 @@ def _ts(v) -> float | None:
 
 
 def _read(path: Path) -> list[TimelineEvent]:
-    """Timeline events in time order. A live run may be mid-write: a torn last line is skipped."""
-    lines = [ln for ln in path.read_text(encoding="utf-8").splitlines() if ln.strip()]
+    """Timeline events in time order. A live run may be mid-write: a torn last line is skipped. A `.gz` timeline is
+    a committed evidence run (docs/evidence/runs/<id>/timeline.jsonl.gz), read as it was logged."""
+    text = gzip.decompress(path.read_bytes()).decode("utf-8") if path.suffix == ".gz" else path.read_text(encoding="utf-8")
+    lines = [ln for ln in text.splitlines() if ln.strip()]
     out = []
     for i, ln in enumerate(lines):
         try:
@@ -195,7 +198,7 @@ class Run:
 
 
 def _run_id(path: Path) -> str:
-    return path.parent.name if path.name == "timeline.jsonl" else path.stem
+    return path.parent.name if path.name in ("timeline.jsonl", "timeline.jsonl.gz") else path.stem
 
 
 def _mean(xs: list[float]) -> float | None:
@@ -597,13 +600,21 @@ def chart(run: Run, rep: Report, out: Path) -> Path:
     return out
 
 
+def shown(path: Path) -> str:
+    """A timeline's path as a reader of the repo would open it: relative to here when it is inside."""
+    try:
+        return path.resolve().relative_to(Path.cwd().resolve()).as_posix()
+    except ValueError:
+        return path.as_posix()
+
+
 def render_markdown(run: Run, rep: Report, chart_name: str | None) -> str:
     ev = run.cap if run.event_window() is not None else None
     sla = run.sla_s()
     tot_before, tot_during = chat_p95(run, rep.window_start, rep.window_end, key="p95_60s")
     lines = [f"# Brownout report: run {rep.run_id}", "",
              f"Window {_fmt(rep.window_start)} to {_fmt(rep.window_end)} "
-             f"({rep.window_end - rep.window_start:.0f} s). Computed from `{run.path.as_posix()}` only: "
+             f"({rep.window_end - rep.window_start:.0f} s). Computed from `{shown(run.path)}` only: "
              "watts are powermetrics samples (SoC: CPU + GPU + ANE), $ and gCO2 use the live price and fuel "
              "mix in effect at each second.", ""]
     if ev is not None:

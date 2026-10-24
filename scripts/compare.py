@@ -94,6 +94,19 @@ def chart(c: Comparison, runs: dict[str, Run], out: Path) -> Path:
     return out
 
 
+def write(dispatched: Path, baseline: Path, out: Path) -> Path:
+    """Compare two timelines and write compare-<d>-vs-<b>.md and its chart into `out`."""
+    c = compare_runs(dispatched, baseline)
+    runs = {k: Run.load(p, run_id=r.run_id) for (k, p), r in zip({"dispatched": dispatched, "baseline": baseline}.items(),
+                                                                  (c.dispatched, c.baseline))}
+    out.mkdir(parents=True, exist_ok=True)
+    name = f"compare-{c.dispatched.run_id}-vs-{c.baseline.run_id}"
+    png = chart(c, runs, out / f"{name}.png")
+    md = out / f"{name}.md"
+    md.write_text(table(c, runs) + f"\n![measured power]({png.name})\n", encoding="utf-8")
+    return md
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--dispatched", help="run id or timeline path (default: newest dispatched run)")
@@ -112,14 +125,7 @@ def main(argv=None) -> int:
     for k, p in paths.items():
         if not p.is_file():
             ap.error(f"{k}: no timeline at {p}")
-    c = compare_runs(paths["dispatched"], paths["baseline"])
-    runs = {k: Run.load(p, run_id=r.run_id) for (k, p), r in zip(paths.items(), (c.dispatched, c.baseline))}
-    out = Path(a.out)
-    out.mkdir(parents=True, exist_ok=True)
-    name = f"compare-{c.dispatched.run_id}-vs-{c.baseline.run_id}"
-    png = chart(c, runs, out / f"{name}.png")
-    md = out / f"{name}.md"
-    md.write_text(table(c, runs) + f"\n![measured power]({png.name})\n", encoding="utf-8")
+    md = write(paths["dispatched"], paths["baseline"], Path(a.out))
     print(md.read_text(encoding="utf-8"))
     print(f"wrote {md}")
     return 0
