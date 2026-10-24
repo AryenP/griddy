@@ -65,3 +65,18 @@ def test_carbon_excludes_negative_and_unknown():
                                        {"Natural Gas": 410, "Solar": 41, "Nuclear": 12})
     assert g == pytest.approx((410 + 12) / 2)
     assert set(detail) == {"Natural Gas", "Nuclear"}
+
+
+def test_solar_profile_takes_each_hour_from_the_newest_day_that_has_it():
+    """Yesterday's full day (a saved real pull), then 'today' so far: today's hours win, yesterday fills the rest.
+    Today is the same real rows moved one day on and cut at 11:00 (test data only)."""
+    from grid.watcher import solar_by_hour
+    yday = _csv("caiso_solar_20261023")
+    today = yday.assign(interval_start=yday.interval_start + pd.Timedelta(days=1))
+    today = today[today.interval_start.dt.tz_convert("US/Pacific").dt.hour < 11].assign(Solar=lambda d: d.Solar * 0.5)
+    p, days = solar_by_hour([yday, today], "US/Pacific")
+    assert days == "2026-10-23: 13 h; 2026-10-24: 11 h"
+    full, _ = solar_by_hour([yday], "US/Pacific")
+    assert p[10] == pytest.approx(full[10] * 0.5) and p[12] == pytest.approx(full[12])
+    assert min(v for v in p) >= 0.0                                        # night's small negatives are load, not solar
+    assert solar_by_hour([None, today.drop(columns="Solar")], "US/Pacific") == ([None] * 24, "")

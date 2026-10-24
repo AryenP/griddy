@@ -66,8 +66,8 @@ def fetch_load_forecast(iso: str) -> pd.DataFrame:
     return out.sort_values("interval_start").reset_index(drop=True)
 
 
-def fetch_fuel_mix(iso: str) -> pd.DataFrame:
-    df = _client(iso).get_fuel_mix("today")
+def fetch_fuel_mix(iso: str, date="today") -> pd.DataFrame:
+    df = _client(iso).get_fuel_mix(date)
     if "Interval Start" not in df.columns:      # ERCOT has only `Time`
         df = df.rename(columns={"Time": "Interval Start"})
     drop = [c for c in ("Time", "Interval End") if c in df.columns]

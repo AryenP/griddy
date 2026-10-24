@@ -41,11 +41,32 @@ def _hourly_lookup(df: pd.DataFrame, value_col: str) -> dict[pd.Timestamp, float
             for r in df.itertuples(index=False)}
 
 
+def solar_by_hour(frames: list[pd.DataFrame | None], tz: str) -> tuple[list[float | None], str]:
+    """The ISO's measured solar output by hour of day (MW, local time): each hour's mean from the newest of
+    `frames` (oldest first) that has it, so today's hours so far and yesterday's for the hours still to come."""
+    out: list[float | None] = [None] * 24
+    days: dict[int, str] = {}
+    for df in frames:
+        col = next((c for c in df.columns if str(c).lower() == "solar"), None) if df is not None and not df.empty else None
+        if col is None:
+            continue
+        ts = pd.to_datetime(df["interval_start"], utc=True).dt.tz_convert(tz)
+        means = df.assign(_d=ts.dt.date, _h=ts.dt.hour).groupby(["_d", "_h"])[col].mean()
+        for (d, h), mw in means.items():
+            out[int(h)], days[int(h)] = max(0.0, float(mw)), str(d)
+    if not days:
+        return out, ""
+    by_day: dict[str, list[int]] = {}
+    for h, d in sorted(days.items()):
+        by_day.setdefault(d, []).append(h)
+    return out, "; ".join(f"{d}: {len(hs)} h" for d, hs in sorted(by_day.items()))
+
+
 def signal_from_frames(
     *, iso: str, location: str, rt: pd.DataFrame, da: pd.DataFrame | None,
     load: pd.DataFrame | None, fuel: pd.DataFrame | None, alerts: list[str],
     fetched_at: float, now: float, slot_minutes: int, horizon_hours: int, poll_lmp_s: int,
-    tz: str,
+    tz: str, fuel_prev: pd.DataFrame | None = None,
 ) -> GridSignal:
     factors = ISOS_CFG["emission_factors_gco2_per_kwh"]
     here = rt[rt["location"] == location]
@@ -86,6 +107,7 @@ def signal_from_frames(
         carbon_curve = [(s, carbon_now) for s in slots]   # live mix held flat; labelled proxy
         proxy = True
 
+    solar, solar_days = solar_by_hour([fuel_prev, fuel], tz)
     age = max(0.0, now - fetched_at)
     return GridSignal(
         iso=iso, location=location, t=now,
@@ -93,7 +115,8 @@ def signal_from_frames(
         price_curve=price_curve, price_curve_source=curve_source,
         load_forecast=load_curve,
         carbon_now=carbon_now, carbon_curve=carbon_curve, carbon_curve_is_proxy=proxy,
-        fuel_mix_mw=mix, alerts=alerts, feed_age_s=age, stale=age > 2 * poll_lmp_s,
+        fuel_mix_mw=mix, solar_by_hour_mw=solar, solar_by_hour_days=solar_days,
+        alerts=alerts, feed_age_s=age, stale=age > 2 * poll_lmp_s,
         source_urls=[isos.source_url(iso)],
     )
 
@@ -105,7 +128,8 @@ class GridWatcher:
         self.locations = cfg["locations"] if isinstance(cfg["locations"], list) else [location]
         self.slot_minutes = int(POLICY_CFG.get("slot_minutes", 15))
         self.horizon_hours = int(POLICY_CFG.get("horizon_hours", 24))
-        self.rt = self.da = self.load = self.fuel = None
+        self.rt = self.da = self.load = self.fuel = self.fuel_prev = None
+        self.fuel_prev_day = None             # yesterday's fuel mix, fetched once a day (the solar profile)
         self.alerts: list[str] = []
         self.rt_fetched_at = 0.0
         self.subscribers: list = []
@@ -124,6 +148,13 @@ class GridWatcher:
 
     async def refresh_fuel(self):
         self.fuel = await asyncio.to_thread(isos.fetch_fuel_mix, self.iso)
+        yesterday = (datetime.now(ZoneInfo(self.cfg["timezone"])) - timedelta(days=1)).date()
+        if self.fuel_prev_day != yesterday:
+            try:
+                self.fuel_prev = await asyncio.to_thread(isos.fetch_fuel_mix, self.iso, pd.Timestamp(yesterday))
+                self.fuel_prev_day = yesterday
+            except Exception as e:      # today's mix still drives carbon; the solar profile covers fewer hours
+                log.warning("%s yesterday's fuel mix failed: %r", self.iso, e)
 
     async def refresh_conditions(self):
         cond = await asyncio.to_thread(isos.fetch_ercot_conditions)
@@ -143,7 +174,7 @@ class GridWatcher:
             iso=self.iso, location=self.location, rt=self.rt, da=self.da, load=self.load,
             fuel=self.fuel, alerts=self.alerts, fetched_at=self.rt_fetched_at, now=time.time(),
             slot_minutes=self.slot_minutes, horizon_hours=self.horizon_hours,
-            poll_lmp_s=int(self.cfg["poll_s"]["lmp"]), tz=self.cfg["timezone"],
+            poll_lmp_s=int(self.cfg["poll_s"]["lmp"]), tz=self.cfg["timezone"], fuel_prev=self.fuel_prev,
         )
         return self._signal
 
