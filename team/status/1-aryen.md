@@ -3,12 +3,9 @@
   20.85 W, 0 % of seconds under the cap; pause everything 0.80 W, 99 %, 19 train steps; Brownout 14.34 W, 93 %,
   compliant in 12 s, 1575 steps (about 83x pause everything). In README and Devpost, reports in docs/evidence/.
   Caveat stated: that calibration read idle at 3.81 W (0.80 W measured with everything paused).
-- **Chat during a cap FAILED its first run (DECISIONS 10:00, run 20261024-094941):** cap 19.68 W, mean 26.46 W,
-  never under; time to first token 0.20 s before, 4.56 s worst during (SLA 1 s). The plan cut chat to 1 stream on
-  its own and priced chat per stream (one busy stream draws most of what four do). Fixed in b06cd51: chat keeps
-  full concurrency until the operator says no; chat watts come from a measured curve. **Not measured yet**: needs
-  Aryen's sudo for `make calibrate` then `make evidence-chat` (~15 min, Mac idle). No page claims chat keeps its
-  SLA under a cap.
+- **Chat during a cap (DECISIONS 10:00, then 14:20):** the first run failed (time to first token 4.56 s). After the
+  fix: two busy streams, 0.08 s worst under the cap, power over it (busy chat alone is above a 30 % cut; operator
+  asked); one person chatting, cap held in 8 s, 80 % of capped seconds, 0.19 s (Mac in use during it, stated).
 - **Tag:** demo-stable-3 (09:48). It predates b06cd51; re-tag after the chat re-run and a live check.
 - **Azure Foundry:** `azd provision --preview` (read-only) with it off: no new resources. Switched on: it would
   create an AI Services account, a gpt-4o-mini deployment (GlobalStandard, capacity 10) and a project in West US 2.
@@ -16,7 +13,7 @@
 - **Team:** no open PRs or [supervisor] issues at 10:15. Machine 2 last active 06:04 (queue: 21, 22, 12, 20);
   machine 3 last 08:42 (queue: K6 now, K10 review the chat fix, K11 judge Q13, K9 waits for the demo);
   machine 4 last 05:46.
-- **Needs Aryen:** (1) in a terminal, Mac idle ~20 min after: `sudo -v && make evidence-chat && make evidence-chat-judge`
+- **Needs Aryen:** (1) done 14:13 (chat evidence);
   (calibrates chat at 1/2/4 streams, then the 2-stream worst case, then one person chatting with 15 s to read).
   Optional, your call (a security setting): the pinned passwordless powermetrics rule in team/README.md lets
   evidence runs go without a password; remove it after the hackathon;
