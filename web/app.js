@@ -8,7 +8,7 @@ const S = {
   grid: null, schedule: null, plan: null, power: null, jobs: {}, calibration: null, policy: null,
   isoOptions: [], iso: null, dispatcherEnabled: null, agent: null, agentModel: null, runId: null,
   jobSpecs: {}, quote: null, explanation: null, hardDeadlines: new Set(), capEvents: [], sel: null,
-  fleet: [], fleetPower: null,
+  fleet: [], fleetPower: null, hood: null, hoodLast: null, hoodHist: [],
 };
 const FLEET_FRESH_S = 5;
 const LOG_KINDS = new Set(["grid", "event", "intake", "plan", "action", "shortfall", "approval", "policy", "note", "schedule"]);
@@ -28,11 +28,17 @@ function handle(msg) {
       S.agent = d.agent; S.agentModel = d.agent_model || null; S.runId = d.run_id || null;
       S.jobSpecs = d.job_specs || {}; S.quote = d.quote || null; S.capEvents = d.cap_events || [];
       S.fleet = d.fleet || [];
+      S.hood = d.neighbourhood || null; S.hoodLast = S.hood && S.hood.last ? S.hood.last : null;
       S.explanation = d.explanation ? { data: d.explanation, scheduleId: d.schedule ? d.schedule.id : null, t: null } : null;
       traceSeed(d.power_history);
       renderAll();
       return;
     case "power": S.power = d; traceAdd(d.t, d.combined_w); renderNumbers(); renderLoad(); break;
+    case "neighbourhood":
+      S.hoodLast = d;
+      if (d.scenario) S.hoodHist.push(d);
+      renderHood();
+      break;
     case "fleet_power": S.fleetPower = d; traceSet(d.t, d.combined_w); renderNumbers(); renderLoad(); break;
     case "grid":
       if (d.feed === "signal") { S.grid = d; S.iso = d.iso; renderNumbers(); renderCurve(); renderControls(); }
@@ -126,6 +132,55 @@ function renderLoad() {
   $("load-src").textContent = "measured by macOS powermetrics (combined CPU + GPU + ANE, 1 Hz)" +
     (S.schedule && S.dispatcherEnabled !== false ? " · plan line: the current schedule's calibrated watts" : "") +
     " · within or over: the 10-s mean of measured watts, computed on this page; receipts hold the reporter's figure";
+}
+
+// ---------- the SIMULATED neighbourhood line (neighbourhood/model.py, DECISIONS 05:45) ----------
+function simClock(h) { const m = Math.round((h % 24) * 60); return `${String(Math.floor(m / 60) % 24).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`; }
+function renderHood() {
+  const box = $("hood"), h = S.hood, d = S.hoodLast;
+  box.hidden = !(h && h.enabled);
+  if (box.hidden) return;
+  const running = !!(d && d.scenario);
+  $("hood-replay").textContent = running ? "Stop the replay" : "Replay the evening peak";
+  $("hood-limit").textContent = `${fixed(h.limit_kw, 0)} kW`;
+  if (!d) {
+    $("hood-state").textContent = `Press Replay to run today's ${h.scenario.hours[0]}:00 to ${h.scenario.hours[1]}:00 on this line in ${h.scenario.seconds} seconds.`;
+    setHTML($("hood-parts"), html``);
+    return;
+  }
+  const load = d.loading_pct;
+  $("hood-fill").style.width = `${Math.min(100, (Math.max(0, load) / 130) * 100).toFixed(1)}%`;
+  $("hood-fill").className = load >= 100 ? "bad" : load >= 95 ? "warn" : "ok";
+  $("hood-loading").textContent = `${fixed(load, 0)}% of the limit, ${fixed(d.line_kw, 0)} kW on the line`;
+  const kw = (v) => (v == null ? "—" : `${fixed(v, 0)} kW`);
+  const part = (name, value, tag, note, cls = "") => html`<li class="${cls}"><span class="d-part-name">${name}</span>
+    <span class="d-part-val">${value}</span><span class="${tag === "measured" ? "d-meas" : "d-sim"}">${tag}</span>
+    <span class="src">${note}</span></li>`;
+  setHTML($("hood-parts"), html`
+    ${part("Homes and offices", kw(d.homes_kw), "simulated", d.homes_kw == null ? "no load forecast from the grid feed yet" : "shape of today's real load forecast")}
+    ${part("Solar farm", d.solar_kw ? `−${fixed(d.solar_kw, 0)} kW` : "0 kW", "simulated", "clear-day profile")}
+    ${part(`${d.dc_count} data centers`, kw(d.dc_kw), "simulated", `their flexible ${fixed(100 * (h.dc_flexible_share || 0), 0)}% follows our sites: ${fixed(100 * d.response, 0)}% of their usual load`)}
+    ${part("Our sites", d.ours_w == null ? "—" : `${fixed(d.ours_w, 1)} W`, "measured", "this Mac and any laptops, from their own meters")}
+    ${part("Diesel generator", kw(d.diesel_kw), "simulated", d.diesel_kw > 0 ? "running: the line cannot carry the rest" : "off", d.diesel_kw > 0 ? "on" : "")}`);
+  const sentence = [];
+  if (running) {
+    sentence.push(`Simulated ${simClock(d.sim_hour)}: the line carries ${fixed(d.line_kw, 0)} kW, ${fixed(load, 0)}% of its limit.`);
+    if (d.cap_id) sentence.push("The utility called for a cut: our sites shed for real and the simulated data centers follow.");
+    if (d.diesel_kw > 0) sentence.push(`The diesel generator covers ${fixed(d.diesel_kw, 0)} kW.`);
+  } else if (S.hoodHist.length) {
+    sentence.push(`Replay finished: diesel ${sig(d.diesel_kwh)} kWh with Brownout as it ran, ${sig(d.diesel_off_kwh)} kWh if our sites had ignored the cut (simulated kWh over the replayed evening).`);
+  } else {
+    sentence.push(`Now, at the wall clock: the line at ${fixed(load, 0)}% of its limit. Press Replay to run today's evening peak in ${h.scenario.seconds} s.`);
+  }
+  $("hood-state").textContent = sentence.join(" ");
+  $("hood-diesel").textContent = running || S.hoodHist.length
+    ? `Diesel so far: ${sig(d.diesel_kwh)} kWh with Brownout as it runs, ${sig(d.diesel_off_kwh)} kWh if our sites ignored the cut (simulated)` : "";
+  const pts = S.hoodHist, n = Math.max(1, h.scenario.seconds), y = (v) => 118 - (Math.min(140, Math.max(0, v)) / 140) * 114;
+  const t0 = pts.length ? pts[0].t : 0, x = (t) => ((t - t0) / n) * 600;
+  const path = pts.map((p, i) => `${i ? "L" : "M"}${x(p.t).toFixed(1)} ${y(p.loading_pct).toFixed(1)}`).join(" ");
+  setHTML($("hood-trace"), html`<line class="h-limit" x1="0" x2="600" y1="${y(100).toFixed(1)}" y2="${y(100).toFixed(1)}"/>
+    ${pts.filter((p) => p.diesel_kw > 0).map((p) => html`<line class="h-diesel" x1="${x(p.t).toFixed(1)}" x2="${x(p.t).toFixed(1)}" y1="${y(p.loading_pct).toFixed(1)}" y2="${y(100).toFixed(1)}"/>`)}
+    ${path ? html`<path class="h-load" d="${path}"/>` : ""}`);
 }
 
 // ---------- the laptops (fleet/hub.py): each one's status, its own battery's watts, its job ----------
@@ -455,7 +510,7 @@ function renderControls() {
   else setHTML($("quote"), html``);
 }
 
-function renderAll() { renderControls(); renderNumbers(); renderLoad(); renderCurve(); renderJobs(); renderSolver(); }
+function renderAll() { renderControls(); renderNumbers(); renderLoad(); renderHood(); renderCurve(); renderJobs(); renderSolver(); }
 
 async function post(path, body) {
   const r = await postJSON(path, body);
@@ -478,6 +533,11 @@ function pressOne(group, btn) {
 $("iso").addEventListener("change", (e) => post("/api/iso", { iso: e.target.value }));
 $("objective").addEventListener("click", (e) => { const b = e.target.closest("button[data-objective]"); if (b) setObjective(b.dataset.objective); });
 $("dispatcher").addEventListener("click", toggleDispatcher);
+$("hood-replay").addEventListener("click", async () => {
+  const start = !(S.hoodLast && S.hoodLast.scenario);
+  if (start) S.hoodHist = [];
+  await post("/api/neighbourhood", { action: start ? "start" : "stop" });
+});
 $("trace-window").addEventListener("click", (e) => {
   const b = e.target.closest("button[data-window]");
   if (!b) return;

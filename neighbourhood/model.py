@@ -3,7 +3,7 @@
 Simulated, and labelled so on screen (Aryen's decision, Sat 05:35): the homes and offices, the solar farm,
 twenty data centers, the line's limit and a diesel generator. Driven by real inputs where one exists:
   - homes and offices: the shape of today's real ISO load forecast (GridSignal.load_forecast), scaled so the
-    day's forecast peak is `homes_offices_peak_kw`;
+    day's lowest hour at `homes_offices_kw[0]` and its peak at `homes_offices_kw[1]`;
   - solar: a clear-day profile between `solar_day` hours (simulated outright);
   - data centers: each has a fixed size; its flexible share follows OUR sites' measured response, i.e. our
     fleet's measured watts as a fraction of its 60-s baseline before the cap. Brownout on: our machines shed
@@ -79,7 +79,7 @@ class Neighbourhood:
 
     # ------------------------------------------------------------------ the parts of the line
     def homes_kw(self, hour: float, sig: GridSignal | None) -> float | None:
-        """Today's real forecast shape at `hour`, scaled so the day's forecast peak is homes_offices_peak_kw."""
+        """Today's real forecast at `hour`, its lowest hour mapped to homes_offices_kw[0] and its peak to [1]."""
         if not sig or not sig.load_forecast:
             return None
         pts = sorted((datetime.fromisoformat(str(t)) if not isinstance(t, datetime) else t, mw) for t, mw in sig.load_forecast)
@@ -93,7 +93,9 @@ class Neighbourhood:
         else:
             h0, h1, m0, m1 = hours[i - 1], hours[i], mws[i - 1], mws[i]
             mw = m0 + (m1 - m0) * (hour - h0) / (h1 - h0)
-        return float(self.cfg["homes_offices_peak_kw"]) * mw / max(mws)
+        lo, hi = self.cfg["homes_offices_kw"]
+        span = max(mws) - min(mws)
+        return float(hi) if span <= 0 else lo + (hi - lo) * (mw - min(mws)) / span
 
     def solar_kw(self, hour: float) -> float:
         rise, fall = self.cfg.get("solar_day", [6.5, 18.5])

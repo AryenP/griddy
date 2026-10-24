@@ -9,7 +9,7 @@ from core.timeline import Timeline
 from core.types import GridSignal
 from neighbourhood.model import Neighbourhood
 
-CFG = {"line_limit_kw": 1000, "homes_offices_peak_kw": 760, "solar_kw": 260, "solar_day": [6.5, 18.5],
+CFG = {"line_limit_kw": 1000, "homes_offices_kw": [380, 720], "solar_kw": 260, "solar_day": [6.5, 18.5],
        "data_centers": {"count": 20, "size_kw": [8, 30], "flexible_share": 0.6}, "diesel_kw": 600,
        "cap_trigger_pct": 95, "cap_margin_pct": 8, "scenario": {"name": "evening peak", "hours": [16, 21], "seconds": 90}}
 DAY = datetime(2026, 10, 24).astimezone()
@@ -38,8 +38,8 @@ def test_nothing_configured_changes_nothing(tmp_path):
 
 def test_homes_follow_the_forecast_shape(tmp_path):
     n = hood(tmp_path)
-    assert n.homes_kw(19.0, n.ex.signal) == pytest.approx(760.0)            # the forecast peak
-    assert n.homes_kw(3.0, n.ex.signal) == pytest.approx(760 * 20000 / 40000)
+    assert n.homes_kw(19.0, n.ex.signal) == pytest.approx(720.0)            # the forecast peak
+    assert n.homes_kw(3.0, n.ex.signal) == pytest.approx(380.0)             # its lowest hour
     assert n.homes_kw(19.0, None) is None                                   # no feed: no homes number
     assert n.solar_kw(12.5) == pytest.approx(260.0) and n.solar_kw(20.0) == 0.0
 
