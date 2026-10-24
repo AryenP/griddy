@@ -57,6 +57,13 @@ function rollingMeans(fromT) {
   return out;
 }
 
+// The reporter's baseline (agent/reporter.py BASELINE_S): the mean measured watts in the 60 s before the cap.
+const BASELINE_S = 60;
+function preCapBaseline(start) {
+  const xs = TRACE.pts.filter(([t]) => t >= start - BASELINE_S && t < start).map(([, w]) => w);
+  return xs.length >= BASELINE_S / 2 ? xs.reduce((a, b) => a + b, 0) / xs.length : null;
+}
+
 // The cap as the meter sees it now. null band = no cap in force. `ttc`: seconds from the cap's start to the
 // first 10-s mean at or under it; `overSince`: when the 10-s mean last went over (if it is over now).
 function capStatus(bands, now) {

@@ -40,6 +40,8 @@
 .d-state.idle { color: var(--text); }
 .d-state.idle::before { background: var(--muted); }
 .d-state-sub { margin: 6px 0 0; color: var(--muted); font-size: 0.95rem; min-height: 1.4em; }
+.d-ratio { margin: 10px 0 0; font-size: 1.05rem; }
+.d-ratio b { font-size: 1.9rem; font-weight: 650; margin-right: 4px; color: var(--ok); }
 .d-watts { font-size: clamp(3.4rem, 5.6vw, 5.4rem); font-weight: 600; line-height: 1; letter-spacing: -0.015em; margin: 18px 0 6px; color: #fff; }
 .d-watts small { font-size: 0.26em; font-weight: 500; color: var(--muted); margin-left: 0.4em; letter-spacing: 0; }
 .d-dl { margin: 20px 0 0; padding-top: 14px; border-top: 1px solid var(--line); display: grid; gap: 14px; }
