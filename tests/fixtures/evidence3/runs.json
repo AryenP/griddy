@@ -1,0 +1,23 @@
+[
+ {
+  "run_id": "20261024-031301-baseline",
+  "started": 1792836782.5212648,
+  "dispatcher_enabled": false,
+  "machine": "Apple M2 Pro macOS 15.4.1",
+  "policy": "baseline"
+ },
+ {
+  "run_id": "20261024-032041-pause_all",
+  "started": 1792837242.28294,
+  "dispatcher_enabled": false,
+  "machine": "Apple M2 Pro macOS 15.4.1",
+  "policy": "pause_all"
+ },
+ {
+  "run_id": "20261024-032821",
+  "started": 1792837701.6301959,
+  "dispatcher_enabled": true,
+  "machine": "Apple M2 Pro macOS 15.4.1",
+  "policy": "dispatcher"
+ }
+]

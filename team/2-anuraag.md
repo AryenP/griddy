@@ -123,7 +123,7 @@ deployment and an Azure AI Content Safety resource with `azd` (your Azure for St
 endpoints to Aryen privately (never in the repo, a PR or Slack). Machine 1 will add the infra files to your
 roster when it is time.
 
-## Next batch (Sat 04:25), in order after F5 and 8. Judge-facing first.
+## Next batch (Sat 03:40), in order after F5 and 8. Judge-facing first.
 
 ### 10. Proof page: `web/proof.html` (the judges asked for receipts)
 One page, projector- and phone-ready, that shows the measured comparison of the three policies on the same

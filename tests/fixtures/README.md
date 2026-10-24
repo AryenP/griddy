@@ -7,4 +7,5 @@ Never shown to a judge as live data.
 |---|---|
 | `caiso_*.csv` | gridstatus CAISO pull, Fri 23 Oct 2026 ~21:44 PT (first line of each file says so) |
 | `real_timeline_calibrate_20261023.jsonl` | `make calibrate` run, 23:11 PT: 1 Hz `power` events while each job ran, knob `action`s, phase `note`s |
+| `evidence3/` | `make evidence3`, Sat 24 Oct 03:13-03:36 PT, the same scripted cap (30 % for 30 min, 120 s in, train deadline 1.87 h) under each policy: `runs.json` (`GET /api/runs` rows), `<run>.series.json` (`GET /api/runs/{id}/series`) and `compare-vs-baseline.json` / `compare-vs-pause_all.json` (`GET /api/compare`). These runs predate the p90 cap-planning fix, so the dispatched run is at or under the cap 69 % of seconds |
 | `real_timeline_solve_20261023.jsonl` | `make solve` run, 23:15 PT: live CAISO `grid` signal, `policy`, solved `schedule` |

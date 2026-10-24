@@ -77,8 +77,9 @@ chat has `concurrency`, `inflight`, `p95_60s` (total latency), `ttft_p95_60s` (t
 | GET | `/api/explain` | | `Explanation` for the current schedule |
 | POST | `/api/ask` | `{"question": str}` operator asks "why is training paused?" | `Explanation` answered from live state only |
 | GET | `/api/report?run=<id>\|latest` | | `Report` |
-| GET | `/api/compare?dispatched=<id>&baseline=<id>` | | `Comparison` |
-| GET | `/api/runs` | | `[{"run_id", "started", "dispatcher_enabled"}]` |
+| GET | `/api/compare?dispatched=<id>&baseline=<id>` (or `baseline_policy=baseline\|pause_all` for the newest of that policy) | | `Comparison` |
+| GET | `/api/runs` | | `[{"run_id", "started", "dispatcher_enabled", "policy", "machine"}]`, oldest first; `policy` is `dispatcher` \| `baseline` (ignore the call) \| `pause_all` |
+| GET | `/api/runs/{run_id}/series` | | `{"run_id", "policy", "dispatcher_enabled", "machine", "started", "ended", "power": [[t, W]], "caps": [{"id", "start", "end", "target_w", "target_pct", "source", "reason"}], "actions": [{"t", "job", ...}], "shortfalls": [{"t", "shortfall_kind", "job_id", "message"}]}`: the measured record for drawing (since Sat 03:40). Run ids only: a path is a 404 on every run route |
 | GET | `/api/trace?n=50` | | recent OpenTelemetry spans `[{"name","start","end","attributes",...}]` |
 
 WebSocket adds `{"kind": "approval", "data": ApprovalRequest}` whenever a request is created or changes
