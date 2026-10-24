@@ -7,11 +7,12 @@
   <link rel="stylesheet" href="style.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
-<body>
+<body class="dash">
   <header class="top">
     <div class="claim">
       <h1>Brownout</h1>
       <p>When the grid runs short, the plan for AI data centers is diesel generators. This is the alternative.</p>
+      <div id="quote" class="quote"></div>
     </div>
     <div class="controls">
       <span id="conn" class="badge">connecting</span>
@@ -24,7 +25,7 @@
           <option value="balanced">balanced</option>
         </select>
       </label>
-      <button id="dispatcher" class="toggle" type="button">DISPATCHER ON</button>
+      <button id="dispatcher" class="toggle" type="button">DISPATCHER ?</button>
     </div>
   </header>
 
@@ -46,9 +47,10 @@
         <div class="src" id="carbon-src">waiting for grid feed</div>
       </div>
       <div class="tile">
-        <div class="label">Chat p95 (60 s)</div>
-        <div class="value" id="p95">—</div>
-        <div class="src" id="p95-src">waiting for chat proxy</div>
+        <div class="label" id="ttft-label">Chat time to first token, p95 (60 s)</div>
+        <div class="value" id="ttft">—</div>
+        <div class="sub" id="total-p95">total —</div>
+        <div class="src" id="ttft-src">waiting for chat proxy</div>
       </div>
     </section>
 
@@ -75,18 +77,23 @@
 
     <section class="row bottom">
       <div class="panel">
-        <h2>Solver says</h2>
+        <h2>Why this plan</h2>
+        <div id="explain" class="explain"></div>
+        <div class="src" id="explain-src"></div>
+        <h2 class="sub-h">Current slot</h2>
         <div id="plan" class="plan"></div>
+        <h2 class="sub-h">Solver's facts</h2>
         <ul id="explanations" class="explanations"></ul>
         <div class="src" id="solve-src"></div>
       </div>
       <div class="panel">
         <h2>Event log</h2>
-        <ol id="log" class="log"></ol>
+        <ol id="log" class="log"><li class="empty">no events yet</li></ol>
       </div>
     </section>
   </main>
 
+  <script src="common.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

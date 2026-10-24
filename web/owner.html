@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Brownout owner</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="phone">
+  <header class="phone-top">
+    <h1>Job owner</h1>
+    <p class="cap">When the grid needs power back, the solver asks you before it moves your job. Answer in your own words.</p>
+    <div class="badges"><span id="conn" class="badge">connecting</span><span id="agent" class="badge">agent ?</span></div>
+  </header>
+
+  <main>
+    <section class="panel">
+      <label class="field"><span>You own the jobs of</span><select id="owner"><option value="">waiting for the server</option></select></label>
+      <label class="field"><span>Your name (recorded with your reply)</span><input id="who" autocomplete="name" maxlength="80"></label>
+    </section>
+
+    <section class="panel">
+      <h2>Waiting for you</h2>
+      <div id="requests" class="board"></div>
+      <div class="src" id="requests-src"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Your jobs</h2>
+      <p class="cap">Deadline and the live schedule for each job you own.</p>
+      <div id="mine"><p class="empty">waiting for the server</p></div>
+    </section>
+  </main>
+
+  <script src="common.js"></script>
+  <script src="approvals.js"></script>
+  <script src="owner.js"></script>
+</body>
+</html>
