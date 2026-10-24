@@ -2,7 +2,11 @@
 objective: balanced            # cost | carbon | balanced
 weights: {cost: 0.5, carbon: 0.5, lateness_penalty: 1000}
 power_cap_w: null              # set by CapEvents at runtime
-sla: {chat_p95_s: 2.0}
+# Chat SLA on time to first token (replies stream to the user). Set from `make chat-sweep`
+# (2026-10-24 00:05-00:11, M2 Pro, qwen3:4b): worst TTFT p95 0.23 s idle, 0.11 s with training on the
+# GPU, concurrency 1-4, 64-256 tokens. 1.0 s leaves 4x headroom. Total latency is reported, not an SLA:
+# it is reply length / ~31-45 tok/s per stream (8.2-16.5 s p95 for 256 tokens).
+sla: {chat_ttft_p95_s: 1.0}
 never_pause: [chat]
 approvals:
   deadline_slip: owner

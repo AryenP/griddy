@@ -8,7 +8,6 @@ jobs:
     device: gpu
     min_concurrency: 1
     max_concurrency: 4
-    sla: {p95_latency_s: 2.0}
   - id: train
     kind: deferrable
     owner: ml-team

@@ -36,6 +36,7 @@ members:
       - tests/test_controller.py
       - tests/test_execute.py
       - tests/test_api*.py
+      - tests/test_chat_proxy.py
       - tests/test_team.py
       - tests/fixtures/*.csv
       - tests/fixtures/*.jsonl
