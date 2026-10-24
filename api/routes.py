@@ -78,8 +78,9 @@ class SiteCalibration(BaseModel):
     meter: str
 
 
-class NeighbourhoodIn(BaseModel):
+class ReplayIn(BaseModel):
     action: Literal["start", "stop"]
+    event: str | None = None
     who: str = "operator"
 
 
@@ -161,14 +162,21 @@ def make_router(rt) -> APIRouter:
             raise HTTPException(404, f"{site_id!r} is not a site in config/fleet.yaml")
         return rt.fleet.calibrate(site_id, body.model_dump())
 
-    @r.post("/api/neighbourhood")
-    async def neighbourhood(body: NeighbourhoodIn, request: Request):
-        """Start or stop the SIMULATED neighbourhood's time-lapse (config/neighbourhood.yaml scenario)."""
+    @r.get("/api/replay/events")
+    async def replay_events():
+        """The real grid emergencies a judge can replay, with their EIA-930 hours, cited alerts and impact."""
+        return rt.replay.catalog()
+
+    @r.post("/api/replay")
+    async def replay(body: ReplayIn, request: Request):
+        """Start (with `event`) or stop a replay of a real grid emergency through the live software."""
         who = by(body.who, request)
-        rt.tl.log("policy", reason=f"neighbourhood replay {body.action}", who=who)
-        if not rt.neighbourhood.enabled:
-            raise HTTPException(404, "no neighbourhood configured (config/neighbourhood.yaml)")
-        return rt.neighbourhood.start() if body.action == "start" else rt.neighbourhood.stop()
+        rt.tl.log("policy", reason=f"replay {body.action}", event=body.event, who=who)
+        if body.action == "stop":
+            return rt.replay.stop()
+        if body.event not in rt.replay.events:
+            raise HTTPException(404, f"no event {body.event!r}: {sorted(rt.replay.events)}")
+        return rt.replay.start(body.event)
 
     @r.get("/api/state")
     async def state():

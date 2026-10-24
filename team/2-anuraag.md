@@ -287,3 +287,18 @@ message ("run `make calibrate`: chat is measured at 1, 2 and 4 streams"). Also i
 an "sla" shortfall's amount is watts ("slowing chat saves about N W"), not seconds (K10 #4).
 Done when: a test feeds preflight the old calibration shape and gets FAIL, and the current one gets PASS.
 
+### 25. The judge picks a REAL grid emergency from the phone (Sat Sat 15:58), do first: the old route is gone
+The organizers want real data and a live demo, nothing simulated. Machine 1 replaced the simulated neighbourhood with
+replays of real grid emergencies (HANDOFF "replay"): Winter Storm Uri (Texas, 2021), California's rotating outages
+(14 Aug 2020) and California's record heat wave (6 Sep 2022). The grid's data is the operator's own (EIA-930) and every
+alert and impact number is cited to the official report's page; our sites respond live. `POST /api/neighbourhood` no
+longer exists, so the operator page's replay button now fails.
+1. `web/operator.js` / `operator.html`: replace the neighbourhood block with an event picker from
+   `GET /api/replay/events` (title, when, the first impact line) and `POST /api/replay {"action": "start", "event": id}`
+   / `{"action": "stop"}`. While one runs, show the WebSocket `replay` event's `sim_time`, `demand_mw`, `forecast_mw`,
+   the alerts fired, our `measured_cut_pct` (say "measured") and `scale` (say "estimate").
+2. Remove every "simulated neighbourhood" word, test and CSS rule from your pages and tests
+   (`tests/test_web_pages.py` CONTRACT_ROUTES: `/api/replay`, `/api/replay/events` instead of `/api/neighbourhood`).
+3. docs/judging/*: the neighbourhood is gone; say what the replays are (real recorded data, cited reports, live response).
+Done when: from the phone, a judge starts the Uri replay and the dashboard and phone both show it; no page says simulated.
+

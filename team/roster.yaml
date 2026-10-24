@@ -21,7 +21,7 @@ members:
   - config/policy.yaml
   - config/site.yaml
   - config/fleet.yaml
-  - config/neighbourhood.yaml
+  - config/events.yaml
   - Makefile
   - pyproject.toml
   - uv.lock
@@ -38,8 +38,8 @@ members:
   - web/dashboard.css
   - tests/test_web_dashboard.py
   - fleet/**
-  - neighbourhood/**
-  - tests/test_neighbourhood*.py
+  - replay/**
+  - tests/test_replay*.py
   - tests/test_fleet*.py
   - scripts/team.py
   - scripts/check_runtime.py

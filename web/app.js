@@ -8,7 +8,7 @@ const S = {
   grid: null, schedule: null, plan: null, power: null, jobs: {}, calibration: null, policy: null,
   isoOptions: [], iso: null, dispatcherEnabled: null, agent: null, agentModel: null, runId: null,
   jobSpecs: {}, quote: null, explanation: null, hardDeadlines: new Set(), capEvents: [], sel: null,
-  fleet: [], fleetPower: null, hood: null, hoodLast: null, hoodHist: [],
+  fleet: [], fleetPower: null, replay: null, replayCat: [], replayLast: null, replayPick: null,
 };
 const FLEET_FRESH_S = 5;
 const LOG_KINDS = new Set(["grid", "event", "intake", "plan", "action", "shortfall", "approval", "policy", "note", "schedule"]);
@@ -28,18 +28,14 @@ function handle(msg) {
       S.agent = d.agent; S.agentModel = d.agent_model || null; S.runId = d.run_id || null;
       S.jobSpecs = d.job_specs || {}; S.quote = d.quote || null; S.capEvents = d.cap_events || [];
       S.fleet = d.fleet || [];
-      S.hood = d.neighbourhood || null; S.hoodLast = S.hood && S.hood.last ? S.hood.last : null;
+      S.replay = d.replay || null; S.replayLast = S.replay && S.replay.last ? S.replay.last : null;
       S.scale = d.scale || null;
       S.explanation = d.explanation ? { data: d.explanation, scheduleId: d.schedule ? d.schedule.id : null, t: null } : null;
       traceSeed(d.power_history);
       renderAll();
       return;
     case "power": S.power = d; traceAdd(d.t, d.combined_w); renderNumbers(); renderLoad(); break;
-    case "neighbourhood":
-      S.hoodLast = d;
-      if (d.scenario) S.hoodHist.push(d);
-      renderHood();
-      break;
+    case "replay": S.replayLast = d; S.replayPick = d.event; if (S.replay) S.replay.active = d.event; renderReplay(); break;
     case "scale": S.scale = d; renderScale(); break;
     case "fleet_power": S.fleetPower = d; traceSet(d.t, d.combined_w); renderNumbers(); renderLoad(); break;
     case "grid":
@@ -140,71 +136,85 @@ function renderLoad() {
     " · within or over: the 10-s mean of measured watts, computed on this page; receipts hold the reporter's figure";
 }
 
-// ---------- the SIMULATED neighbourhood line (neighbourhood/model.py, DECISIONS 05:45) ----------
-function simClock(h) { const m = Math.round((h % 24) * 60); return `${String(Math.floor(m / 60) % 24).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`; }
-// At grid scale: an ESTIMATE from public data (grid/scale.py), never shown as measured. ERCOT's demand is live;
+// ---------- real grid emergencies, replayed through the live software (replay/engine.py, config/events.yaml) ----------
+// The grid's side is the operator's own recorded data (EIA-930) and the official reports' alert times, cited on screen;
+// our sites' side is this Mac, live and measured. Nothing here is simulated.
+async function loadReplayEvents() {
+  const r = await getJSON("/api/replay/events");
+  if (r.ok) { S.replayCat = r.data; if (!S.replayPick && S.replayCat.length) S.replayPick = S.replayCat[0].id; renderReplay(); }
+}
+const gwOf = (mw) => (mw == null ? "—" : `${fixed(mw / 1000, 1)} GW`);
+function eventClock(iso) { return iso ? iso.slice(11, 16) : ""; }
+function replayRunning() { const d = S.replayLast; return !!(d && d.event && nowS() - d.t < 5); }
+
+function renderReplay() {
+  const box = $("replay");
+  box.hidden = !(S.replay && S.replay.enabled);
+  if (box.hidden) return;
+  const running = replayRunning(), d = S.replayLast;
+  const ev = S.replayCat.find((e) => e.id === (running && d ? d.event : S.replayPick)) || S.replayCat[0];
+  $("replay-stop").hidden = !running;
+  setHTML($("replay-cards"), html`${S.replayCat.map((e) => html`<div role="listitem" class="d-replay-card${ev && e.id === ev.id ? " on" : ""}">
+      <div class="d-replay-title">${e.title}</div><div class="src">${e.when} · ${e.iso}</div>
+      <div class="d-replay-hit">${e.impact[0].text}</div>
+      <button type="button" class="${ev && e.id === ev.id ? "primary" : ""}" data-replay="${e.id}" ${running ? "disabled" : ""}>Replay it live</button></div>`)}`);
+  if (!ev) { $("replay-state").textContent = "Loading the events…"; return; }
+  const sentence = [];
+  if (running) {
+    sentence.push(`Replaying ${ev.title}, ${ev.when}, at ${eventClock(d.sim_time)} local: the grid served ${gwOf(d.demand_mw)} against a forecast of ${gwOf(d.forecast_mw)}${d.gap_mw > 1000 ? `, ${gwOf(d.gap_mw)} short` : ""}.`);
+    if (d.nothing_to_shed) sentence.push("Our sites had nothing running to shed, so no cut was sent: give training work and replay again.");
+    else if (d.measured_cut_pct != null) sentence.push(`This Mac: ${fixed(d.measured_cut_pct, 0)}% below its baseline, measured.`);
+  } else {
+    sentence.push(`Pick a real emergency. The grid's data is the operator's own (EIA-930), every alert comes at the time the official report gives, and the response is this Mac, live: ${S.replay.seconds} s of replay.`);
+  }
+  $("replay-state").textContent = sentence.join(" ");
+  // the chart: real demand served (solid) and the operator's day-ahead forecast (dashed) over the window
+  const pts = ev.series.map(([t, dem, fc]) => ({ t: Date.parse(t) / 1000, dem, fc }));
+  const t0 = Date.parse(ev.window[0]) / 1000, t1 = Date.parse(ev.window[1]) / 1000;
+  const vals = pts.flatMap((p) => [p.dem, p.fc]).filter((v) => v != null);
+  const lo = Math.min(...vals) * 0.95, hi = Math.max(...vals, ev.record_mw || 0) * 1.03;
+  const X = (t) => (((t - t0) / (t1 - t0)) * 600).toFixed(1), Y = (v) => (170 - ((v - lo) / (hi - lo)) * 160).toFixed(1);
+  const line = (k) => pts.filter((p) => p[k] != null).map((p, i) => `${i ? "L" : "M"}${X(p.t)} ${Y(p[k])}`).join(" ");
+  const gap = pts.filter((p) => p.dem != null && p.fc != null);
+  const gapPath = gap.length ? `M${gap.map((p) => `${X(p.t)} ${Y(p.fc)}`).join(" L")} L${gap.slice().reverse().map((p) => `${X(p.t)} ${Y(p.dem)}`).join(" L")} Z` : "";
+  const marks = ev.alerts.filter((a) => a.at && !a.before_window);
+  const fired = new Set(running && d ? d.fired : []);
+  const head = running && d ? X(Date.parse(d.sim_time) / 1000) : null;
+  setHTML($("replay-chart"), html`<path class="r-gap" d="${gapPath}"/>
+    ${ev.record_mw ? html`<line class="r-record" x1="0" x2="600" y1="${Y(ev.record_mw)}" y2="${Y(ev.record_mw)}"/><text class="r-label" x="4" y="${Number(Y(ev.record_mw)) - 3}">record before the event ${gwOf(ev.record_mw)}</text>` : ""}
+    <path class="r-fc" d="${line("fc")}"/><path class="r-dem" d="${line("dem")}"/>
+    ${marks.map((a) => html`<line class="r-alert ${a.kind}${fired.has(a.label) ? " fired" : ""}" x1="${X(Date.parse(a.at) / 1000)}" x2="${X(Date.parse(a.at) / 1000)}" y1="4" y2="172"/>`)}
+    ${head != null ? html`<line class="r-head" x1="${head}" x2="${head}" y1="0" y2="180"/>` : ""}
+    <text class="r-label" x="4" y="178">${eventClock(ev.window[0])}</text><text class="r-label" x="560" y="178">${eventClock(ev.window[1])}</text>`);
+  $("replay-chart").setAttribute("aria-label", `${ev.title}: demand served and the day-ahead forecast, ${gwOf(lo)} to ${gwOf(hi)}`);
+  setHTML($("replay-alerts"), html`${ev.alerts.map((a) => html`<li class="${a.kind}${fired.has(a.label) ? " fired" : ""}">
+      <b>${a.before_window ? (a.day ? `days before (${a.day})` : "before the window") : eventClock(a.at)}</b> ${a.label}${a.cut_pct ? html` <span class="d-meas">our sites: −${a.cut_pct}%</span>` : ""}
+      <div class="src">${a.source}</div></li>`)}`);
+  const sc = running && d ? d.scale : null;
+  setHTML($("replay-impact"), html`<h3>What happened</h3>
+    <ul>${ev.impact.map((i) => html`<li>${i.text} <span class="src">(${i.source})</span></li>`)}</ul>
+    <h3>This Mac, live <span class="d-meas">measured</span></h3>
+    <p>${running && d && d.baseline_w ? html`Baseline ${fixed(d.baseline_w, 1)} W before the replay; now ${d.ours_w == null ? "—" : `${fixed(d.ours_w, 1)} W`}${d.measured_cut_pct != null ? html`, <b>${fixed(d.measured_cut_pct, 0)}% below</b>` : ""}.` : "Starts when you press Replay."}</p>
+    <h3>At the operator's scale <span class="d-sim">estimate</span></h3>
+    <p>${sc ? html`The ${fixed(sc.share_pct, 0)}% cut the grid asked, which this Mac delivered (measured), on ${gwOf(sc.flexible_mw)} of flexible load frees about <b>${fixed(sc.freed_mw, 0)} MW</b>${sc.share_of_shed_pct != null ? html`, <b>${fixed(sc.share_of_shed_pct, 1)}%</b> of the ${fixed(ev.shed_mw, 0)} MW in this event` : ""}${sc.people != null ? html`: about <b>${Math.round(sc.people).toLocaleString()}</b> ${sc.people_unit} at this event's own ratio` : ""}.` : "Appears once our sites have cut."}</p>
+    <div class="src">${ev.flexible_source}. Arithmetic on the event's own published numbers and our measured cut; a laptop is not a data center.</div>`);
+  setHTML($("replay-src"), html`Data: ${ev.data_source}. Alerts and impact: <a href="${ev.report_url}" target="_blank" rel="noopener">the official report</a> (pages cited per line).`);
+}
+
+// At grid scale, live: an ESTIMATE from public data (grid/scale.py), never shown as measured. ERCOT's demand is live;
 // the large loads and the queue are cited with their dates; the cut is this Mac's, measured under the same call.
 function renderScale() {
-  const box = $("hood-scale"), x = S.scale;
+  const box = $("live-scale"), x = S.scale;
   box.hidden = !x;
   if (!x) return;
   const gw = (mw) => `${fixed(mw / 1000, 1)} GW`;
-  setHTML(box, html`<h3>At grid scale <span class="d-sim">estimate from public data</span></h3>
+  setHTML(box, html`<h3>ERCOT right now <span class="d-sim">estimate from public data</span></h3>
     <p>ERCOT's large loads now running draw about <b>${gw(x.large_loads_running_mw)}</b>. If they cut the
       ${fixed(x.our_cut_pct, 0)}% this Mac cut under the same call, that frees about <b>${fixed(x.freed_mw, 0)} MW</b>${x.share_of_demand_pct != null ? html`, <b>${fixed(x.share_of_demand_pct, 1)}%</b> of ERCOT's demand right now (${gw(x.demand_mw)}, live)` : ""}.
       Another ${fixed(x.queue_gw, 0)} GW of large loads, mostly data centers, are asking to connect.</p>
     <div class="src">Running and approved (${gw(x.large_loads_approved_mw)}) large loads: <a href="${x.large_loads_url}" target="_blank" rel="noopener">${x.large_loads_source}</a>.
       Queue: <a href="${x.queue_url}" target="_blank" rel="noopener">${x.queue_source}</a>. Demand: ERCOT real-time system conditions${x.demand_t ? `, ${localClock(Date.parse(x.demand_t) / 1000)}` : ""}.
       The cut: ${x.our_cut_source}. A laptop's response is not a data center's; this is arithmetic on public numbers, not a measurement.</div>`);
-}
-
-function renderHood() {
-  const box = $("hood"), h = S.hood, d = S.hoodLast;
-  box.hidden = !(h && h.enabled);
-  if (box.hidden) return;
-  const running = !!(d && d.scenario);
-  $("hood-replay").textContent = running ? "Stop the replay" : "Replay the evening peak";
-  $("hood-limit").textContent = `${fixed(h.limit_kw, 0)} kW`;
-  if (!d) {
-    $("hood-state").textContent = `Press Replay to run today's ${h.scenario.hours[0]}:00 to ${h.scenario.hours[1]}:00 on this line in ${h.scenario.seconds} seconds.`;
-    setHTML($("hood-parts"), html``);
-    return;
-  }
-  const load = d.loading_pct;
-  $("hood-fill").style.width = `${Math.min(100, (Math.max(0, load) / 130) * 100).toFixed(1)}%`;
-  $("hood-fill").className = load >= 100 ? "bad" : load >= 95 ? "warn" : "ok";
-  $("hood-loading").textContent = `${fixed(load, 0)}% of the limit, ${fixed(d.line_kw, 0)} kW on the line`;
-  const kw = (v) => (v == null ? "—" : `${fixed(v, 0)} kW`);
-  const part = (name, value, tag, note, cls = "") => html`<li class="${cls}"><span class="d-part-name">${name}</span>
-    <span class="d-part-val">${value}</span><span class="${tag === "measured" ? "d-meas" : "d-sim"}">${tag}</span>
-    <span class="src">${note}</span></li>`;
-  setHTML($("hood-parts"), html`
-    ${part("Homes and offices", kw(d.homes_kw), "simulated", d.homes_kw == null ? "no load forecast from the grid feed yet" : "shape of today's real load forecast")}
-    ${part("Solar farm", d.solar_kw ? `−${fixed(d.solar_kw, 0)} kW` : "0 kW", "simulated", d.solar_source || "clear-day profile")}
-    ${part(`${d.dc_count} data centers`, kw(d.dc_kw), "simulated", `their flexible ${fixed(100 * (h.dc_flexible_share || 0), 0)}% follows our sites: ${fixed(100 * d.response, 0)}% of their usual load`)}
-    ${part("Our sites", d.ours_w == null ? "—" : `${fixed(d.ours_w, 1)} W`, "measured", "this Mac and any laptops, from their own meters")}
-    ${part("Diesel generator", kw(d.diesel_kw), "simulated", d.diesel_kw > 0 ? "running: the line cannot carry the rest" : "off", d.diesel_kw > 0 ? "on" : "")}`);
-  const sentence = [];
-  if (running) {
-    sentence.push(`Simulated ${simClock(d.sim_hour)}: the line carries ${fixed(d.line_kw, 0)} kW, ${fixed(load, 0)}% of its limit.`);
-    if (d.cut_skipped) sentence.push("The line needs a cut, but our sites had nothing running to shed, so no cut was sent to the real dispatcher: give a job work before the replay.");
-    else if (d.cap_id && d.nothing_to_shed) sentence.push("The utility called for a cut, but our sites had nothing running to shed, so the simulated data centers hold: give a job work before the replay.");
-    else if (d.cap_id) sentence.push("The utility called for a cut: our sites shed for real and the simulated data centers follow.");
-    if (d.diesel_kw > 0) sentence.push(`The diesel generator covers ${fixed(d.diesel_kw, 0)} kW.`);
-  } else if (S.hoodHist.length) {
-    sentence.push(`Replay finished: diesel ${sig(d.diesel_kwh)} kWh with Brownout as it ran, ${sig(d.diesel_off_kwh)} kWh if our sites had ignored the cut (simulated kWh over the replayed evening).`);
-  } else {
-    sentence.push(`Now, at the wall clock: the line at ${fixed(load, 0)}% of its limit. Press Replay to run today's evening peak in ${h.scenario.seconds} s.`);
-  }
-  $("hood-state").textContent = sentence.join(" ");
-  $("hood-diesel").textContent = running || S.hoodHist.length
-    ? `Diesel so far: ${sig(d.diesel_kwh)} kWh with Brownout as it runs, ${sig(d.diesel_off_kwh)} kWh if our sites ignored the cut (simulated)` : "";
-  const pts = S.hoodHist, n = Math.max(1, h.scenario.seconds), y = (v) => 118 - (Math.min(140, Math.max(0, v)) / 140) * 114;
-  const t0 = pts.length ? pts[0].t : 0, x = (t) => ((t - t0) / n) * 600;
-  const path = pts.map((p, i) => `${i ? "L" : "M"}${x(p.t).toFixed(1)} ${y(p.loading_pct).toFixed(1)}`).join(" ");
-  setHTML($("hood-trace"), html`<line class="h-limit" x1="0" x2="600" y1="${y(100).toFixed(1)}" y2="${y(100).toFixed(1)}"/>
-    ${pts.filter((p) => p.diesel_kw > 0).map((p) => html`<line class="h-diesel" x1="${x(p.t).toFixed(1)}" x2="${x(p.t).toFixed(1)}" y1="${y(p.loading_pct).toFixed(1)}" y2="${y(100).toFixed(1)}"/>`)}
-    ${path ? html`<path class="h-load" d="${path}"/>` : ""}`);
 }
 
 // ---------- the laptops (fleet/hub.py): each one's status, its own battery's watts, its job ----------
@@ -536,7 +546,7 @@ function renderControls() {
   else setHTML($("quote"), html``);
 }
 
-function renderAll() { renderControls(); renderNumbers(); renderLoad(); renderHood(); renderScale(); renderCurve(); renderJobs(); renderSolver(); }
+function renderAll() { renderControls(); renderNumbers(); renderLoad(); renderReplay(); renderScale(); renderCurve(); renderJobs(); renderSolver(); }
 
 async function post(path, body) {
   const r = await postJSON(path, body);
@@ -559,11 +569,14 @@ function pressOne(group, btn) {
 $("iso").addEventListener("change", (e) => post("/api/iso", { iso: e.target.value }));
 $("objective").addEventListener("click", (e) => { const b = e.target.closest("button[data-objective]"); if (b) setObjective(b.dataset.objective); });
 $("dispatcher").addEventListener("click", toggleDispatcher);
-$("hood-replay").addEventListener("click", async () => {
-  const start = !(S.hoodLast && S.hoodLast.scenario);
-  if (start) S.hoodHist = [];
-  await post("/api/neighbourhood", { action: start ? "start" : "stop" });
+$("replay-cards").addEventListener("click", async (e) => {
+  const b = e.target.closest("button[data-replay]");
+  if (!b) return;
+  S.replayPick = b.dataset.replay;
+  renderReplay();
+  await post("/api/replay", { action: "start", event: b.dataset.replay });
 });
+$("replay-stop").addEventListener("click", () => post("/api/replay", { action: "stop" }));
 $("trace-window").addEventListener("click", (e) => {
   const b = e.target.closest("button[data-window]");
   if (!b) return;
@@ -590,7 +603,7 @@ $("inspect").addEventListener("click", (e) => {
 bindLoadTrace($("load-trace"), renderLoad);
 
 // Ages tick every second even when no message arrives, so a silent feed visibly gets old.
-setInterval(() => { renderNumbers(); renderJobs(); renderLoad(); }, 1000);
+setInterval(() => { renderNumbers(); renderJobs(); renderLoad(); if (S.replayLast && nowS() - S.replayLast.t < 8) renderReplay(); }, 1000);
 // Laptops join and leave: re-read their status every 5 s while any is configured.
 setInterval(() => { if (S.fleet.length) refreshFleet(); }, 5000);
 // Driver hotkeys for the table demo (shown in the header): D dispatcher, 1/2/3 objective, R receipts.
@@ -599,3 +612,4 @@ hotkeys({ d: toggleDispatcher, 1: () => setObjective("cost"), 2: () => setObject
 window.brownout = { handle };   // the WebSocket's handler, exposed for feeding real timelines from the console
 renderAll();
 connectWS(handle, $("conn"));
+loadReplayEvents();

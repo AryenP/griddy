@@ -103,8 +103,9 @@ the Mac was also in use (counted as outside load; DECISIONS 14:16, not in the re
 ## Responsible design
 - The solver decides, the LLM explains and negotiates, the controller executes. The LLM has no code
   path to any knob.
-- Every price, watt and dollar about the real sites is live or measured, with source and age. The
-  neighbourhood power line around them is simulated and labelled "simulated" on every page (DECISIONS 05:45).
+- Nothing is simulated. Every price, watt and dollar about the real sites is live or measured, with source and age;
+  replayed grid emergencies are the operators' recorded data (EIA-930) with each alert and impact cited by page;
+  grid-scale figures are labelled "estimate".
 - A human owner approves any deadline slip; refusals are respected and logged with name and time.
 - Reviewed with Microsoft's HVE Core reviewers (Responsible AI, System Architecture) at the Saturday workshop.
   They found that any phone on the venue network could approve going over the cap; now only this machine or a
@@ -129,9 +130,9 @@ qwen3:4b-instruct (chat, streamed), PyTorch MPS (training with checkpoints), sen
 (batch embeddings), Microsoft Agent Framework with Foundry for the agent layer when Azure is configured
 (Claude behind the same interface otherwise), OpenTelemetry with the Azure Monitor exporter, Application Insights
 provisioned with `azd` on Azure for Students, vanilla JS dashboard (hand-drawn SVG, no chart library).
-Emission factors: IPCC AR5 lifecycle medians. Architecture: docs/judging/architecture.svg. The neighbourhood
-power line on the dashboard is SIMULATED and labelled so (homes shaped by today's real load forecast, data
-centers following our measured response); every measured number stays measured (DECISIONS 05:45).
+Emission factors: IPCC AR5 lifecycle medians. Architecture: docs/judging/architecture.svg. Replays of real grid
+emergencies: U.S. EIA Form EIA-930 hourly data, alerts and impact from the FERC-NERC Uri report, CAISO's root-cause
+analysis and Cal Advocates' heat-wave analysis.
 
 ## Challenges
 - macOS 15 `powermetrics` prints GPU power twice per sample; the meter splits on sample headers.

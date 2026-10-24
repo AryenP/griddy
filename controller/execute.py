@@ -103,7 +103,7 @@ class Executor:
         return await self.resolve("cap event")
 
     async def remove_event(self, event_id: str, reason: str) -> Schedule | None:
-        """Withdraw a cap before its end (e.g. the simulated neighbourhood's replay was stopped)."""
+        """Withdraw a cap before its end (e.g. a replayed event's alert ended)."""
         if not any(e.id == event_id for e in self.events):
             return None
         self.events = [e for e in self.events if e.id != event_id]
