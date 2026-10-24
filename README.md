@@ -7,8 +7,10 @@ curve, load forecast, fuel mix, alerts), schedules every AI job over the next 24
 solver, executes the current slot on real hardware, asks job owners before breaking their deadlines,
 and proves the result with measured power. Built at Cal Hacks 13.0 for the Microsoft Challenge.
 
-Every price, watt and dollar about the real sites is live or measured, with its source and age. The
-neighbourhood power line drawn around them is SIMULATED, and every simulated part says so on screen (DECISIONS 05:45).
+Nothing on screen is simulated. Every price, watt and dollar about the real sites is live or measured, with its source
+and age; the grid emergencies a judge can replay through the live software are the grid operators' own recorded data
+(U.S. EIA Form EIA-930), with every alert and impact cited to the official report's page; estimates at grid scale are
+labelled "estimate". Every published measured number recomputes from the raw timelines: `make verify`.
 
 ### Diesel and "pause everything" are the naive answers. Brownout is the intelligent one.
 
@@ -95,11 +97,12 @@ extra or the connection string, spans stay in the in-memory buffer behind `/api/
 ## How it fits together
 Grid watcher → CP-SAT dispatcher → controller on the Mac → powermetrics → timeline → dashboard,
 report and comparison. The LLM handles messy intake, owner negotiation and explanations; it never
-touches a knob. Around the real sites, a labelled SIMULATED neighbourhood power line (homes shaped by today's
-real load forecast, 20 data centers following our measured response, a line limit and a diesel generator) shows
-the same loop at grid scale; its call for a cut goes to the real dispatcher (DECISIONS 05:45).
+touches a knob. To show the loop at grid scale with nothing invented, a judge replays a real grid emergency (Winter
+Storm Uri, Texas 2021; California's rotating outages, 2020; California's record heat wave, 2022): the operator's own
+hourly demand and forecast play on screen, each alert reaches the real dispatcher at the moment it was issued, and
+this Mac's measured response is set against what the event cost (replay/engine.py, config/events.yaml).
 
-![How Brownout fits together; the simulated neighbourhood is the dashed box](docs/judging/architecture.svg)
+![How Brownout fits together](docs/judging/architecture.svg)
 
 More: [docs/architecture.md](docs/architecture.md). Interfaces: [SPEC.md](SPEC.md).
 API contract: [HANDOFF.md](HANDOFF.md). Every decision taken during the build: [DECISIONS.md](DECISIONS.md).

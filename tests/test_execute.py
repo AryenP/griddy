@@ -219,7 +219,7 @@ async def test_idle_floor_never_rises_and_needs_quiet_chat(rig, monkeypatch):
 async def test_a_cap_can_be_withdrawn(rig):
     e, clock, tmp = rig
     await e.on_signal(signal([50.0] * 96))
-    ev = CapEvent(source="simulated", start=SLOTS[0], duration_s=3600, target_w=9.5)
+    ev = CapEvent(source="replay", start=SLOTS[0], duration_s=3600, target_w=9.5)
     s = await e.add_event(ev)
     assert s.caps_w[0] == pytest.approx(9.5)
     s = await e.remove_event(ev.id, "test")

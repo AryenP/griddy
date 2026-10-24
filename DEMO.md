@@ -5,9 +5,9 @@
   and owner pages via QR (`make qr`). QR card for the chat page.
 - Wired or travel-router network; the grid feeds need internet. If the feed drops, the dashboard shows "stale" and
   the plan is marked "on last known data"; say it.
-- What is real and what is not, said once, early: every price, watt and dollar about this Mac (and any laptop that
-  joined) is live or measured, with its source and age. The neighbourhood power line around it is SIMULATED and
-  every simulated part says so on screen (DECISIONS 05:45).
+- Said once, early: nothing here is simulated. Every price, watt and dollar about this Mac (and any laptop that
+  joined) is live or measured, with its source and age; the emergencies we replay are the grid operators' recorded
+  data with the official report's page on every line; grid-scale numbers say "estimate".
 - Before the judge arrives: `make preflight`, `make demo`, and give training work (a deadline) so the Mac has
   something to shed when the cut comes.
 
@@ -34,12 +34,14 @@ before the 1:10 request: a streaming reply draws most of the GPU, so while chat 
 a 30 % cut, and by design chat keeps full speed and the operator is asked instead (DECISIONS 10:00, 14:16). If they
 chat during the cut, show that: "chat is serving 1 request at full speed (slowing chat is the operator's call)".
 
-**2:20 The grid around it (simulated, say so).** "Around this Mac we drew a simulated neighbourhood: homes on
-today's real load forecast, a solar farm, 20 data centers, a line limit and a diesel generator." Press **Replay
-the evening peak** (dashboard, or the operator page). Today's 4 PM to 9 PM plays in 90 s: the line climbs toward
-its limit, the utility's cut goes to the real dispatcher, this Mac sheds for real, the simulated data centers
-follow its measured response, the line stays under its limit and the diesel stays off. The panel shows the
-diesel it would have burned had our sites ignored the cut.
+**2:20 A real emergency, replayed live (the judge picks).** Three cards: Winter Storm Uri (Texas, 2021),
+California's rotating outages (2020), California's record heat wave (2022). They press **Replay it live**. In two
+minutes the operator's own hourly data plays: for Uri, the forecast pulls away from the demand Texas could serve
+and the gap fills red. The warnings issued days before fire first, and Brownout's own flag (the day-ahead forecast
+above the record before the event); the Mac shifts its work. At 1:20 a.m. ERCOT's EEA 3 reaches the real
+dispatcher and the Mac cuts deeper, measured. Read the panel: "More than 4.5 million people lost power; 210 died"
+(the report's page is on the line), this Mac's measured cut, and the cut the grid asked applied to the 4.1 GW of
+large loads ERCOT sees running today: the megawatts and the people that is, from the event's own numbers.
 
 **3:10 Receipts.** Open the proof page: the same utility call measured under three policies (DECISIONS 09:46):
 ignore the call 20.85 W and 0 % of seconds under the cap; pause everything 0.80 W, 99 %, 19 training steps;
@@ -60,7 +62,7 @@ never without that answer). The shortfall is logged.
 - LLM API down → solver and controller continue; "agent offline" badge; nothing pretends to be the agent.
 - Solver infeasible → it shows the minimal relaxation, never a blank.
 - Judge types something odd → the agent asks one clarifying question; let it.
-- The neighbourhood replay says "nothing to shed" → nothing of ours was running; give training a deadline and replay.
+- The replay says "nothing to shed" → nothing of ours was running; give training a deadline and replay.
 - Lid closed → the Mac sleeps whatever keep-awake does (DECISIONS 08:00); keep it open.
 
 ## Prize opt-ins on Devpost

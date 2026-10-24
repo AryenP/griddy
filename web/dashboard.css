@@ -90,32 +90,41 @@
 .d-fleet li.off b { color: var(--muted); }
 .d-num-sm { font-weight: 650; }
 
-/* ---------- the SIMULATED neighbourhood line: simulated parts wear a dashed tag, measured a solid one ---------- */
+/* ---------- real grid emergencies, replayed: a solid tag is measured or recorded, a dashed one an estimate ---------- */
 .d-sim, .d-meas { display: inline-block; font-size: 0.72rem; font-weight: 650; padding: 1px 7px; border-radius: 999px; vertical-align: middle; white-space: nowrap; }
 .d-sim { border: 1px dashed var(--muted); color: var(--muted); }
 .d-meas { border: 1px solid var(--ok); color: var(--ok); }
-h2 .d-sim { margin-left: 8px; font-size: 0.75rem; }
-.d-hood-state { font-size: 1.15rem; margin: 2px 0 12px; min-height: 1.4em; }
-.d-hood-grid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 24px; }
-.d-gauge { position: relative; height: 22px; border-radius: 4px; background: var(--off); overflow: hidden; }
-.d-gauge i { position: absolute; inset: 0 auto 0 0; width: 0; transition: width .4s; }
-.d-gauge i.ok { background: var(--ok); }
-.d-gauge i.warn { background: var(--warn); }
-.d-gauge i.bad { background: var(--bad); }
-.d-gauge-limit { position: absolute; top: -3px; bottom: -3px; left: calc(100% / 1.3); border-left: 2px solid var(--text); }
-.d-gauge-label { display: flex; justify-content: space-between; color: var(--muted); font-size: 0.9rem; margin: 4px 0 8px; }
-.d-hood-trace { width: 100%; height: 110px; display: block; background: var(--bg); border-radius: 4px; }
-.h-limit { stroke: var(--bad); stroke-width: 1.5; stroke-dasharray: 5 4; vector-effect: non-scaling-stroke; }
-.h-load { fill: none; stroke: var(--text); stroke-width: 2; vector-effect: non-scaling-stroke; }
-.h-diesel { stroke: var(--warn); stroke-width: 3; opacity: .55; vector-effect: non-scaling-stroke; }
-.d-hood-diesel { color: var(--warn); margin: 8px 0 0; min-height: 1.3em; }
-.d-hood-parts { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
-.d-hood-parts li { display: grid; grid-template-columns: 1fr auto auto; gap: 2px 10px; align-items: baseline; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
-.d-hood-parts li .src { grid-column: 1 / -1; }
-.d-hood-parts li.on .d-part-name, .d-hood-parts li.on .d-part-val { color: var(--warn); }
-.d-part-name { font-weight: 650; }
-.d-part-val { font-variant-numeric: tabular-nums; font-weight: 650; font-size: 1.1rem; }
-@media (max-width: 900px) { .d-hood-grid { grid-template-columns: 1fr; } }
+h2 .d-sim, h2 .d-meas { margin-left: 8px; font-size: 0.75rem; }
+.d-replay-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 12px; }
+.d-replay-card { border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; display: grid; gap: 6px; align-content: start; }
+.d-replay-card.on { border-color: var(--text); }
+.d-replay-title { font-weight: 700; }
+.d-replay-hit { font-size: 0.92rem; }
+.d-replay-card button { justify-self: start; }
+.d-replay-state { font-size: 1.1rem; margin: 2px 0 10px; min-height: 1.4em; }
+.d-replay-chart { width: 100%; height: 200px; display: block; background: var(--bg); border-radius: 4px; }
+.r-dem { fill: none; stroke: var(--text); stroke-width: 2.2; vector-effect: non-scaling-stroke; }
+.r-fc { fill: none; stroke: var(--muted); stroke-width: 1.6; stroke-dasharray: 6 4; vector-effect: non-scaling-stroke; }
+.r-gap { fill: var(--bad); opacity: .22; }
+.r-record { stroke: var(--warn); stroke-width: 1; stroke-dasharray: 2 4; vector-effect: non-scaling-stroke; }
+.r-alert { stroke: var(--muted); stroke-width: 1; opacity: .6; vector-effect: non-scaling-stroke; }
+.r-alert.emergency, .r-alert.outage { stroke: var(--bad); }
+.r-alert.fired { opacity: 1; stroke-width: 2; }
+.r-head { stroke: var(--ok); stroke-width: 2; vector-effect: non-scaling-stroke; }
+.r-label { fill: var(--muted); font-size: 9px; }
+.d-replay-key span::before { content: ""; display: inline-block; width: 16px; height: 0; margin: 0 4px 3px 10px; vertical-align: middle; }
+.d-replay-key .k-dem::before { border-top: 2px solid var(--text); }
+.d-replay-key .k-fc::before { border-top: 2px dashed var(--muted); }
+.d-replay-key .k-gap::before { height: 8px; background: var(--bad); opacity: .3; }
+.d-replay-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; margin-top: 12px; }
+.d-replay-alerts { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.d-replay-alerts li { padding-left: 10px; border-left: 3px solid var(--line); }
+.d-replay-alerts li.emergency, .d-replay-alerts li.outage { border-left-color: var(--bad); }
+.d-replay-alerts li.brownout { border-left-color: var(--ok); }
+.d-replay-alerts li.fired { background: var(--off); }
+.d-replay-impact h3 { font-size: 0.95rem; margin: 10px 0 4px; display: flex; gap: 8px; align-items: baseline; }
+.d-replay-impact ul { margin: 0; padding-left: 18px; }
+@media (max-width: 900px) { .d-replay-grid { grid-template-columns: 1fr; } }
 
 /* ---------- the day: map and inspector ---------- */
 .d-day { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start; }

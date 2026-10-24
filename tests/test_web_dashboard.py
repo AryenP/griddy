@@ -15,7 +15,7 @@ def test_dashboard_loads_its_scripts_and_no_external_ones():
 
 def test_posts_only_to_contract_routes():
     routes = set(re.findall(r'post\("(/api/[\w/]+)"', JS))
-    assert routes <= {"/api/iso", "/api/policy", "/api/dispatcher", "/api/neighbourhood"}, routes
+    assert routes <= {"/api/iso", "/api/policy", "/api/dispatcher", "/api/replay"}, routes
 
 
 def test_chat_sla_is_time_to_first_token():
@@ -72,12 +72,11 @@ def test_no_global_name_is_defined_twice_across_the_page_scripts():
             seen[name] = src
 
 
-def test_every_simulated_part_is_labelled_simulated():
-    # DECISIONS 05:45: the neighbourhood is simulated; each part on screen carries its tag, only our sites say measured
-    lines = [l.strip() for l in JS.splitlines() if l.strip().startswith("${part(")]
-    assert len(lines) == 5, lines
-    for l in lines:
-        tag = "measured" if '"Our sites"' in l else "simulated"
-        assert f'"{tag}"' in l, l
-    assert sum('"measured"' in l for l in lines) == 1
-    assert "simulated around our measured sites" in HTML and "Simulated (Aryen's decision" in HTML
+def test_replay_panel_shows_real_data_with_its_sources_and_labels_estimates():
+    """Sat 15:40: the simulated neighbourhood is gone; replays of real emergencies show the operator's own data (EIA-930)
+    and the official report's line for every alert and impact; scale figures say "estimate"."""
+    assert "simulated" not in HTML.lower()
+    assert "Replay a real grid emergency" in HTML and "recorded grid data" in HTML
+    assert "ev.data_source" in JS and "a.source" in JS and "i.source" in JS and "ev.report_url" in JS
+    assert JS.count('class="d-sim">estimate') >= 2          # the operator's-scale line and ERCOT right now
+    assert 'post("/api/replay", { action: "start", event:' in JS

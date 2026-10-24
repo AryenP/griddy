@@ -1,0 +1,103 @@
+# Real grid emergencies the judge can replay through the live software (replay/engine.py, Aryen Sat 15:40: "real
+# grid emergencies played through the live software, judges pick the event").
+#
+# Everything here is REAL and cited: the hourly demand, the operator's own day-ahead forecast and generation by fuel
+# come from the U.S. EIA's Form EIA-930 files (docs/evidence/events/<id>.csv); every alert time and every impact
+# number comes from the official report named with it, with its page. Nothing is invented: what the replay adds is
+# Brownout itself, running live on this Mac, receiving each alert at the moment it was really issued and cutting the
+# measured power of our sites.
+#
+# alerts: `at` is the local time the report gives; `day` is a date only, for warnings issued days before (the report
+# gives no time, so none is shown). `cut_pct` (if any) is the cut the alert asks of our sites, below their measured
+# baseline just before the first cut: a warning shifts deferrable work (smaller), an emergency cuts deeper.
+# Our sites are a laptop; the scale lines say what the same measured cut means at the operator's scale.
+
+replay_seconds: 120           # how long a replay lasts on screen, whatever its real window
+
+events:
+  - id: uri-2021
+    title: "Winter Storm Uri, Texas"
+    when: "15 February 2021"
+    iso: ERCOT
+    ba: ERCO
+    timezone: US/Central
+    data: docs/evidence/events/uri-2021.csv
+    window: ["2021-02-14T18:00", "2021-02-15T21:00"]
+    record_mw: 65750          # ERCOT's winter record before the event (17 Jan 2018); the day-ahead forecast above it is Brownout's flag
+    record_source: "FERC-NERC-Regional Entity Joint Staff Report, The February 2021 Cold Weather Outages (Nov 2021), PDF p. 33"
+    alerts:
+      - {day: "2021-02-08", kind: warning, label: "ERCOT Operating Condition Notices: extreme cold expected 11-15 February",
+         source: "FERC-NERC report (Nov 2021), PDF p. 54"}
+      - {day: "2021-02-13", kind: warning, label: "ERCOT Emergency Notice for extreme cold weather", cut_pct: 20,
+         source: "FERC-NERC report (Nov 2021), PDF p. 54"}
+      - {at: "2021-02-15T01:20", kind: emergency, label: "ERCOT declares EEA 3 and orders its first 1,000 MW of firm load shed", cut_pct: 40,
+         source: "FERC-NERC report (Nov 2021), PDF p. 15"}
+      - {at: "2021-02-15T01:51", kind: emergency, label: "Frequency below 59.4 Hz for 4 min 23 s: minutes from a total blackout",
+         source: "FERC-NERC report (Nov 2021), PDF p. 138"}
+      - {at: "2021-02-15T19:00", kind: outage, label: "Firm load shed peaks at 20,000 MW",
+         source: "FERC-NERC report (Nov 2021), PDF p. 15"}
+    impact:
+      - {text: "More than 4.5 million people in Texas lost power", source: "FERC-NERC report (Nov 2021), PDF p. 10"}
+      - {text: "210 people died during the event, most of the deaths connected to the power outages", source: "FERC-NERC report (Nov 2021), PDF p. 10"}
+      - {text: "20,000 MW of firm load shed at the worst point; load shed lasted nearly three days", source: "FERC-NERC report (Nov 2021), PDF p. 15"}
+    shed_mw: 20000
+    people_out: 4500000
+    flexible_mw: 4132          # large loads ERCOT observes running today (ERCOT Monthly Operational Overview, Sep 2026, p. 8)
+    flexible_source: "ERCOT large loads observed running, September 2026 (ERCOT Monthly Operational Overview, p. 8)"
+    report_url: https://www.nerc.com/pa/rrm/ea/Documents/February_2021_Cold_Weather_Report.pdf
+
+  - id: caiso-2020-08
+    title: "California rotating outages"
+    when: "14 August 2020"
+    iso: CAISO
+    ba: CISO
+    timezone: US/Pacific
+    data: docs/evidence/events/caiso-2020-08.csv
+    window: ["2020-08-14T12:00", "2020-08-14T22:00"]
+    alerts:
+      - {day: "2020-08-13", kind: warning, label: "By 3 p.m. the day before: CAISO Flex Alert for 14 August 3-10 p.m. and an Alert forecasting a reserve deficiency 5-9 p.m.", cut_pct: 20,
+         source: "CAISO, CPUC, CEC Final Root Cause Analysis, Mid-August 2020 Extreme Heat Wave (Jan 2021), PDF p. 38"}
+      - {at: "2020-08-14T18:38", kind: emergency, label: "CAISO declares a Stage 3 Emergency: rotating outages begin", cut_pct: 40,
+         source: "Final Root Cause Analysis (Jan 2021), PDF p. 40"}
+      - {at: "2020-08-14T21:08", kind: end, label: "Last rotating outages end (PG&E, about 9:08 p.m.)",
+         source: "Final Root Cause Analysis (Jan 2021), PDF p. 47, Table 3.1"}
+    impact:
+      - {text: "491,600 customers lost power in rotating outages on 14 August, for 15 to 150 minutes", source: "Final Root Cause Analysis (Jan 2021), PDF p. 47, Table 3.1"}
+      - {text: "931.6 MW of rotating outages ordered by CAISO", source: "Final Root Cause Analysis (Jan 2021), PDF p. 47, Table 3.1"}
+      - {text: "321,000 more customers lost power the next day", source: "Final Root Cause Analysis (Jan 2021), PDF p. 47, Table 3.2"}
+    shed_mw: 931.6
+    people_out: 491600
+    people_unit: customers
+    flexible_mw: 1000          # per 1 GW of data centers: CAISO publishes no running-data-center figure we can cite
+    flexible_source: "per 1 GW of data centers (illustrative unit, not a CAISO figure)"
+    report_url: https://www.caiso.com/Documents/Final-Root-Cause-Analysis-Mid-August-2020-Extreme-Heat-Wave.pdf
+
+  - id: caiso-2022-09
+    title: "California's record heat wave"
+    when: "6 September 2022"
+    iso: CAISO
+    ba: CISO
+    timezone: US/Pacific
+    data: docs/evidence/events/caiso-2022-09.csv
+    window: ["2022-09-06T12:00", "2022-09-06T22:00"]
+    record_mw: 50270          # CAISO's record before the event (2006); the day-ahead forecast above it is Brownout's flag
+    record_source: "Cal Advocates, September 2022 Heat Wave Analysis (22 Sep 2022), PDF p. 4, note 10"
+    alerts:
+      - {day: "2022-08-31", kind: warning, label: "CAISO Flex Alerts every evening, 31 August to 9 September", cut_pct: 20,
+         source: "Cal Advocates, September 2022 Heat Wave Analysis (22 Sep 2022), PDF p. 1"}
+      - {at: "2022-09-06T16:55", kind: warning, label: "All-time record demand: 51,426 MW",
+         source: "Cal Advocates (22 Sep 2022), PDF p. 4; U.S. EIA Today in Energy, 28 Sep 2022"}
+      - {at: "2022-09-06T17:17", kind: emergency, label: "CAISO declares EEA 3: firm load armed for shedding", cut_pct: 40,
+         source: "Cal Advocates (22 Sep 2022), PDF p. 4"}
+      - {at: "2022-09-06T17:45", kind: emergency, label: "Emergency alert to every phone in California: demand falls about 2,000 MW",
+         source: "Cal Advocates (22 Sep 2022), PDF pp. 4-5"}
+      - {at: "2022-09-06T20:00", kind: end, label: "EEA 3 downgraded: no load shed ordered by CAISO",
+         source: "Cal Advocates (22 Sep 2022), PDF p. 5"}
+    impact:
+      - {text: "Record demand of 51,426 MW at 4:55 p.m.", source: "U.S. EIA Today in Energy, 28 Sep 2022"}
+      - {text: "A statewide phone alert cut about 2,000 MW within half an hour; CAISO ordered no load shed", source: "Cal Advocates (22 Sep 2022), PDF pp. 4-5"}
+    shed_mw: 2000              # what the phone alert had to find in half an hour
+    people_out: null
+    flexible_mw: 1000
+    flexible_source: "per 1 GW of data centers (illustrative unit, not a CAISO figure)"
+    report_url: https://www.publicadvocates.cpuc.ca.gov/-/media/cal-advocates-website/files/press-room/reports-and-analyses/220922-caladvocates-sept-22-heat-wave-analysis---full.pdf
