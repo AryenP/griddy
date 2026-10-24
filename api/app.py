@@ -42,6 +42,7 @@ class Runtime:
         self.executor = Executor(self.tl, self.knobs, self.cal, load_policy(), dispatcher_enabled)
         self.meter.subscribers.append(self.executor.on_power)
         self.agent = AgentBridge(self.tl, self.executor)
+        self.agent.snapshot = self.snapshot
         self.watcher: GridWatcher | None = None
         self.watcher_task: asyncio.Task | None = None
         self.broadcaster: Broadcaster | None = None
