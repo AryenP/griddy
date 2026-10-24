@@ -149,3 +149,15 @@ sheet, RESEARCH.md source check. The coordinator loop now runs every 10 minutes 
 anurag/* and arumalla/* branches each tick, not only their PRs.
 Next: Application Insights check once .env has the string; ERCOT end to end before 06:30; final run 06:40.
 Blockers / needs Aryen: paste the start message into Arumalla's Claude; the .env command for Azure.
+
+## 2026-10-24 05:12 PT — the laptop fleet (Aryen's ask, 05:00)
+Done: laptops can join as extra measured sites. fleet/agent.py (Windows, Python standard library only) reads
+the laptop's own battery discharge rate, runs real lzma compression work, and runs or pauses it on the Mac's
+plan, pausing itself if the Mac goes quiet for 10 s. fleet/hub.py on the Mac adds online laptops' watts to the
+total the cap is judged on (fleet_power events), and their calibrated idle and job to the solver; reports and
+the dashboard use the total, with one line per laptop. New routes POST /api/sites/{id}/beat and /calibration.
+fleet/README.md is the plain-language setup. config/fleet.yaml lists no laptop yet, so nothing changes until a
+battery probe says GOOD. 305 tests pass. Not verified on a real laptop yet: no Windows machine here.
+Next: switch the running demo back from ERCOT after 05:15 and record the two-grid run; stop heavy work by 06:30.
+Blockers / needs Aryen: battery probe results from the Windows laptops (fleet/battery_probe.ps1, run by a
+person at each laptop); who has which laptop; the .env command for Azure.
