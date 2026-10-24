@@ -7,7 +7,7 @@ const S = {
   isoOptions: [], iso: null, dispatcherEnabled: null, agent: null, agentModel: null, runId: null,
   jobSpecs: {}, quote: null, explanation: null, hardDeadlines: new Set(),
 };
-const LOG_KINDS = new Set(["grid", "event", "plan", "action", "shortfall", "approval", "policy", "note", "schedule"]);
+const LOG_KINDS = new Set(["grid", "event", "intake", "plan", "action", "shortfall", "approval", "policy", "note", "schedule"]);
 const LOG_MAX = 200;
 const JOB_COLORS = { chat: "#4cc9f0", train: "#f8961e", batch: "#90be6d" };
 const STALE_POWER_S = 5, STALE_STATUS_S = 10;
@@ -277,7 +277,9 @@ function renderSolver() {
     const head = [`${p.mode === "baseline" ? "BASELINE (dispatcher off)" : "Dispatcher plan"} for slot ${p.slot_start ? isoLabel(p.slot_start) : "—"}`];
     if (p.planned_w != null) head.push(`planned ${sig(p.planned_w)} W (calibrated, not measured)`);
     if (p.cap_w != null) head.push(`cap ${sig(p.cap_w)} W`);
+    const running = runningPlanLine(sc, p);
     setHTML($("plan"), html`<div class="plan-head">${head.join(" · ")}</div><ul>${acts}</ul>
+      ${running ? html`<div class="warn-line">${running}</div>` : ""}
       ${p.on_last_known_data ? html`<div class="warn-line">on last known data: the grid feed is stale</div>` : ""}
       ${p.needs_approval && p.needs_approval.length ? html`<div class="warn-line">waiting for approval: ${p.needs_approval.join(", ")}</div>` : ""}`);
   } else {
@@ -318,7 +320,9 @@ function summary(msg) {
       if (d.reason === "dispatcher toggle") return `dispatcher ${d.dispatcher_enabled ? "ON" : "OFF (baseline)"}`;
       if (d.reason === "iso change") return `ISO → ${d.iso} ${d.location || ""}`;
       return `policy: objective ${d.objective}` + (d.power_cap_w != null ? `, cap ${d.power_cap_w} W` : "");
-    case "event":
+    case "intake":
+      return `${d.who || "?"} → intake ${d.intake.kind}: ${d.intake.readback || d.intake.question || d.intake.reason || ""}`;
+    case "event":   // timelines before Sat 03:15 logged parsed requests as `event` too
       if (d.intake) return `${d.who || "?"} → intake ${d.intake.kind}: ${d.intake.readback || d.intake.question || d.intake.reason || ""}`;
       return `cap ${d.target_w != null ? `${sig(d.target_w)} W` : `${d.target_pct}%`} from ${isoLabel(d.start)} for ${dur(d.duration_s)} (${d.source})` + (d.reason ? `: ${d.reason}` : "");
     case "note":
