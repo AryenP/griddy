@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
+import pytest
+
 from agent.negotiator import draft_ask, parse_deadline, parse_reply
 from core.types import Job, Shortfall
 from tests.test_agent_llm import ScriptedLLM
@@ -72,3 +74,13 @@ def test_parse_deadline_forms():
     assert parse_deadline("tomorrow at 5pm", NOW) == datetime(2026, 10, 25, 17, 0, tzinfo=PDT)
     assert parse_deadline("Saturday noon", NOW) == datetime(2026, 10, 31, 12, 0, tzinfo=PDT)
     assert parse_deadline("Tuesday 9", NOW) is None
+
+
+@pytest.mark.parametrize("text, ambiguous", [
+    ("Tuesday 9", True), ("ok if it's done by Tuesday 9", True), ("monday at 7:30", True),
+    ("Tuesday 9 AM", False), ("tuesday 9pm", False), ("Tuesday noon", False), ("Monday morning at 9", False),
+    ("give it 2 hours", False), ("Tuesday 21:00", False), ("no", False),
+])
+def test_ambiguous_hour_is_detected_without_a_model(text, ambiguous):
+    from agent.negotiator import ambiguous_hour
+    assert ambiguous_hour(text) is ambiguous
