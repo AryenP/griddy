@@ -99,6 +99,14 @@ class Executor:
         self.tl.log("event", **ev.model_dump(mode="json"))
         return await self.resolve("cap event")
 
+    async def remove_event(self, event_id: str, reason: str) -> Schedule | None:
+        """Withdraw a cap before its end (e.g. the simulated neighbourhood's replay was stopped)."""
+        if not any(e.id == event_id for e in self.events):
+            return None
+        self.events = [e for e in self.events if e.id != event_id]
+        self.tl.log("note", msg=f"cap {event_id} withdrawn: {reason}", cap_withdrawn=event_id)
+        return await self.resolve("cap withdrawn")
+
     async def set_job(self, job_id: str, **changes) -> Schedule | None:
         self.job_changes.setdefault(job_id, {}).update(changes)
         self.tl.log("policy", reason="job change", job=job_id,
@@ -344,7 +352,10 @@ class Executor:
                 if self.fleet:
                     change = self.fleet.membership_changed()
                     if change:
-                        self.tl.log("note", msg=f"re-solve: fleet {change}", trigger="fleet", online=self.fleet.online())
+                        during = self.cap_in_force()
+                        self.tl.log("note", msg=f"re-solve: fleet {change}" + (" during a cap: a laptop that left is no longer in "
+                                    "the measured total" if during and "left" in change else ""), trigger="fleet",
+                                    online=self.fleet.online(), during_cap=during)
                         await self.resolve(f"fleet: {change}")
                 idle = self.idle_drift()
                 if idle is not None:

@@ -44,6 +44,9 @@ class Neighbourhood:
         self.cap_id: str | None = None
         self.cap_baseline_w: float | None = None
         self.pending_cap: CapEvent | None = None      # the utility's call, handed to the real dispatcher
+        self.pending_withdraw: str | None = None      # a call to take back (replay stopped or finished)
+        self.nothing_to_shed = False
+        self._warned_no_baseline = False
         self.diesel_kwh = 0.0
         self.diesel_off_kwh = 0.0
         self.last: dict | None = None
@@ -117,10 +120,15 @@ class Neighbourhood:
         return float(self.cfg.get("solar_kw", 0)) * math.sin(math.pi * (hour - rise) / (fall - rise))
 
     def response(self, now: float) -> tuple[float, float | None]:
-        """Our sites' measured response: 10-s mean of measured watts over their pre-cap baseline (1.0 = as usual)."""
+        """Our sites' measured response: 10-s mean of measured watts over their pre-cap baseline (1.0 = as usual).
+        Only when our sites had flexible load running at the call: a baseline within `min_flexible_w` of the idle
+        floor is meter noise (Krish K1 #3), so the simulated data centers hold and the page says so."""
         xs = [w for t, w in self.ex.power if t > now - ROLL_S]
         mean = sum(xs) / len(xs) if xs else None
-        if self.cap_baseline_w and mean is not None:
+        idle = getattr(getattr(self.ex, "cal", None), "idle_w", 0.0) or 0.0
+        self.nothing_to_shed = bool(self.cap_baseline_w is not None and
+                                    self.cap_baseline_w - idle < float(self.cfg.get("min_flexible_w", 3.0)))
+        if self.cap_baseline_w and mean is not None and not self.nothing_to_shed:
             return max(0.0, min(1.5, mean / self.cap_baseline_w)), mean
         return 1.0, mean
 
@@ -158,7 +166,7 @@ class Neighbourhood:
                  "dc_flexible_share": self.flex, "response": r, "ours_w": ours_w, "line_kw": demand - diesel,
                  "demand_kw": demand, "limit_kw": self.limit, "loading_pct": loading, "diesel_kw": diesel,
                  "diesel_kwh": self.diesel_kwh, "diesel_off_kwh": self.diesel_off_kwh, "cap_id": self.cap_id,
-                 "cap_baseline_w": self.cap_baseline_w,
+                 "cap_baseline_w": self.cap_baseline_w, "nothing_to_shed": self.nothing_to_shed,
                  "inputs": "homes: shape of today's ISO load forecast; data centers: our sites' measured response"}
         self.last = state
         self.history.append(state)
@@ -168,19 +176,27 @@ class Neighbourhood:
         return state
 
     def _call_for_cut(self, now: float, homes: float, solar: float, ours_kw: float) -> None:
-        """The utility's call: a % cut for the data centers, sized to land cap_margin_pct under the limit."""
+        """The utility's call: a % cut for the data centers, sized for the worst loading still ahead in the
+        replay (the utility knows the forecast; Krish K1 #2: sized for the moment, the line still peaked at 111 %)
+        so that it lands cap_margin_pct under the limit at that worst point."""
         target = self.limit * (1 - float(self.cfg.get("cap_margin_pct", 8)) / 100)
         flex_total = sum(self.dc_sizes) * self.flex
-        fixed = homes - solar + ours_kw + sum(self.dc_sizes) * (1 - self.flex)
+        h1 = self.scenario()["hours"][1]
+        ahead = [self.hour(now) + k * (h1 - self.hour(now)) / 50 for k in range(51)]
+        net = [(self.homes_kw(h, self.ex.signal, now) or homes) - self.solar_kw(h) for h in ahead]
+        worst = max([homes - solar] + net)
+        fixed = worst + ours_kw + sum(self.dc_sizes) * (1 - self.flex)
         r_needed = (target - fixed) / flex_total if flex_total else 0.0
         pct = max(10.0, min(95.0, 100 * (1 - r_needed)))
         base = self.ex.baseline_w()
         if base is None:
-            self.tl.log("note", msg="neighbourhood: the line needs a cut but our sites have no 60-s baseline yet",
-                        simulated=True)
+            if not self._warned_no_baseline:              # once per replay, not every second (K1 #8)
+                self._warned_no_baseline = True
+                self.tl.log("note", msg="neighbourhood: the line needs a cut but our sites have no 60-s baseline yet",
+                            simulated=True)
             return
         remaining = float(self.scenario()["seconds"]) - (now - self.scenario_start)
-        ev = CapEvent(source="ui", start=datetime.fromtimestamp(now).astimezone(), duration_s=int(remaining + 30),
+        ev = CapEvent(source="simulated", start=datetime.fromtimestamp(now).astimezone(), duration_s=int(remaining + 30),
                       target_pct=round(pct, 1),
                       reason=f"simulated neighbourhood line at {100 * (homes + self.dc_kw(1.0) + ours_kw - solar) / self.limit:.0f}% "
                              f"of its limit: cut the data centers' load {pct:.0f}%")
@@ -190,7 +206,10 @@ class Neighbourhood:
     # ------------------------------------------------------------------ control
     def start(self, now: float | None = None) -> dict:
         now = time.time() if now is None else now
+        if self.cap_id:                                   # a call from an earlier replay is still in force
+            self.pending_withdraw = self.cap_id
         self.scenario_start, self.cap_id, self.cap_baseline_w = now, None, None
+        self._warned_no_baseline = False
         self.diesel_kwh = self.diesel_off_kwh = 0.0
         self._last_t = None
         self.tl.log("note", msg=f"neighbourhood: {self.scenario().get('name', 'scenario')} replay started (simulated)",
@@ -202,6 +221,8 @@ class Neighbourhood:
         if self.scenario_start is not None:
             self.tl.log("note", msg=f"neighbourhood: replay {'finished' if finished else 'stopped'} (simulated)",
                         simulated=True, diesel_kwh=self.diesel_kwh, diesel_off_kwh=self.diesel_off_kwh)
+            if self.cap_id:                               # take back its call (K1 #6)
+                self.pending_withdraw = self.cap_id
         self.scenario_start = None
         return {"running": False}
 

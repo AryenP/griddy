@@ -102,7 +102,7 @@ Objective = Literal["cost", "carbon", "balanced"]
 Device = Literal["gpu", "cpu", "either"]
 RunDevice = Literal["gpu", "cpu"]
 JobState = Literal["pending", "running", "paused", "done", "dropped"]
-EventSource = Literal["openadr", "text", "ui"]
+EventSource = Literal["openadr", "text", "ui", "simulated"]
 
 Point = tuple[datetime, float]  # (slot_start, value)
 

@@ -83,6 +83,7 @@ class Run:
     shortfalls: list[TimelineEvent] = field(default_factory=list)
     policies: list[TimelineEvent] = field(default_factory=list)
     actions: list[TimelineEvent] = field(default_factory=list)
+    notes: list[TimelineEvent] = field(default_factory=list)            # cap withdrawals, fleet changes
     fleet: dict[float, dict] = field(default_factory=dict)              # t -> {mac_w, sites, combined_w}
     start_note: dict | None = None
     first_t: float | None = None
@@ -118,6 +119,8 @@ class Run:
                 r.policies.append(ev)
             elif ev.kind == "action":
                 r.actions.append(ev)
+            elif ev.kind == "note" and (d.get("cap_withdrawn") or d.get("trigger") == "fleet"):
+                r.notes.append(ev)
             elif ev.kind == "note" and d.get("msg") == "runtime start" and r.start_note is None:
                 r.start_note = {"t": ev.t, **d}
         if r.fleet:
@@ -154,11 +157,14 @@ class Run:
         return _ts(self.cap.data["start"]) if self.cap else None
 
     def event_window(self) -> tuple[float, float] | None:
-        """[cap start, cap end], cut at the last power sample; None if no cap, or it starts after the data."""
+        """[cap start, cap end], cut at the last power sample or where the cap was withdrawn; None if no cap,
+        or it starts after the data."""
         start = self.cap_start()
         if start is None or not self.power or start > self.power[-1][0]:
             return None
-        return start, min(start + float(self.cap.data["duration_s"]), self.power[-1][0])
+        end = start + float(self.cap.data["duration_s"])
+        end = min([end] + [n.t for n in self.notes if n.data.get("cap_withdrawn") == self.cap.data.get("id")])
+        return start, min(end, self.power[-1][0])
 
     def run_window(self) -> tuple[float, float]:
         if self.power:
@@ -396,6 +402,10 @@ def build_report(timeline_path: str | Path, window: tuple[float, float] | None =
         shortfalls.append(f"the {ROLLING_S:.0f}-s mean never reached the {cap:.2f} W cap in the window")
     if in_cap and baseline_w is None:
         shortfalls.append(f"no power samples in the {BASELINE_S:.0f} s before the cap: no baseline")
+    for n in run.notes:
+        if n.data.get("trigger") == "fleet" and start <= n.t <= end:
+            shortfalls.append(f"the fleet changed at {_fmt(n.t)} ({n.data.get('msg', '').replace('re-solve: ', '')}): "
+                              f"the measured total before and after covers different machines")
     for job in PROGRESS:
         done = next((e for e in run.states if e.data.get("job") == job and e.data.get("state") == "done"
                      and e.t <= start), None)
