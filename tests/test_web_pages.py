@@ -8,7 +8,7 @@ import pytest
 
 WEB = Path(__file__).resolve().parents[1] / "web"
 PAGES = sorted(p.name for p in WEB.glob("*.html"))
-EXPECTED_PAGES = {"index.html", "chat.html"}
+EXPECTED_PAGES = {"index.html", "chat.html", "owner.html"}
 CHART_JS = "https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"
 
 # HANDOFF.md "API contract" + "Agent and receipts routes"; path parameters normalised to {}.
