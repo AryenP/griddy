@@ -222,3 +222,10 @@ follow-on: no cut is sent to the real dispatcher when our sites have nothing to 
 corrects 08:00 (no three-policy run is the record). 373 tests pass. Lid still closed (08:15).
 Next: re-run the evidence when the lid is open; re-tag after a live check of the fixes.
 Blockers / needs Aryen: open the lid.
+
+## 2026-10-24 08:36 PT — tick: laptop routes can require a token (Krish K1 #4)
+Done: optional FLEET_TOKEN (.env): with it set, POST /api/sites/{id}/beat and /calibration need header
+X-Brownout-Fleet-Token (fleet/agent.py --token); without it nothing changes. Test added; 374 pass. No teammate
+activity since 08:14. Lid still closed (08:35).
+Next: evidence re-run when the lid opens; then live-check the K1 fixes and re-tag.
+Blockers / needs Aryen: open the lid; before laptops join, put a FLEET_TOKEN in .env and give it to whoever runs a laptop.

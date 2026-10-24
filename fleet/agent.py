@@ -136,9 +136,14 @@ class CompressJob:
         return (pts[-1][1] - pts[0][1]) / (pts[-1][0] - pts[0][0])
 
 
+TOKEN = os.environ.get("BROWNOUT_FLEET_TOKEN", "")   # or --token; the Mac's FLEET_TOKEN
+
+
 def post(url: str, body: dict, timeout: float = 3.0) -> dict:
-    req = urllib.request.Request(url, data=json.dumps(body).encode(), method="POST",
-                                 headers={"content-type": "application/json"})
+    headers = {"content-type": "application/json"}
+    if TOKEN:
+        headers["X-Brownout-Fleet-Token"] = TOKEN
+    req = urllib.request.Request(url, data=json.dumps(body).encode(), method="POST", headers=headers)
     with urllib.request.urlopen(req, timeout=timeout) as r:
         return json.loads(r.read() or b"{}")
 
@@ -220,7 +225,10 @@ def main(argv=None) -> int:
     ap.add_argument("--window-s", type=float, default=120.0)
     ap.add_argument("--warmup-s", type=float, default=75.0)
     ap.add_argument("--failsafe-s", type=float, default=10.0)
+    ap.add_argument("--token", default=None, help="the Mac's FLEET_TOKEN, if it set one (or BROWNOUT_FLEET_TOKEN)")
     args = ap.parse_args(argv)
+    global TOKEN
+    TOKEN = args.token or TOKEN
     args.mac = args.mac.rstrip("/")
     meter, job = BatteryMeter(), CompressJob(args.site, args.threads)
     try:
