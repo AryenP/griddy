@@ -7,9 +7,9 @@ HTML = (WEB / "index.html").read_text(encoding="utf-8")
 JS = (WEB / "app.js").read_text(encoding="utf-8")
 
 
-def test_dashboard_loads_chart_js_and_its_scripts():
-    assert re.findall(r'<script src="([^"]+)"', HTML) == [
-        "https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js", "common.js", "app.js", "receipts.js"]
+def test_dashboard_loads_its_scripts_and_no_external_ones():
+    # the dispatch map is plain HTML/CSS/SVG (web/map.js): no chart library to fetch when the venue network drops
+    assert re.findall(r'<script src="([^"]+)"', HTML) == ["common.js", "map.js", "app.js", "receipts.js"]
 
 
 def test_posts_only_to_contract_routes():

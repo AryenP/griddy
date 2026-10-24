@@ -4,8 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Brownout</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
 <body class="dash">
   <header class="top">
@@ -57,17 +59,18 @@
     <section class="row curves">
       <div class="panel">
         <div class="panel-head">
-          <h2>Next 24 h: price, carbon and the schedule</h2>
+          <h2>The next 24 hours: what runs when, and why</h2>
           <span id="feed-age" class="badge">no feed</span>
         </div>
-        <div class="chart-box"><canvas id="curve"></canvas></div>
-        <div class="strips" id="strips"></div>
+        <div id="map" class="map"><p class="empty">no schedule yet: the map appears when the solver publishes one</p></div>
         <div class="legend">
-          <span><i class="sw price"></i>price $/MWh (left)</span>
-          <span><i class="sw carbon"></i>carbon gCO2/kWh (right)</span>
-          <span><i class="sw run-gpu"></i>job runs on GPU</span>
-          <span><i class="sw run-cpu"></i>job runs on CPU</span>
-          <span><i class="sw now"></i>current slot</span>
+          <span><i class="sw price"></i>price $/MWh</span>
+          <span><i class="sw carbon"></i>carbon gCO2/kWh, own scale</span>
+          <span><i class="sw run-gpu"></i>runs on GPU</span>
+          <span><i class="sw run-cpu"></i>runs on CPU</span>
+          <span><i class="sw off"></i>deferred</span>
+          <span><i class="sw cap"></i>cap window</span>
+          <span><i class="sw now"></i>now</span>
         </div>
         <div class="src" id="curve-src">waiting for grid feed and schedule</div>
       </div>
@@ -125,6 +128,7 @@
   </main>
 
   <script src="common.js"></script>
+  <script src="map.js"></script>
   <script src="app.js"></script>
   <script src="receipts.js"></script>
 </body>

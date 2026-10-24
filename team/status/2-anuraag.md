@@ -42,3 +42,13 @@ the operator decides" from plan.needs_approval + the solver's "running plan:" fa
 runningPlanLine). PR "2 Anuraag: intake and cap-held follow-ups".
 Next: F4 design pass with the 24-h dispatch map as centrepiece.
 Blockers / needs: none.
+
+## 2026-10-24 04:05 PT — F4 design pass: the 24-h dispatch map
+Done: PR #8 merged. F4: web/map.js, a 24-h dispatch map as the dashboard's centrepiece (price line, hour
+marks, cap bands with their W, one row per job: solid GPU / hatched CPU / recessed deferred, plan watts vs
+cap, the current slot outlined through every row, tooltips with the slot's price, cap and the solver's facts
+for that job). Chart.js removed (nothing external to fetch for the map). Control-room tokens in style.css
+:root and Barlow (one family, system fallback) on every page. Checked at 1440 and 375 px on the real solve
+capture. PR "2 Anuraag: design pass and dispatch map".
+Next: F5 polish (hotkeys, captions, layout jumps), then judging docs.
+Blockers / needs: none.
