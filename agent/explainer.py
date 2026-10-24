@@ -20,7 +20,7 @@ def numbers(text: str) -> set[str]:
     return set(_NUMBER.findall(text))
 
 
-def _allowed(facts: list[str]) -> set[str]:
+def allowed_numbers(facts: list[str]) -> set[str]:
     """Every number in the facts, plus the same number rounded to fewer decimals (36.33 -> 36.3, 36)."""
     out: set[str] = set()
     for tok in numbers(" ".join(facts)):
@@ -40,7 +40,7 @@ def _allowed(facts: list[str]) -> set[str]:
 
 def ungrounded(text: str, facts: list[str]) -> set[str]:
     """Numbers in `text` that do not appear in `facts` (empty set = grounded)."""
-    allowed = _allowed(facts)
+    allowed = allowed_numbers(facts)
     return {tok for tok in numbers(text) if tok not in allowed and tok.replace(",", "") not in allowed}
 
 
