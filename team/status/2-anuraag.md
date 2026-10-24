@@ -59,6 +59,14 @@ R (receipts) with a key legend in the header; a one-line "what you're seeing" ca
 event log and receipts panels; the map reserves its height so the page does not jump when the schedule
 arrives. Operator E/A hotkeys were already in. PR "2 Anuraag: polish".
 Next: 8 judging docs, then 10 proof page.
+
+## 2026-10-24 05:05 PT — task 10 proof page
+Done: judging docs in review (PR #11). Task 10: web/proof.html + proof.js: the newest run of each policy
+(ignore the call, pause everything, Brownout) from GET /api/runs, their measured watts from
+/api/runs/{id}/series drawn on one axis aligned at each cap start with Brownout's cap as the red line,
+Brownout vs each other policy from /api/compare, and what each run did; "recorded, not live" on every block.
+Rendered from tests/fixtures/evidence3 at 1440 and 375 px. tests/test_web_proof.py. PR "2 Anuraag: proof page".
+Next: 16 load outside the plan (after PR #10), then 11 evals.
 Blockers / needs: none.
 
 ## 2026-10-24 04:45 PT — task 8 judging docs
