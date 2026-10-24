@@ -8,7 +8,9 @@ const S = {
   grid: null, schedule: null, plan: null, power: null, jobs: {}, calibration: null, policy: null,
   isoOptions: [], iso: null, dispatcherEnabled: null, agent: null, agentModel: null, runId: null,
   jobSpecs: {}, quote: null, explanation: null, hardDeadlines: new Set(), capEvents: [], sel: null,
+  fleet: [], fleetPower: null,
 };
+const FLEET_FRESH_S = 5;
 const LOG_KINDS = new Set(["grid", "event", "intake", "plan", "action", "shortfall", "approval", "policy", "note", "schedule"]);
 const LOG_GROUP = { plan: "plan", schedule: "plan", action: "plan", policy: "plan", note: "plan",
   event: "people", intake: "people", approval: "people", shortfall: "people", grid: "grid" };
@@ -25,11 +27,13 @@ function handle(msg) {
       S.isoOptions = d.iso_options || []; S.iso = d.iso || null; S.dispatcherEnabled = d.dispatcher_enabled;
       S.agent = d.agent; S.agentModel = d.agent_model || null; S.runId = d.run_id || null;
       S.jobSpecs = d.job_specs || {}; S.quote = d.quote || null; S.capEvents = d.cap_events || [];
+      S.fleet = d.fleet || [];
       S.explanation = d.explanation ? { data: d.explanation, scheduleId: d.schedule ? d.schedule.id : null, t: null } : null;
       traceSeed(d.power_history);
       renderAll();
       return;
     case "power": S.power = d; traceAdd(d.t, d.combined_w); renderNumbers(); renderLoad(); break;
+    case "fleet_power": S.fleetPower = d; traceSet(d.t, d.combined_w); renderNumbers(); renderLoad(); break;
     case "grid":
       if (d.feed === "signal") { S.grid = d; S.iso = d.iso; renderNumbers(); renderCurve(); renderControls(); }
       break;
@@ -52,6 +56,7 @@ function handle(msg) {
       break;
     case "note":
       if (d.explanation) { S.explanation = { data: d.explanation, scheduleId: d.schedule_id || null, t: msg.t }; renderSolver(); }
+      if (d.trigger === "fleet") { traceMark(msg.t, d.msg.replace("re-solve: ", ""), "warn"); refreshFleet(); }
       if (d.trigger === "background" || d.trigger === "idle") traceMark(msg.t, d.trigger === "idle" ? "idle re-measured" : "outside load", "warn");
       break;
   }
@@ -113,26 +118,46 @@ function renderLoad() {
     " · within or over: the 10-s mean of measured watts, computed on this page; receipts hold the reporter's figure";
 }
 
+// ---------- the laptops (fleet/hub.py): each one's status, its own battery's watts, its job ----------
+function fleetLive() { const f = S.fleetPower; return f && nowS() - f.t <= FLEET_FRESH_S ? f : null; }
+function renderFleet() {
+  if (!S.fleet.length) { setHTML($("fleet"), html``); return; }
+  const live = fleetLive();
+  setHTML($("fleet"), html`${S.fleet.map((s) => {
+    const w = live && live.sites[s.id] != null ? live.sites[s.id] : null;
+    const state = w == null ? s.status : s.run ? "job running" : "job paused";
+    return html`<li class="${w == null ? "off" : ""}"><b>${s.name}</b> <span class="d-num-sm">${w == null ? "—" : `${fixed(w, 1)} W`}</span>
+      <span class="src">${state}${w != null ? ", measured by its battery" : ""}</span></li>`;
+  })}`);
+}
+async function refreshFleet() {
+  const r = await getJSON("/api/state");
+  if (r.ok) { S.fleet = r.data.fleet || []; renderFleet(); }
+}
+
 // ---------- the live numbers ----------
 function renderNumbers() {
-  const p = S.power, g = S.grid;
+  const p = S.power, g = S.grid, live = fleetLive();
   if (p) {
     const stale = nowS() - p.t > STALE_POWER_S;
-    setHTML($("watts"), html`${p.combined_w.toFixed(1)}<small>W measured</small>`);
+    const total = live ? live.combined_w : p.combined_w;
+    setHTML($("watts"), html`${total.toFixed(1)}<small>${live ? `W measured, this Mac and ${plural(Object.keys(live.sites).length, "laptop")}` : "W measured"}</small>`);
     $("watts").classList.toggle("stale", stale);
     const parts = [["CPU", p.cpu_w], ["GPU", p.gpu_w], ["ANE", p.ane_w]]
       .filter(([, v]) => v != null).map(([k, v]) => `${k} ${v.toFixed(1)}`).join(", ");
     $("watts-src").textContent = (stale ? `STALE: no powermetrics sample for ${age(p.t).replace(" ago", "")}. ` : "") +
-      `SoC power from macOS powermetrics: ${parts}, ${age(p.t)}`;
+      (live ? `this Mac ${fixed(live.mac_w, 1)} W from macOS powermetrics (${parts}); each laptop from its own battery; ` : `SoC power from macOS powermetrics: ${parts}, `) + age(p.t);
   }
+  renderFleet();
   if (p && g) {
     // A laptop costs fractions of a cent per hour; show cents so the number stays readable.
-    const usdH = p.combined_w / 1e6 * g.price_now;
+    const w = live ? live.combined_w : p.combined_w;
+    const usdH = w / 1e6 * g.price_now;
     setHTML($("cost"), Math.abs(usdH) < 0.01 ? html`${sig(usdH * 100)}<small>¢/h</small>` : html`$${sig(usdH)}<small>/h</small>`);
     const at = g.price_interval_start ? ` for ${isoClock(g.price_interval_start)}` : "";
     $("cost-src").textContent = `measured W × ${g.iso} ${g.location} real-time $${sig(g.price_now, 4)}/MWh${at}, feed ${age(feedT())}` + (g.stale ? ", STALE" : "");
     if (g.carbon_now != null) {
-      setHTML($("carbon"), html`${sig(p.combined_w / 1000 * g.carbon_now)}<small>gCO2/h</small>`);
+      setHTML($("carbon"), html`${sig(w / 1000 * g.carbon_now)}<small>gCO2/h</small>`);
       $("carbon-src").textContent = `measured W × ${g.iso} live fuel mix ${sig(g.carbon_now)} gCO2/kWh, feed ${age(feedT())}` + (g.stale ? ", STALE" : "");
     } else {
       $("carbon").textContent = "—";
@@ -470,6 +495,8 @@ bindLoadTrace($("load-trace"), renderLoad);
 
 // Ages tick every second even when no message arrives, so a silent feed visibly gets old.
 setInterval(() => { renderNumbers(); renderJobs(); renderLoad(); }, 1000);
+// Laptops join and leave: re-read their status every 5 s while any is configured.
+setInterval(() => { if (S.fleet.length) refreshFleet(); }, 5000);
 // Driver hotkeys for the table demo (shown in the header): D dispatcher, 1/2/3 objective, R receipts.
 hotkeys({ d: toggleDispatcher, 1: () => setObjective("cost"), 2: () => setObjective("carbon"),
   3: () => setObjective("balanced"), r: () => $("receipts").scrollIntoView({ behavior: "smooth", block: "start" }) });

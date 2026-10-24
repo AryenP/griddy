@@ -233,3 +233,18 @@ def test_job_finished_before_the_window_is_called_out(tmp_path):
     assert r.work_done.get("batch") == 0
     assert any("batch had already finished" in m and "0 by construction" in m for m in r.shortfalls)
     assert not any("already finished" in m for m in build_report(p, window=(0.0, 29.0)).shortfalls)
+
+
+def test_fleet_seconds_are_judged_on_the_fleet_total(tmp_path):
+    import json as _json
+
+    from agent.reporter import Run
+    ev = [{"t": 0.0, "kind": "note", "data": {"msg": "runtime start", "dispatcher_enabled": True}}]
+    for t in range(5):
+        ev.append({"t": t + 0.1, "kind": "power", "data": {"t": float(t), "combined_w": 10.0}})
+        if t >= 2:   # a laptop online from the third second on
+            ev.append({"t": t + 0.2, "kind": "fleet_power", "data": {"t": float(t), "mac_w": 10.0,
+                                                                     "sites": {"surface1": 6.0}, "combined_w": 16.0}})
+    p = tmp_path / "timeline.jsonl"
+    p.write_text("".join(_json.dumps(e) + "\n" for e in ev))
+    assert [w for _, w in Run.load(p).power] == [10.0, 10.0, 16.0, 16.0, 16.0]

@@ -21,6 +21,12 @@ function traceAdd(t, w) {
   while (p.length && p[0][0] < cut) p.shift();
 }
 
+// The same second measured again with the laptops added (fleet_power): replace, never add a second point.
+function traceSet(t, w) {
+  const p = TRACE.pts;
+  if (p.length && p[p.length - 1][0] === t) p[p.length - 1][1] = w; else traceAdd(t, w);
+}
+
 // A moment worth marking on the trace: a cap arriving, a knob moving, an owner's answer, a re-plan.
 function traceMark(t, text, tone) {
   if (!isFinite(t)) return;
