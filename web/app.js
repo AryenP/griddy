@@ -9,7 +9,6 @@ const S = {
 };
 const LOG_KINDS = new Set(["grid", "event", "intake", "plan", "action", "shortfall", "approval", "policy", "note", "schedule"]);
 const LOG_MAX = 200;
-const JOB_COLORS = { chat: "#4cc9f0", train: "#f8961e", batch: "#90be6d" };
 const STALE_POWER_S = 5, STALE_STATUS_S = 10;
 
 // ---------- message handling ----------
@@ -115,90 +114,20 @@ function renderFeedBadge() {
   b.className = "badge " + (stale ? "bad" : "ok");
 }
 
-// ---------- row 2: curves with the schedule painted on ----------
-let chart = null;
-const slotHighlight = {
-  id: "slotHighlight",
-  beforeDatasetsDraw(c) {
-    const i = c.$currentSlot;
-    if (i == null || i < 0) return;
-    const x = c.scales.x, a = c.chartArea, w = (a.right - a.left) / c.data.labels.length;
-    c.ctx.save();
-    c.ctx.fillStyle = "rgba(255,255,255,0.16)";
-    c.ctx.fillRect(x.getPixelForValue(i) - w / 2, a.top, w, a.bottom - a.top);
-    c.ctx.restore();
-  },
-};
-
+// ---------- row 2: the 24-hour dispatch map (web/map.js) ----------
 function renderCurve() {
   const g = S.grid, sc = S.schedule;
-  const slots = sc ? sc.slots : g ? g.price_curve.map((p) => p[0]) : [];
-  if (!slots.length) {
-    $("curve-src").textContent = (g ? "" : "no grid feed yet · ") + "no schedule yet: waiting for the solver";
-    renderStrips([], -1);
-    return;
-  }
-  const byT = (pts) => { const m = new Map(pts.map(([t, v]) => [Date.parse(t), v])); return slots.map((s) => m.get(Date.parse(s)) ?? null); };
-  const price = g ? byT(g.price_curve) : [];
-  const carbon = g ? byT(g.carbon_curve) : [];
-  const minutes = sc ? sc.slot_minutes : (S.policy && S.policy.slot_minutes) || 15;
-  const cur = currentSlotIndex(slots, minutes);
-  const labels = slots.map(isoLabel);
-  if (!chart) {
-    const tick = { color: "#e1e5ea", font: { size: 14 } };
-    chart = new Chart($("curve"), {
-      type: "line",
-      data: { labels, datasets: [
-        { label: "price $/MWh", data: price, borderColor: "#ff4fa3", backgroundColor: "#ff4fa3", yAxisID: "y", stepped: true, pointRadius: 0, borderWidth: 3 },
-        { label: "carbon gCO2/kWh", data: carbon, borderColor: "#cfd6dd", backgroundColor: "#cfd6dd", yAxisID: "y2", stepped: true, pointRadius: 0, borderWidth: 2.5, borderDash: [6, 4] },
-      ] },
-      options: {
-        animation: false, maintainAspectRatio: false, interaction: { mode: "index", intersect: false },
-        plugins: { legend: { display: false } },
-        scales: {
-          x: { ticks: { ...tick, maxRotation: 0, autoSkip: true, maxTicksLimit: 9 }, grid: { color: "#353b47" } },
-          y: { position: "left", title: { display: true, text: "$/MWh", color: "#ff4fa3", font: { size: 14 } }, ticks: tick, grid: { color: "#353b47" } },
-          y2: { position: "right", title: { display: true, text: "gCO2/kWh", color: "#cfd6dd", font: { size: 14 } }, ticks: tick, grid: { display: false } },
-        },
-      },
-      plugins: [slotHighlight],
-    });
-  } else {
-    chart.data.labels = labels;
-    chart.data.datasets[0].data = price;
-    chart.data.datasets[1].data = carbon;
-  }
-  chart.$currentSlot = cur;
-  chart.update();
-  renderStrips(slots, cur);
-
+  renderMap($("map"), sc, g, S.plan);
   const src = [];
   if (g) {
     src.push(`price: ${g.iso} ${g.location}, ${g.price_curve_source || "source not stated"}`);
-    src.push(g.carbon_curve_is_proxy ? "carbon curve: live mix held flat (proxy)" : "carbon curve: from the feed");
+    src.push(g.carbon_curve_is_proxy ? "carbon: live mix held flat (proxy), so only price varies across slots" : "carbon curve: from the feed");
     if (g.source_urls && g.source_urls.length) src.push(g.source_urls.join(", "));
   } else src.push("no grid feed yet");
-  if (sc) src.push(`schedule ${sc.id}, solved ${age(sc.solve_t)}`); else src.push("no schedule yet: waiting for the solver");
+  if (sc) src.push(`schedule ${sc.id}, solved ${age(sc.solve_t)}; plan watts are calibrated, not measured`);
+  else src.push("no schedule yet: waiting for the solver");
   if (g && g.alerts && g.alerts.length) src.push(`ALERTS: ${g.alerts.join("; ")}`);
   $("curve-src").textContent = src.join(" · ");
-}
-
-// One row per job, one cell per slot, aligned under the chart's plot area.
-function renderStrips(slots, cur) {
-  const box = $("strips"), sc = S.schedule;
-  if (!sc || !chart) { setHTML(box, html`<div class="empty">no schedule yet: job rows appear when the solver publishes one</div>`); return; }
-  const a = chart.chartArea;
-  box.style.paddingLeft = `${a.left}px`;
-  box.style.paddingRight = `${chart.width - a.right}px`;
-  setHTML(box, html`${Object.entries(sc.assignments).map(([job, row]) => {
-    const color = JOB_COLORS[job] || "#ddd";
-    const cells = row.map((x, i) => {
-      const cls = ["cell", x.run ? `run-${x.device || "gpu"}` : "", i === cur ? "now" : ""].join(" ");
-      const tip = `${job} ${isoLabel(slots[i])}: ` + (x.run ? `run on ${x.device || "?"}` + (x.concurrency ? `, concurrency ${x.concurrency}` : "") : "off");
-      return html`<span class="${cls}" style="--c:${color}" title="${tip}"></span>`;
-    });
-    return html`<div class="strip"><span class="strip-name" style="color:${color}">${job}</span><div class="cells" style="grid-template-columns:repeat(${row.length},1fr)">${cells}</div></div>`;
-  })}`);
 }
 
 // ---------- row 3: job cards ----------
@@ -239,7 +168,7 @@ function jobCard(id) {
   lines.push(kv("schedule", nextRun(id)));
   const state = st.state || "no status";
   const stale = st.t != null && nowS() - st.t > STALE_STATUS_S;
-  return html`<div class="tile job" style="--c:${JOB_COLORS[id] || "#ddd"}">
+  return html`<div class="tile job" style="--c:${MAP_JOB_COLOR[id] || "var(--text)"}">
     <div class="job-head"><h3>${id}</h3><span class="badge state-${state}">${state}</span></div>
     ${lines}
     <div class="src">${st.t == null ? "no status from the workload yet" : (stale ? "STALE · " : "") + `status ${age(st.t)}`}${spec ? " · owner and deadline from config/jobs.yaml + approvals" : ""}</div></div>`;
