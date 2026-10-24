@@ -72,10 +72,12 @@ class Runtime:
         return await self._start_watcher(iso, location)
 
     async def start(self):
+        import telemetry
+        self.telemetry = telemetry.configure()      # OpenTelemetry; Application Insights when configured
         self.broadcaster = Broadcaster(self.tl, asyncio.get_running_loop())
         self.tl.log("note", msg="runtime start", dispatcher_enabled=self.executor.dispatcher_enabled,
                     calibration_measured_at=self.cal.measured_at, machine=self.cal.machine,
-                    agent=self.agent.status, agent_model=self.agent.llm.name)
+                    agent=self.agent.status, agent_model=self.agent.llm.name, telemetry=self.telemetry)
         await self.meter.start()
         self.knobs.set_concurrency("chat", next(j["max_concurrency"] for j in config.jobs["jobs"] if j["id"] == "chat"))
         for j in ("chat", "train", "batch"):
@@ -89,6 +91,8 @@ class Runtime:
         await asyncio.to_thread(self.knobs.stop_all)
         if self.meter._proc is not None:
             await self.meter.stop()
+        import telemetry
+        await asyncio.to_thread(telemetry.flush)
         self.tl.log("note", msg="runtime stop")
         self.tl.close()
 
