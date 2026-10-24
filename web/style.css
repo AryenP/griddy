@@ -10,7 +10,7 @@
   --warn: #ffb547;
   --bad: #ff5b5b;       /* limit red: caps, over-cap, refusals */
   --ok: #34d399;        /* live and within limits */
-  --action: #4f8cff;    /* the one primary action per box */
+  --action: #2f6fe0;    /* the one primary action per box; white on it is 4.7:1 */
   --job-chat: #5bc0eb; --job-train: #c792ea; --job-batch: #9be15d;
   --off: #213042;       /* a deferred slot: recessed */
   --font: "Barlow", "Bahnschrift", "DIN Alternate", system-ui, sans-serif;
@@ -206,7 +206,7 @@ textarea.mono { font-family: ui-monospace, "Cascadia Mono", Menlo, monospace; fo
 .map-cell.run-gpu { background: var(--c); }
 .map-cell.run-cpu { background: repeating-linear-gradient(45deg, var(--c) 0 3px, var(--off) 3px 6px); }
 .map-bar { height: 28px; display: flex; align-items: flex-end; }
-.map-bar i { display: block; width: 100%; background: #4a6280; border-radius: 1px 1px 0 0; }
+.map-bar i { display: block; width: 100%; background: #5a7596; border-radius: 1px 1px 0 0; }
 .map-bar.over i { background: var(--bad); }
 .map-now { position: relative; outline: 2px solid var(--text); outline-offset: 1px; border-radius: 2px; background: rgba(255,255,255,.07); pointer-events: none; z-index: 2; }
 .sw.now { background: rgba(255,255,255,.12); outline: 2px solid var(--text); }
