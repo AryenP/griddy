@@ -6,7 +6,8 @@ Time each with a stopwatch; the judge sees four minutes (DEMO.md).
 ## Before each run (demo Mac)
 - [ ] Wired or travel-router network up; `make probe` prints a CAISO price with today's timestamp.
 - [ ] `sudo -v` in the same terminal, then `make demo` from cold; dashboard up in under 2 minutes.
-- [ ] Ollama running with `OLLAMA_NUM_PARALLEL` matching chat max concurrency; model pulled.
+- [ ] Ollama running with `OLLAMA_NUM_PARALLEL` matching chat max concurrency; `qwen3:4b-instruct` pulled (not plain `qwen3:4b`).
+- [ ] `make calibrate` re-run on qwen3:4b-instruct (chat watts were measured on the old model).
 - [ ] `.env` has the LLM key and `APPLICATIONINSIGHTS_CONNECTION_STRING`; `telemetry.configure()` reports sinks `memory, azure-monitor`.
 - [ ] Phone on the owner page via QR (`make qr`); chat QR card on the table.
 - [ ] A dispatcher-off run of the same length exists for `make compare` (`make baseline`).
@@ -15,7 +16,7 @@ Time each with a stopwatch; the judge sees four minutes (DEMO.md).
 ## The run (DEMO.md script)
 - [ ] 0:00 diesel line and the operator quote on screen.
 - [ ] 0:15 judge picks ISO and policy; schedule repaints; explanation readable.
-- [ ] 0:45 chat from the phone; p95 on screen.
+- [ ] 0:45 chat from the phone (streamed); time-to-first-token p95 on screen against the 1.0 s SLA.
 - [ ] 1:15 plain-text cut; read-back before anything moves.
 - [ ] 1:45 owner refuses in words; re-plan states the reachable %; watts drop; time-to-compliance shows.
 - [ ] 2:30 policy or ISO switch; Mac follows the new slot.
@@ -32,6 +33,6 @@ Time each with a stopwatch; the judge sees four minutes (DEMO.md).
 - [ ] Application Insights slow to ingest (it can take minutes): show the same spans from `/api/trace` and say Azure lags.
 
 ## After the last rehearsal
-- [ ] Fill the ⟨⟩ numbers in docs/devpost.md from that run's `reports/*.md`.
+- [ ] Fill every "to be measured" in docs/devpost.md and docs/demo-video.md from that run's `reports/*.md`.
 - [ ] Record the video (docs/demo-video.md) from the same setup.
 - [ ] Repo public or judges added; Devpost opt-ins per docs/devpost.md.

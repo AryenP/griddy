@@ -21,7 +21,7 @@ isos:
     locations: hubs
     poll_s: {lmp: 300, forecast: 1800, fuel_mix: 300}
 # Emission factors, gCO2-eq per kWh generated, used to turn the live fuel mix into carbon intensity.
-# Source (all but the last three rows): IPCC AR5 WGIII (2014), Annex III, Table A.III.2, lifecycle
+# Source (all but the last four rows): IPCC AR5 WGIII (2014), Annex III, Table A.III.2, lifecycle
 #   emissions, median values (Schloemer et al., "Technology-specific Cost and Performance Parameters").
 #   https://www.ipcc.ch/site/assets/uploads/2018/02/ipcc_wg3_ar5_annex-iii.pdf
 # Source (Imports, Other): CARB Mandatory GHG Reporting Regulation (17 CCR §95111(b)(1)), default
