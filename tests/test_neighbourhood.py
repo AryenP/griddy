@@ -38,9 +38,10 @@ def test_nothing_configured_changes_nothing(tmp_path):
 
 def test_homes_follow_the_forecast_shape(tmp_path):
     n = hood(tmp_path)
-    assert n.homes_kw(19.0, n.ex.signal) == pytest.approx(720.0)            # the forecast peak
-    assert n.homes_kw(3.0, n.ex.signal) == pytest.approx(380.0)             # its lowest hour
-    assert n.homes_kw(19.0, None) is None                                   # no feed: no homes number
+    now = (DAY + timedelta(hours=12)).timestamp()
+    assert n.homes_kw(19.0, n.ex.signal, now) == pytest.approx(720.0)       # the forecast peak
+    assert n.homes_kw(3.0, n.ex.signal, now) == pytest.approx(380.0)        # its lowest hour
+    assert n.homes_kw(19.0, None, now) is None                              # no feed: no homes number
     assert n.solar_kw(12.5) == pytest.approx(260.0) and n.solar_kw(20.0) == 0.0
 
 
@@ -98,3 +99,13 @@ def test_no_cut_without_a_baseline_for_our_sites(tmp_path):
     for s in range(91):
         n.tick(now=t0 + s)
     assert n.pending_cap is None and n.cap_id is None
+
+
+def test_a_multi_day_forecast_uses_today_only(tmp_path):
+    # supervisor issue 13: ERCOT's forecast covers seven days; hours repeat, so only today's points may be used
+    n = hood(tmp_path)
+    tomorrow_flat = [(DAY + timedelta(days=1, hours=h), 30000.0) for h in range(24)]
+    n.ex.signal = GridSignal(iso="TEST", location="fixture", price_now=50.0, load_forecast=FORECAST + tomorrow_flat)
+    now = (DAY + timedelta(hours=12)).timestamp()
+    assert n.homes_kw(19.0, n.ex.signal, now) == pytest.approx(720.0)
+    assert n.homes_kw(3.0, n.ex.signal, now) == pytest.approx(380.0)

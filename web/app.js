@@ -191,8 +191,10 @@ function renderFleet() {
   setHTML($("fleet"), html`${S.fleet.map((s) => {
     const w = live && live.sites[s.id] != null ? live.sites[s.id] : null;
     const state = w == null ? s.status : s.run ? "job running" : "job paused";
+    // supervisor issue 14: a laptop's battery reading changes about once a minute; say how old it is
+    const read = s.reading_changed ? `, reading ${age(s.reading_changed)}` : "";
     return html`<li class="${w == null ? "off" : ""}"><b>${s.name}</b> <span class="d-num-sm">${w == null ? "—" : `${fixed(w, 1)} W`}</span>
-      <span class="src">${state}${w != null ? ", measured by its battery" : ""}</span></li>`;
+      <span class="src">${state}${w != null ? `, measured by its battery${read}` : ""}</span></li>`;
   })}`);
 }
 async function refreshFleet() {
@@ -211,7 +213,7 @@ function renderNumbers() {
     const parts = [["CPU", p.cpu_w], ["GPU", p.gpu_w], ["ANE", p.ane_w]]
       .filter(([, v]) => v != null).map(([k, v]) => `${k} ${v.toFixed(1)}`).join(", ");
     $("watts-src").textContent = (stale ? `STALE: no powermetrics sample for ${age(p.t).replace(" ago", "")}. ` : "") +
-      (live ? `this Mac ${fixed(live.mac_w, 1)} W from macOS powermetrics (${parts}); each laptop from its own battery; ` : `SoC power from macOS powermetrics: ${parts}, `) + age(p.t);
+      (live ? `this Mac ${fixed(live.mac_w, 1)} W from macOS powermetrics (${parts}); each laptop from its own battery, whose reading changes about once a minute; ` : `SoC power from macOS powermetrics: ${parts}, `) + age(p.t);
   }
   renderFleet();
   if (p && g) {

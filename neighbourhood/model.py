@@ -64,12 +64,25 @@ class Neighbourhood:
         return self.scenario_start is not None and now - self.scenario_start < float(s.get("seconds", 0))
 
     def hour(self, now: float) -> float:
-        """The simulated hour of day: replayed during the scenario, the wall clock otherwise."""
+        """The simulated hour of day: replayed during the scenario, else the wall clock in the ISO's time zone."""
         if self.running(now):
             h0, h1 = self.scenario()["hours"]
             return h0 + (h1 - h0) * (now - self.scenario_start) / float(self.scenario()["seconds"])
-        d = datetime.fromtimestamp(now)
+        day = self._forecast_day(self.ex.signal, now)
+        d = datetime.fromtimestamp(now, tz=day[0][0].tzinfo) if day else datetime.fromtimestamp(now)
         return d.hour + d.minute / 60 + d.second / 3600
+
+    @staticmethod
+    def _forecast_day(sig: GridSignal | None, now: float) -> list[tuple[datetime, float]]:
+        """Today's points of the ISO's load forecast, in the ISO's time zone. ERCOT's forecast covers seven days
+        (supervisor issue 13): hours repeat across days, so only today's are used."""
+        if not sig or not sig.load_forecast:
+            return []
+        pts = sorted((t if isinstance(t, datetime) else datetime.fromisoformat(str(t)), float(mw)) for t, mw in sig.load_forecast)
+        tz = pts[0][0].tzinfo
+        today = datetime.fromtimestamp(now, tz=tz).date()
+        day = [(t.astimezone(tz), mw) for t, mw in pts if t.astimezone(tz).date() == today]
+        return day or [(t, mw) for t, mw in pts if t.date() == pts[0][0].date()]
 
     def sim_hours_per_s(self, now: float) -> float:
         if self.running(now):
@@ -78,11 +91,11 @@ class Neighbourhood:
         return 1 / 3600
 
     # ------------------------------------------------------------------ the parts of the line
-    def homes_kw(self, hour: float, sig: GridSignal | None) -> float | None:
+    def homes_kw(self, hour: float, sig: GridSignal | None, now: float | None = None) -> float | None:
         """Today's real forecast at `hour`, its lowest hour mapped to homes_offices_kw[0] and its peak to [1]."""
-        if not sig or not sig.load_forecast:
+        pts = self._forecast_day(sig, time.time() if now is None else now)
+        if not pts:
             return None
-        pts = sorted((datetime.fromisoformat(str(t)) if not isinstance(t, datetime) else t, mw) for t, mw in sig.load_forecast)
         hours = [p[0].hour + p[0].minute / 60 for p in pts]
         mws = [p[1] for p in pts]
         i = bisect_right(hours, hour)
@@ -123,7 +136,7 @@ class Neighbourhood:
         if self.scenario_start is not None and not running:
             self.stop(now, finished=True)
         hour = self.hour(now)
-        homes = self.homes_kw(hour, self.ex.signal)
+        homes = self.homes_kw(hour, self.ex.signal, now)
         solar = self.solar_kw(hour)
         r, ours_w = self.response(now)
         ours_kw = (ours_w or 0.0) / 1000
