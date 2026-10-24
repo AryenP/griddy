@@ -122,3 +122,12 @@ Merged PR #10 (Anuraag polish). Roster: the dashboard page is machine 1's now (A
 real 30 % cap. Anuraag task 17: drop the old dashboard rules from style.css.
 Next: B (three-way proof table, after the 06:40 run), D (scripted cold-start rehearsal), C (ERCOT end to end).
 Blockers / needs Aryen: none tonight.
+
+## 2026-10-24 04:32 PT — tick
+Done: merged PR #11 (judging docs: criteria, customer, production, compliance, responsible; every number cites a
+DECISIONS line, gaps stated) and PR #12 (proof page: the three policies' measured traces aligned at the cap start,
+both comparisons, "recorded, not live"). Linked the proof page from the dashboard receipts. 295 tests pass.
+Next: D (scripted cold-start rehearsal), C (ERCOT end to end); B after the 06:40 final evidence run.
+Blockers / needs Aryen (asked once, Aryen is awake): install azd and run azd auth login so machine 1 can provision
+Application Insights (the live Microsoft piece the judges asked for); rotate the Anthropic key; change the Mac
+password; decide judge access to the private repo before Sun 08:50.
