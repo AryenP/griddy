@@ -1,4 +1,4 @@
-.PHONY: evidence preflight tag-stable ollama setup demo baseline calibrate chat-sweep solve report compare test probe qr clean
+.PHONY: evidence evidence3 preflight tag-stable ollama setup demo baseline calibrate chat-sweep solve report compare test probe qr clean
 
 PY ?= uv run
 # sudo for powermetrics: no prompt when the passwordless rule for /usr/bin/powermetrics is installed
@@ -37,6 +37,17 @@ evidence: ollama ## unattended (~25 min, Mac otherwise idle): calibrate, then di
 	BROWNOUT_CHECKPOINT_DIR=$$E/baseline POLICY=baseline $(PY) python -m api.app --headless --duration 450 $(EVIDENCE_ARGS) && \
 	BROWNOUT_CHECKPOINT_DIR=$$E/dispatched $(PY) python -m api.app --headless --duration 450 $(EVIDENCE_ARGS) && \
 	$(PY) python scripts/compare.py; s=$$?; kill $$K 2>/dev/null; exit $$s
+
+EVIDENCE3_ARGS ?= --cap-pct 30 --cap-at 120 --cap-for 1800 --deadline train=1.87
+evidence3: ollama ## unattended (~30 min): calibrate, then ignore-the-call, pause-everything and dispatched runs, same tight scenario, two comparisons
+	($(SUDO_PM)) || exit 1; ( while sudo -n -v 2>/dev/null; do sleep 50; done ) & K=$$!; \
+	E=runs/evidence-state-$$(date +%Y%m%d-%H%M%S); \
+	$(PY) python -m controller.feasibility --calibrate && \
+	BROWNOUT_CHECKPOINT_DIR=$$E/baseline POLICY=baseline $(PY) python -m api.app --headless --duration 450 $(EVIDENCE3_ARGS) && \
+	BROWNOUT_CHECKPOINT_DIR=$$E/pause_all POLICY=pause_all $(PY) python -m api.app --headless --duration 450 $(EVIDENCE3_ARGS) && \
+	BROWNOUT_CHECKPOINT_DIR=$$E/dispatched $(PY) python -m api.app --headless --duration 450 $(EVIDENCE3_ARGS) && \
+	$(PY) python scripts/compare.py --baseline-policy baseline && \
+	$(PY) python scripts/compare.py --baseline-policy pause_all; s=$$?; kill $$K 2>/dev/null; exit $$s
 
 report:         ## render compliance report + charts from a timeline
 	$(PY) python -m agent.reporter --run $(RUN)

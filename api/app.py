@@ -34,12 +34,15 @@ log = logging.getLogger("api.app")
 
 
 class Runtime:
-    def __init__(self, dispatcher_enabled: bool):
-        self.tl = Timeline(run_id=time.strftime("%Y%m%d-%H%M%S") + ("" if dispatcher_enabled else "-baseline"))
+    def __init__(self, policy_name: str = "dispatcher"):
+        dispatcher_enabled = policy_name not in ("baseline", "pause_all")
+        self.policy_name = policy_name
+        self.tl = Timeline(run_id=time.strftime("%Y%m%d-%H%M%S") + ("" if dispatcher_enabled else f"-{policy_name}"))
         self.cal = load_calibration()
         self.meter = PowerMeter(self.tl)
         self.knobs = Knobs(self.tl)
-        self.executor = Executor(self.tl, self.knobs, self.cal, load_policy(), dispatcher_enabled)
+        self.executor = Executor(self.tl, self.knobs, self.cal, load_policy(), dispatcher_enabled,
+                                 baseline_mode=policy_name if not dispatcher_enabled else "baseline")
         self.meter.subscribers.append(self.executor.on_power)
         self.agent = AgentBridge(self.tl, self.executor)
         self.agent.snapshot = self.snapshot
@@ -77,6 +80,7 @@ class Runtime:
         self.telemetry = telemetry.configure()      # OpenTelemetry; Application Insights when configured
         self.broadcaster = Broadcaster(self.tl, asyncio.get_running_loop())
         self.tl.log("note", msg="runtime start", dispatcher_enabled=self.executor.dispatcher_enabled,
+                    policy=self.policy_name,
                     calibration_measured_at=self.cal.measured_at, machine=self.cal.machine,
                     agent=self.agent.status, agent_model=self.agent.llm.name, telemetry=self.telemetry)
         await self.meter.start()
@@ -151,7 +155,7 @@ async def amain(args):
     stop = asyncio.Event()
     for sig in (signal.SIGINT, signal.SIGTERM):
         loop.add_signal_handler(sig, stop.set)
-    rt = Runtime(dispatcher_enabled=settings.policy_name != "baseline")
+    rt = Runtime(policy_name=settings.policy_name)
     try:
         await rt.start()
         print(f"run {rt.tl.run_id}: timeline {rt.tl.path}", flush=True)

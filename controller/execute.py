@@ -20,7 +20,7 @@ from core.types import (Calibration, CapEvent, GridSignal, Job, PlanAction, Poli
                         Schedule, SlotPlan)
 from dispatcher.solve import load_jobs, solve
 
-from .baseline import baseline_plan
+from .baseline import baseline_plan, pause_all_plan
 from .knobs import Knobs
 
 log = logging.getLogger("controller.execute")
@@ -29,9 +29,10 @@ JOBS = ("chat", "train", "batch")
 
 class Executor:
     def __init__(self, tl: Timeline, knobs: Knobs, cal: Calibration, policy: Policy,
-                 dispatcher_enabled: bool = True, baseline_window_s: int = 60):
+                 dispatcher_enabled: bool = True, baseline_window_s: int = 60, baseline_mode: str = "baseline"):
         self.tl, self.knobs, self.cal, self.policy = tl, knobs, cal, policy
         self.dispatcher_enabled = dispatcher_enabled
+        self.baseline_mode = baseline_mode       # which naive policy runs when the dispatcher is off
         self.signal: GridSignal | None = None
         self.schedule: Schedule | None = None
         self.plan: SlotPlan | None = None
@@ -129,6 +130,11 @@ class Executor:
         self.tl.log("policy", reason="operator approved going over the cap", who=who, caps=sorted(key))
         return await self.resolve("over-cap approved")
 
+    def cap_in_force(self) -> bool:
+        now = time.time()
+        return self.policy.power_cap_w is not None or any(
+            e.start.timestamp() <= now < e.start.timestamp() + e.duration_s for e in self.events)
+
     def active_events(self) -> list[CapEvent]:
         now = time.time()
         return [e for e in self.events if e.start.timestamp() + e.duration_s > now]
@@ -166,6 +172,8 @@ class Executor:
     def current_plan(self) -> SlotPlan | None:
         jobs = self.jobs()
         if not self.dispatcher_enabled:
+            if self.baseline_mode == "pause_all":
+                return pause_all_plan(jobs, self.cal, self.cap_in_force())
             return baseline_plan(jobs, self.cal)
         i = self.slot_index()
         if i is None:

@@ -18,7 +18,7 @@ CONFIG_DIR = Path(os.getenv("CONFIG_DIR", "config"))
 class Settings(BaseModel):
     iso: str = os.getenv("ISO", "CAISO")
     location: str = os.getenv("LOCATION", "")
-    policy_name: str = os.getenv("POLICY", "dispatcher")  # dispatcher | baseline
+    policy_name: str = os.getenv("POLICY", "dispatcher")  # dispatcher | baseline (ignore the call) | pause_all
     ollama_url: str = os.getenv("OLLAMA_URL", "http://localhost:11434")
     ollama_model: str = os.getenv("OLLAMA_MODEL", "")
     host: str = os.getenv("HOST", "0.0.0.0")
