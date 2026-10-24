@@ -250,7 +250,8 @@ function capGauge(el) {
 // The grid feeding this machine, in 3D: a pylon carries three phases of current (white, flowing at the measured
 // watts) to a transformer and on to the load column, idle at the base and each running job stacked above, with the
 // utility's cap as a glass plane through it; anything above the plane burns red. Drawn on a 2D canvas with its own
-// projection: no library, no network. Drag or use the arrow keys to turn it. update({watts, idle, jobs, cap, grid, live}).
+// projection: no library, no network. Drag or use the arrow keys to turn it. update({watts, idle, jobs, cap, grid, live,
+// kind, sample}): `kind` labels the job segments ("attributed"); a new `sample` time ripples the floor once.
 function gridScene(host) {
   host.classList.add("scene");
   host.replaceChildren();
@@ -276,7 +277,7 @@ function gridScene(host) {
   };
   colours();
 
-  const state = { watts: 0, idle: 0, jobs: [], cap: null, grid: null, live: true, kind: "" };
+  const state = { watts: 0, idle: 0, jobs: [], cap: null, grid: null, live: true, kind: "", sample: null };
   const shown = { seg: {}, cap: null, capA: 0, max: 10 };
   const tags = new Map();
   let W = 1, H = 1, dpr = 1, k = 30, cx = 0, cy = 0, cs = 1, sn = 0, yaw = -0.72, yawUser = 0;
@@ -519,11 +520,12 @@ function gridScene(host) {
 
   return {
     update(s) {
+      const fresh = s.sample != null && s.sample !== state.sample;
       Object.assign(state, s);
       const sum = (state.idle || 0) + state.jobs.reduce((a, j) => a + (j.watts || 0), 0);
       const need = Math.max(sum, state.watts || 0, state.cap || 0, 1) * 1.2;
       if (need > shown.max || need < shown.max * 0.55) shown.max = need;
-      if (s.watts != null) pulses.push(Math.max(0, performance.now() - t0) / 1000);
+      if (fresh && state.live) pulses.push(Math.max(0, performance.now() - t0) / 1000);
       const over = state.cap != null && state.watts > state.cap;
       host.setAttribute("aria-label", `This machine draws ${fixed(state.watts, 1)} W measured` +
         (state.cap != null ? `, ${over ? "over" : "under"} the ${fixed(state.cap, 1)} W cap` : ", no cap in force") +
