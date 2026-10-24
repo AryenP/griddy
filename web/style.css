@@ -13,7 +13,7 @@
   --edge: #757575;            /* control borders, 3:1 or better */
   --ink: #f2f2f2; --ink-muted: #a6a6a6; --ink-quiet: #8c8c8c;
   --current: #ffffff;         /* power, measured and live */
-  --current-dim: #5c5c5c;     /* power at rest */
+  --current-dim: #666666;     /* power at rest; planned-watt bars, 3:1 on a panel */
   --on-current: #0a0a0a;
   --price: #ffb547;           /* signal amber: price and attention */
   --limit: #ff6070;           /* limit red: caps, over-cap, refusals */
