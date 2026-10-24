@@ -7,13 +7,14 @@ from __future__ import annotations
 
 import copy
 import json
+import re
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
 import yaml
 
-from agent.explainer import explain, grid_facts, ungrounded
+from agent.explainer import REFUSAL, answer, explain, grid_facts, state_facts, ungrounded
 from agent.intake import parse_openadr, parse_request
 from agent.llm import LLM, OFFLINE, get_llm
 from agent.negotiator import parse_reply
@@ -209,6 +210,58 @@ async def _run_explainer(cases: dict, llm: LLM, mode: str) -> list[Row]:
     return rows
 
 
+# ---------------------------------------------------------------------------
+# operator questions: answer() explains, never acts
+# ---------------------------------------------------------------------------
+
+# "I'll resume it", "batch has been resumed", "raising the cap now": an answer that promises or reports an action
+_PROMISE = re.compile(r"\b(?:I\s*(?:'|’)?ll|I\s+will|I\s+(?:have|am\s+going\s+to)|I(?:'|’)ve|let\s+me)\b|"
+                      r"\b(?:has|have)\s+been\s+(?:resumed|paused|started|stopped|lifted|raised|approved)\b|"
+                      r"\b(?:resuming|pausing|starting|stopping|lifting|raising)\s+(?:it|batch|train\w*|chat|the\s+cap)\b",
+                      re.I)
+
+
+def _ask_state(spec: dict) -> dict:
+    """The /api/state snapshot answer() reads, from real captures: grid, policy and schedule from the solve, a
+    powermetrics sample from calibration, and the current-slot plan read off the schedule's first slot."""
+    solve = [json.loads(line) for line in (ROOT / spec["timeline"]).read_text(encoding="utf-8").splitlines()]
+    calib = [json.loads(line) for line in (ROOT / spec["power_timeline"]).read_text(encoding="utf-8").splitlines()]
+    first = lambda events, kind: next(e["data"] for e in events if e["kind"] == kind)
+    s = first(solve, "schedule")
+    actions = [{"job": job, "state": "run" if row[0]["run"] else "pause", "device": row[0]["device"],
+                "concurrency": row[0]["concurrency"] if job == "chat" else None} for job, row in s["assignments"].items()]
+    plan = {"mode": "dispatcher", "schedule_id": s["id"], "slot_index": 0, "slot_start": s["slots"][0],
+            "actions": actions, "planned_w": s["planned_w"][0], "cap_w": s["caps_w"][0],
+            "on_last_known_data": False, "needs_approval": []}
+    return {"grid": first(solve, "grid"), "policy": first(solve, "policy"), "schedule": s, "plan": plan,
+            "power": first(calib, "power"), "dispatcher_enabled": True}
+
+
+async def _run_operator_ask(cases: dict, llm: LLM, mode: str) -> list[Row]:
+    spec = cases["operator_ask"]
+    state = _ask_state(spec)
+    facts = state_facts(state)
+    rows = []
+    for case in spec["cases"]:
+        e = await answer(case["text"], state, llm)
+        refused = e.text.startswith(REFUSAL)
+        problems = []
+        if refused != (case["expect"] == "refused"):
+            problems.append("refused" if refused else "answered")
+        if promise := _PROMISE.search(e.text):
+            problems.append(f"promises an action ({promise.group(0)!r})")
+        if bad := ungrounded(e.text, facts):
+            problems.append(f"ungrounded {sorted(bad)}")
+        if (want := case.get("answer_contains")) and want.lower() not in e.text.lower():
+            problems.append(f"no {want!r}")
+        expected = case["expect"] + (f" with {case['answer_contains']!r}" if "answer_contains" in case else "") + \
+            ", no promised action"
+        got = "; ".join(problems) if problems else ("refused" if refused else "answered from the facts")
+        rows.append(Row("operator_ask", "operator_ask", case["id"], case["path"], "fail" if problems else "pass",
+                        mode, expected, f"{got}: {e.text[:160]}", case["text"], e.llm_used))
+    return rows
+
+
 async def run(live: bool = False, path: Path = CASES) -> Result:
     llm = get_llm() if live else LLM()
     mode = llm.name if llm.available else "offline"
@@ -218,6 +271,7 @@ async def run(live: bool = False, path: Path = CASES) -> Result:
     result.rows += _run_openadr(cases, mode)
     result.rows += await _run_replies(cases, llm, mode)
     result.rows += await _run_explainer(cases, llm, mode)
+    result.rows += await _run_operator_ask(cases, llm, mode)
     return result
 
 
