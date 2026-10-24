@@ -6,18 +6,14 @@
   <title>Brownout</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Saira:wdth,wght@75..100,300..700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="dashboard.css">
 </head>
 <body class="dash d">
   <header class="d-top">
-    <div class="d-claim">
+    <div class="d-bar">
       <h1>Brownout</h1>
-      <p>When the grid runs short, the plan for AI data centers is diesel generators. This is the alternative.</p>
-      <div id="quote" class="quote"></div>
-    </div>
-    <div class="d-controls">
       <div class="d-badges">
         <span id="conn" class="badge">connecting</span>
         <span id="agent" class="badge">agent ?</span>
@@ -34,12 +30,15 @@
           <span class="d-knob" aria-hidden="true"></span><span id="dispatcher-label">Dispatcher</span>
         </button>
       </div>
-      <div class="keys"><kbd>D</kbd> dispatcher <kbd>1</kbd> cost <kbd>2</kbd> carbon <kbd>3</kbd> balanced <kbd>R</kbd> receipts</div>
+    </div>
+    <div class="d-claim">
+      <p>When the grid runs short, the plan for AI data centers is diesel generators. This is the alternative.</p>
+      <div id="quote" class="quote"></div>
     </div>
   </header>
 
   <main class="d-main">
-    <section class="panel d-load" aria-labelledby="load-h">
+    <section class="panel d-load" id="load-panel" aria-labelledby="load-h">
       <div class="d-readout">
         <h2 id="load-h">This machine, now</h2>
         <p id="cap-state" class="d-state" aria-live="polite">Waiting for the meter</p>
@@ -67,28 +66,33 @@
           </div>
         </dl>
       </div>
-      <div class="d-chart">
-        <div class="d-chart-head">
-          <h2>Measured power against the cap</h2>
-          <div class="d-seg d-small" id="trace-window" role="group" aria-label="How much history to show">
-            <button type="button" data-window="300" aria-pressed="true">5 min</button>
-            <button type="button" data-window="900" aria-pressed="false">15 min</button>
-            <button type="button" data-window="3600" aria-pressed="false">1 h</button>
-          </div>
-        </div>
-        <div id="load-trace" class="d-trace">
-          <div class="d-plot"></div>
-          <div class="d-hover" hidden><span class="d-hover-text"></span></div>
-        </div>
-        <div class="legend">
-          <span><i class="sw d-sw-meas"></i>measured</span>
-          <span><i class="sw d-sw-plan"></i>current plan (calibrated)</span>
-          <span><i class="sw d-sw-cap"></i>the utility's cap</span>
-          <span><i class="sw d-sw-over"></i>over the cap</span>
-          <span><i class="sw d-sw-mark"></i>what changed the plan</span>
-        </div>
-        <div class="src" id="load-src">macOS powermetrics, combined CPU + GPU + ANE watts, one sample a second</div>
+      <div class="d-scene-wrap">
+        <div id="scene" class="d-scene" aria-describedby="scene-src"></div>
+        <div class="src" id="scene-src">waiting for powermetrics</div>
       </div>
+    </section>
+
+    <section class="panel d-chart" id="trace-panel" aria-labelledby="trace-h">
+      <div class="d-chart-head">
+        <h2 id="trace-h">Measured power against the cap</h2>
+        <div class="d-seg d-small" id="trace-window" role="group" aria-label="How much history to show">
+          <button type="button" data-window="300" aria-pressed="true">5 min</button>
+          <button type="button" data-window="900" aria-pressed="false">15 min</button>
+          <button type="button" data-window="3600" aria-pressed="false">1 h</button>
+        </div>
+      </div>
+      <div id="load-trace" class="d-trace">
+        <div class="d-plot"></div>
+        <div class="d-hover" hidden><span class="d-hover-text"></span></div>
+      </div>
+      <div class="legend">
+        <span><i class="sw d-sw-meas"></i>measured</span>
+        <span><i class="sw d-sw-plan"></i>current plan (calibrated)</span>
+        <span><i class="sw d-sw-cap"></i>the utility's cap</span>
+        <span><i class="sw d-sw-over"></i>over the cap</span>
+        <span><i class="sw d-sw-mark"></i>what changed the plan</span>
+      </div>
+      <div class="src" id="load-src">macOS powermetrics, combined CPU + GPU + ANE watts, one sample a second</div>
     </section>
 
     <section class="panel d-hood" id="hood" aria-labelledby="hood-h" hidden>
@@ -198,6 +202,10 @@
       <div class="src" id="trace-src"></div>
     </section>
   </main>
+
+  <footer class="d-foot">
+    <div class="keys"><kbd>D</kbd> dispatcher <kbd>1</kbd> cost <kbd>2</kbd> carbon <kbd>3</kbd> balanced <kbd>R</kbd> receipts</div>
+  </footer>
 
   <script src="common.js"></script>
   <script src="map.js"></script>
