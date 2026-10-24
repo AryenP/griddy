@@ -245,3 +245,103 @@ class Calibration(BaseModel):
     window_s: int
     jobs: dict[str, dict[str, DevicePower]] = Field(description="job id -> device -> measured power")
     source: Literal["powermetrics"] = "powermetrics"
+
+
+class PlanAction(BaseModel):
+    """What the controller does to one job in the current slot."""
+
+    job: str
+    state: Literal["run", "pause", "done"]
+    device: RunDevice | None = None
+    concurrency: int | None = None   # chat only
+
+
+class SlotPlan(BaseModel):
+    """The current slot's decisions (SPEC §3 `Plan`). From the schedule, or the baseline policy."""
+
+    id: str = Field(default_factory=lambda: new_id("plan"))
+    t: float = Field(default_factory=now)
+    mode: Literal["dispatcher", "baseline"]
+    schedule_id: str | None = None
+    slot_index: int | None = None
+    slot_start: datetime | None = None
+    actions: list[PlanAction]
+    planned_w: float | None = None
+    cap_w: float | None = None
+    on_last_known_data: bool = False
+    needs_approval: list[str] = Field(default_factory=list)
+
+
+# ---------------------------------------------------------------------------
+# Team contract types (team/README.md). Machine 4 (agent/) produces IntakeResult, OwnerDecision,
+# Explanation; machine 3 (agent/reporter.py, scripts/compare.py) produces Report; machine 1
+# wires them into the API; machine 2 renders them. Change these only through machine 1.
+# ---------------------------------------------------------------------------
+
+class PolicyChange(BaseModel):
+    objective: Objective | None = None
+    power_cap_w: float | None = None
+    never_pause: list[str] | None = None
+
+
+class IntakeResult(BaseModel):
+    """What intake made of one operator/utility request (OpenADR JSON or free text)."""
+
+    kind: Literal["cap_event", "policy", "clarify", "rejected"]
+    cap_event: CapEvent | None = None
+    policy: PolicyChange | None = None
+    question: str | None = None          # kind == clarify: the one question to ask back
+    readback: str = ""                   # what the system understood, in one or two sentences
+    reason: str = ""                     # kind == rejected (e.g. Content Safety flagged it)
+    source: Literal["openadr", "text"] = "text"
+    llm_used: bool = False
+
+
+class ApprovalRequest(BaseModel):
+    """The solver needs an owner's yes/no: a deadline would slip, or chat would degrade."""
+
+    id: str = Field(default_factory=lambda: new_id("ask"))
+    t: float = Field(default_factory=now)
+    job_id: str
+    owner: str
+    shortfall: Shortfall
+    message: str                         # drafted by the negotiator from the shortfall's facts
+    status: Literal["pending", "approved", "refused", "countered", "expired"] = "pending"
+
+
+class OwnerDecision(BaseModel):
+    """The negotiator's parse of an owner's free-text reply."""
+
+    request_id: str
+    decision: Literal["approve", "refuse", "new_deadline", "unclear"]
+    new_deadline: datetime | None = None
+    reason: str = ""                     # the owner's reason in their words ("customer demo Monday")
+    raw: str = ""
+    llm_used: bool = False
+
+
+class Explanation(BaseModel):
+    text: str                            # two sentences an operator reads
+    facts: list[str]                     # the Schedule.explanations it was built from, verbatim
+    llm_used: bool = False
+
+
+class Report(BaseModel):
+    """Event-window / run report, computed from timelines only (SPEC §9 reporter)."""
+
+    run_id: str
+    window_start: float
+    window_end: float
+    baseline_w: float | None = None      # mean measured W in the pre-event window
+    event_w: float | None = None         # mean measured W during the event
+    reduction_pct: float | None = None
+    time_to_compliance_s: float | None = None
+    energy_wh: float = 0.0
+    cost_usd: float = 0.0                # measured W x live price over the window
+    co2_g: float = 0.0
+    deadlines: dict[str, bool] = Field(default_factory=dict)
+    approvals: list[dict] = Field(default_factory=list)   # who, what, when, decision
+    chat_p95_before_s: float | None = None
+    chat_p95_during_s: float | None = None
+    shortfalls: list[str] = Field(default_factory=list)
+    narrative: str | None = None         # optional LLM prose over these numbers; numbers come first

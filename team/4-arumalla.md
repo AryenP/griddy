@@ -1,0 +1,54 @@
+# 4 Arumalla: agent layer (LLM intake, negotiation, explanations)
+
+**Mission:** handle what the solver cannot (messy human requests, owner negotiation in free text, plain
+explanations) without ever deciding or touching a knob. Your functions take data and return the pydantic
+types at the bottom of `core/types.py`; machine 1 wires them into the API.
+
+**Owns:** `agent/__init__.py`, `agent/llm.py`, `agent/intake.py`, `agent/negotiator.py`, `agent/explainer.py`,
+`agent/channels/**`, `tests/test_agent*.py`, `tests/fixtures/openadr/**`.
+
+**Keys:** `ANTHROPIC_API_KEY` / `ANTHROPIC_MODEL` in your own `.env`; Azure via `uv pip install -e ".[azure]"`
+and `AZURE_AI_PROJECT_ENDPOINT` / `AZURE_MODEL_DEPLOYMENT`. Tests never call a network: use recorded fixtures.
+
+## Interfaces (implement exactly; machine 1 codes against these)
+```python
+# agent/llm.py
+class AgentOffline(Exception): ...
+class LLM:
+    name: str                      # "claude:<model>" or "foundry:<deployment>"
+    available: bool
+    async def text(self, system: str, user: str) -> str: ...
+    async def json(self, system: str, user: str, schema: type[BaseModel]) -> BaseModel: ...
+def get_llm() -> LLM               # Agent Framework + Foundry when AZURE_AI_PROJECT_ENDPOINT, else Claude
+
+# agent/intake.py
+def parse_openadr(event: dict) -> IntakeResult                       # deterministic, no LLM
+async def parse_request(text: str, llm: LLM, context: dict) -> IntakeResult
+#   context = {"now": iso8601, "baseline_w": float|None, "jobs": [...], "policy": {...}}
+
+# agent/negotiator.py
+async def draft_ask(shortfall: Shortfall, job: Job, llm: LLM) -> ApprovalRequest
+async def parse_reply(request: ApprovalRequest, text: str, llm: LLM, now: datetime) -> OwnerDecision
+
+# agent/explainer.py
+async def explain(schedule: Schedule, signal: GridSignal, llm: LLM) -> Explanation
+```
+Every call: one OpenTelemetry span (`opentelemetry.trace.get_tracer("brownout.agent")`) with model, latency,
+tokens. Offline (no key, API down): every function still returns a valid result: `clarify`/`unclear` with
+"agent offline", or the solver's facts joined plainly, with `llm_used=False`.
+
+## Tasks, in order
+1. **`agent/llm.py`** with both backends and the offline path. Done when: `get_llm().text(...)` answers with a
+   key, raises/flags offline without one; spans visible with the console exporter.
+2. **`intake.py`.** `parse_openadr` for OpenADR 3.1 EVENT JSON (`IMPORT_CAPACITY_LIMIT` in KW/W,
+   `intervalPeriod` start/duration ISO 8601) → `CapEvent`; fixture from RESEARCH.md in `tests/fixtures/openadr/`.
+   `parse_request`: regex fast path for plain forms ("30% for 20 minutes", "cap at 15 W until 1 AM"); the LLM
+   only for messy text; Azure Content Safety `shieldPrompt` on free text when configured (rejected on attack);
+   ambiguity → exactly one clarifying question. Done when: DEMO.md's "grid alert, I need 30% off for the next
+   twenty minutes" becomes a `CapEvent` with a readback.
+3. **`negotiator.py`.** `draft_ask` turns a deadline `Shortfall` into a short message to the owner using only
+   its facts; `parse_reply`: "no, this has to finish by 9 AM Monday" → refuse with reason; "ok if it's done by
+   Tuesday noon" → `new_deadline`; plain yes/no via regex first. Done when: DEMO.md 1:45 works on fixtures.
+4. **`explainer.py`.** Two sentences from `Schedule.explanations` + the grid signal; **reject its own output**
+   if any number in it is not in the input facts (fall back to the facts). Done when: a test proves no invented
+   numbers on the real `tests/fixtures/real_timeline_solve_20261023.jsonl` schedule.
