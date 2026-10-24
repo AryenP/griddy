@@ -1,0 +1,3 @@
+# Shown on the dashboard. Fill `quote` with the operator/FDE quote collected at the Sat 10 AM
+# Microsoft workshop, with permission; the header shows nothing until it is filled.
+quote: null        # {text: "...", who: "Name", role: "Title, Org"}
