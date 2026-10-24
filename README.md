@@ -81,6 +81,9 @@ make calibrate        # measure idle and each job's watts with powermetrics
 make demo             # grid feeds + meter + workloads + dispatcher + dashboard on :8080
 make baseline         # same jobs, dispatcher off, headless for 10 minutes, for the comparison
 make evidence         # unattended: calibrate, then dispatcher-off and dispatched runs with the same scripted cap, compare
+make evidence3        # unattended (~30 min): calibrate, then ignore the call, pause everything and Brownout, compare
+make evidence-chat    # unattended (~12 min): calibrate (chat at 1, 2, 4 streams), then a capped run with 2 chat streams
+make evidence-chat-judge  # unattended (~8 min): one person chatting during the cap, 15 s to read each reply
 make report RUN=<id>  # reports/<id>.md + power chart, from that run's timeline only (default: latest)
 make compare          # newest dispatched run vs newest baseline run (or DISPATCHED=<id> BASELINE=<id>)
 make test
