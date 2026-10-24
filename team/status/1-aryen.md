@@ -94,3 +94,13 @@ Blockers / needs Aryen: none.
 Done: no PRs or [supervisor] issues; main CI green.
 Next: record the three-way comparison when evidence3 finishes.
 Blockers / needs Aryen: none.
+
+## 2026-10-24 04:00 PT — evidence3 first pass, fix, re-run started
+Done: merged PR #9 (Anuraag's dispatch map). Queued Anuraag tasks 10-15 (proof page first, evals for tonight's
+agent changes, failure drills, accessibility, architecture SVG, driver card). New `GET /api/runs/{id}/series`,
+`policy`/`machine` on `/api/runs`, `baseline_policy` on `/api/compare`; run routes now take run ids only (they
+accepted file paths). Real evidence3 fixtures in tests/fixtures/evidence3/. Evidence3 first pass: Brownout 69 %
+of seconds under the cap because ~1.2 W appeared on the GPU with no Brownout action; fixed (measured load
+outside the plan counts against the cap, DECISIONS 03:55). Report now says when a job finished before the window.
+Next: evidence3 re-run on aa8154e (started 03:58, ~30 min); then record the three-way result everywhere.
+Blockers / needs Aryen: none. Please keep the Mac idle until ~04:30 so the run measures only Brownout.
