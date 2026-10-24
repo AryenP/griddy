@@ -29,8 +29,8 @@ solve:          ## print the 24-h schedule for the live price curve
 report:         ## render compliance report + charts from a timeline
 	$(PY) python -m agent.reporter --run $(RUN)
 
-compare:        ## side-by-side numbers: workload-aware vs uniform
-	$(PY) python scripts/compare.py
+compare:        ## dispatched vs baseline from logged runs (newest of each, or DISPATCHED=<id> BASELINE=<id>)
+	$(PY) python scripts/compare.py $(if $(DISPATCHED),--dispatched $(DISPATCHED)) $(if $(BASELINE),--baseline $(BASELINE))
 
 test:
 	$(PY) pytest -q
