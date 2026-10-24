@@ -49,6 +49,7 @@ class Runtime:
         self.executor.fleet = self.fleet
         self.meter.subscribers.append(lambda r: self.executor.on_power(self.fleet.combine(r)))
         self.neighbourhood = Neighbourhood(self.tl, self.executor)   # SIMULATED line around the real sites
+        self.scale: dict | None = None                               # ERCOT-scale ESTIMATE (grid/scale.py)
         self.agent = AgentBridge(self.tl, self.executor)
         self.agent.snapshot = self.snapshot
         self.watcher: GridWatcher | None = None
@@ -96,6 +97,8 @@ class Runtime:
         self._tasks.append(asyncio.create_task(self.executor.run()))
         if self.neighbourhood.enabled:
             self._tasks.append(asyncio.create_task(self._neighbourhood_loop()))
+        if config.site.get("scale"):
+            self._tasks.append(asyncio.create_task(self._scale_loop(config.site["scale"])))
 
     async def _neighbourhood_loop(self):
         """Once a second: the simulated line; its call for a cut goes to the real dispatcher."""
@@ -112,6 +115,19 @@ class Runtime:
                 log.exception("neighbourhood tick failed")
                 self.tl.log("note", level="error", msg=f"neighbourhood tick failed: {e!r}"[:300])
             await asyncio.sleep(1.0)
+
+    async def _scale_loop(self, cfg: dict):
+        """Every `poll_s`: ERCOT's live demand, and what this Mac's measured cut would mean there (an estimate)."""
+        from grid import isos, scale
+        while True:
+            try:
+                cond = await asyncio.to_thread(isos.fetch_ercot_conditions)
+                self.scale = scale.estimate(cfg, cond.get("Actual System Demand"), cond.get("Time"))
+                self.tl.log("scale", **self.scale)
+            except Exception as e:                  # feed down: keep the last estimate, say so in the log
+                log.warning("ERCOT demand fetch failed: %r", e)
+                self.tl.log("note", level="warning", feed="ercot_scale", error=repr(e)[:300])
+            await asyncio.sleep(float(cfg.get("poll_s", 300)))
 
     async def stop(self):
         for t in self._tasks + ([self.watcher_task] if self.watcher_task else []):
@@ -130,7 +146,7 @@ class Runtime:
         return {"grid": dump(ex.signal), "schedule": dump(ex.schedule), "plan": dump(ex.plan),
                 "power": dump(self.meter.latest), "power_history": [[round(t, 2), round(w, 3)] for t, w in ex.power],
                 "jobs": {j: Knobs.status(j) for j in ("chat", "train", "batch")},
-                "calibration": dump(ex.cal), "fleet": self.fleet.status(), "neighbourhood": self.neighbourhood.summary(), "policy": dump(ex.policy), "iso_options": available_isos(),
+                "calibration": dump(ex.cal), "fleet": self.fleet.status(), "neighbourhood": self.neighbourhood.summary(), "scale": self.scale, "policy": dump(ex.policy), "iso_options": available_isos(),
                 "iso": self.watcher.iso if self.watcher else settings.iso,
                 "dispatcher_enabled": ex.dispatcher_enabled, "agent": self.agent.status, "agent_model": self.agent.llm.name,
                 "approvals": [dump(x) for x in self.agent.pending(status=None)],

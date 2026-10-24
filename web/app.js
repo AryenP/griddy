@@ -29,6 +29,7 @@ function handle(msg) {
       S.jobSpecs = d.job_specs || {}; S.quote = d.quote || null; S.capEvents = d.cap_events || [];
       S.fleet = d.fleet || [];
       S.hood = d.neighbourhood || null; S.hoodLast = S.hood && S.hood.last ? S.hood.last : null;
+      S.scale = d.scale || null;
       S.explanation = d.explanation ? { data: d.explanation, scheduleId: d.schedule ? d.schedule.id : null, t: null } : null;
       traceSeed(d.power_history);
       renderAll();
@@ -39,6 +40,7 @@ function handle(msg) {
       if (d.scenario) S.hoodHist.push(d);
       renderHood();
       break;
+    case "scale": S.scale = d; renderScale(); break;
     case "fleet_power": S.fleetPower = d; traceSet(d.t, d.combined_w); renderNumbers(); renderLoad(); break;
     case "grid":
       if (d.feed === "signal") { S.grid = d; S.iso = d.iso; renderNumbers(); renderCurve(); renderControls(); }
@@ -140,6 +142,22 @@ function renderLoad() {
 
 // ---------- the SIMULATED neighbourhood line (neighbourhood/model.py, DECISIONS 05:45) ----------
 function simClock(h) { const m = Math.round((h % 24) * 60); return `${String(Math.floor(m / 60) % 24).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`; }
+// At grid scale: an ESTIMATE from public data (grid/scale.py), never shown as measured. ERCOT's demand is live;
+// the large loads and the queue are cited with their dates; the cut is this Mac's, measured under the same call.
+function renderScale() {
+  const box = $("hood-scale"), x = S.scale;
+  box.hidden = !x;
+  if (!x) return;
+  const gw = (mw) => `${fixed(mw / 1000, 1)} GW`;
+  setHTML(box, html`<h3>At grid scale <span class="d-sim">estimate from public data</span></h3>
+    <p>ERCOT's large loads now running draw about <b>${gw(x.large_loads_running_mw)}</b>. If they cut the
+      ${fixed(x.our_cut_pct, 0)}% this Mac cut under the same call, that frees about <b>${fixed(x.freed_mw, 0)} MW</b>${x.share_of_demand_pct != null ? html`, <b>${fixed(x.share_of_demand_pct, 1)}%</b> of ERCOT's demand right now (${gw(x.demand_mw)}, live)` : ""}.
+      Another ${fixed(x.queue_gw, 0)} GW of large loads, mostly data centers, are asking to connect.</p>
+    <div class="src">Running and approved (${gw(x.large_loads_approved_mw)}) large loads: <a href="${x.large_loads_url}" target="_blank" rel="noopener">${x.large_loads_source}</a>.
+      Queue: <a href="${x.queue_url}" target="_blank" rel="noopener">${x.queue_source}</a>. Demand: ERCOT real-time system conditions${x.demand_t ? `, ${localClock(Date.parse(x.demand_t) / 1000)}` : ""}.
+      The cut: ${x.our_cut_source}. A laptop's response is not a data center's; this is arithmetic on public numbers, not a measurement.</div>`);
+}
+
 function renderHood() {
   const box = $("hood"), h = S.hood, d = S.hoodLast;
   box.hidden = !(h && h.enabled);
@@ -518,7 +536,7 @@ function renderControls() {
   else setHTML($("quote"), html``);
 }
 
-function renderAll() { renderControls(); renderNumbers(); renderLoad(); renderHood(); renderCurve(); renderJobs(); renderSolver(); }
+function renderAll() { renderControls(); renderNumbers(); renderLoad(); renderHood(); renderScale(); renderCurve(); renderJobs(); renderSolver(); }
 
 async function post(path, body) {
   const r = await postJSON(path, body);

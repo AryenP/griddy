@@ -86,6 +86,12 @@ chat has `concurrency`, `inflight`, `p95_60s` (total latency), `ttft_p95_60s` (t
 | GET | `/api/trace?n=50` | | recent OpenTelemetry spans `[{"name","start","end","attributes",...}]` |
 | GET | `/join?t=<token>&next=/operator.html` | | 303 to `next` (same-site paths only) with the HttpOnly `brownout_op` cookie; wrong token 401 (since Sat 15:10) |
 
+**At grid scale (since Sat 15:00, grid/scale.py).** The snapshot carries `"scale"` (null until the first fetch) and every
+`poll_s` (300 s) the WebSocket sends `{"kind": "scale", "data": {"estimate": true, "iso": "ERCOT", "demand_mw" (ERCOT's live
+actual system demand), "demand_t", "large_loads_running_mw", "large_loads_approved_mw", "large_loads_source", "large_loads_url",
+"queue_gw", "queue_source", "queue_url", "our_cut_pct", "our_cut_source", "freed_mw", "share_of_demand_pct"}}`. It is an
+ESTIMATE (arithmetic on cited public numbers and this Mac's measured cut): label it so on every page; only `demand_mw` is live.
+
 **Who may act (since Sat 15:10, Microsoft HVE Core review; api/access.py).** Every POST that moves a knob, a cap or an
 approval (`/api/policy`, `/api/iso`, `/api/dispatcher`, `/api/jobs/{id}`, `/api/event`, `/api/neighbourhood`, `/request`,
 `/openadr/event`, `/api/approvals/{id}/reply`, `/api/ask`) answers **401** unless the caller is this Mac (loopback or its own

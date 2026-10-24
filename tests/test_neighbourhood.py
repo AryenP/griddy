@@ -195,3 +195,16 @@ def test_solar_follows_the_isos_measured_output_when_the_feed_has_it(tmp_path):
     n.ex.signal = GridSignal(iso="CAISO", location="fixture", price_now=50.0, load_forecast=FORECAST)
     assert "clear-day profile (no solar feed yet)" in n.tick(now=time.time())["inputs"]
 
+
+
+def test_grid_scale_estimate_is_arithmetic_on_cited_numbers():
+    """grid/scale.py: an ESTIMATE, labelled so; every input is in config/site.yaml with its source."""
+    from core import config
+    from grid.scale import estimate
+    cfg = config.site["scale"]
+    x = estimate(cfg, 62168.0, "2026-10-24T16:50:30-05:00")
+    assert x["estimate"] is True and x["iso"] == "ERCOT"
+    assert x["freed_mw"] == pytest.approx(cfg["large_loads_running_mw"] * cfg["our_cut_pct"] / 100)
+    assert x["share_of_demand_pct"] == pytest.approx(100 * x["freed_mw"] / 62168.0)
+    assert all(cfg[k].startswith("https://") for k in ("large_loads_url", "queue_url"))
+    assert estimate(cfg, None, None)["share_of_demand_pct"] is None              # feed down: no share invented
