@@ -89,13 +89,20 @@ class AgentBridge:
             self.tl.log("note", schedule_id=sched.id, explanation=self.explanation.model_dump(mode="json"))
 
     # ------------------------------------------------------------------ replies
-    async def reply(self, request_id: str, text: str, who: str):
+    async def reply(self, request_id: str, text: str, who: str, acting_as: str | None = None):
+        """`acting_as`: the owner the replying console speaks for; only the request's own owner may answer it
+        (HVE Core review, fix 1). Going over the cap takes a plain yes, never a model's reading (fix 2)."""
         req = self.approvals.get(request_id)
         if req is None:
             raise KeyError(request_id)
         if req.status != "pending":
             raise ValueError(f"request {request_id} is {req.status}")
-        decision = await negotiator.parse_reply(req, text, self.llm, self._now())
+        if acting_as is not None and acting_as != req.owner:
+            self.tl.log("note", level="warning", msg=f"reply to {req.id} refused: it is for {req.owner}, not {acting_as}",
+                        request_id=req.id, who=who)
+            raise PermissionError(f"this request is for {req.owner}; answer it from {req.owner}'s console")
+        decision = (negotiator.parse_cap_reply(req, text) if req.job_id == CAP_JOB
+                    else await negotiator.parse_reply(req, text, self.llm, self._now()))
         self.tl.log("approval", request_id=req.id, who=who, decision=decision.model_dump(mode="json"))
         sched = None
         if decision.decision == "unclear":
@@ -113,10 +120,10 @@ class AgentBridge:
             miss = next((m for m in (self.ex.schedule.deadline_misses if self.ex.schedule else [])
                          if m.job_id == req.job_id), None)
             if miss and miss.finishes_at:
-                sched = await self.ex.set_job(req.job_id, deadline=miss.finishes_at)
+                sched = await self.ex.set_job(req.job_id, who=who, deadline=miss.finishes_at)
         elif decision.decision == "new_deadline":
             req.status = "countered"
-            sched = await self.ex.set_job(req.job_id, deadline=decision.new_deadline)
+            sched = await self.ex.set_job(req.job_id, who=who, deadline=decision.new_deadline)
         else:
             req.status = "refused"
             self.refused[req.job_id] = decision.reason
@@ -143,7 +150,7 @@ class AgentBridge:
             return await self.ex.add_event(result.cap_event)
         if result.kind == "policy" and result.policy:
             changes = result.policy.model_dump(exclude_none=True)
-            return await self.ex.set_policy(**changes) if changes else None
+            return await self.ex.set_policy(who=who, **changes) if changes else None
         return None
 
     async def request(self, text: str, who: str):

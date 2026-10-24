@@ -1,8 +1,10 @@
 """HTTP contract tests (HANDOFF.md). TEST FIXTURE: a stand-in runtime that records what the routes
 hand it; the real Runtime needs powermetrics and runs only on the demo Mac."""
+import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from api import access
 from api.routes import make_router
 from dispatcher.solve import solve
 from tests.test_dispatcher import CAL, POLICY, jobs, signal
@@ -15,11 +17,11 @@ class FakeExecutor:
     def jobs(self):
         return jobs()
 
-    async def set_policy(self, **c):
+    async def set_policy(self, who="", **c):
         self.calls.append(("policy", c))
         return solve(signal([50.0] * 96), jobs(), POLICY, CAL)
 
-    async def set_job(self, job_id, **c):
+    async def set_job(self, job_id, who="", **c):
         self.calls.append(("job", job_id, c))
         return None
 
@@ -27,8 +29,9 @@ class FakeExecutor:
         self.calls.append(("event", ev))
         return None
 
-    def set_dispatcher(self, enabled):
+    def set_dispatcher(self, enabled, who=""):
         self.dispatcher_enabled = enabled
+        self.calls.append(("dispatcher", enabled, who))
 
 
 class FakeRuntime:
@@ -39,11 +42,20 @@ class FakeRuntime:
         return {"dispatcher_enabled": self.executor.dispatcher_enabled}
 
 
-def client():
+TOKEN = "test-operator-token"
+
+
+@pytest.fixture(autouse=True)
+def _operator_token(monkeypatch):
+    monkeypatch.setattr(access.settings, "operator_token", TOKEN)
+
+
+def client(joined: bool = True):
+    """A joined device by default (the test client is not this machine); `joined=False` is a stranger's phone."""
     rt = FakeRuntime()
     app = FastAPI()
     app.include_router(make_router(rt))
-    return TestClient(app), rt
+    return TestClient(app, headers={access.HEADER: TOKEN} if joined else {}), rt
 
 
 def test_policy_null_clears_cap_and_returns_schedule():
@@ -130,3 +142,35 @@ def test_run_routes_take_run_ids_never_paths(tmp_path, monkeypatch):
         assert c.get("/api/report", params={"run": bad}).status_code == 404, bad
         assert c.get("/api/compare", params={"dispatched": bad, "baseline": bad}).status_code == 404, bad
     assert isinstance(c.get("/api/trace").json(), list)
+
+
+def test_a_device_that_has_not_joined_cannot_act_but_can_read():
+    """HVE Core review fix 1: the venue network has judges' phones on it."""
+    c, rt = client(joined=False)
+    for path, body in [("/api/dispatcher", {"enabled": False}), ("/api/policy", {"objective": "cost"}),
+                       ("/api/jobs/train", {"deadline": "2026-10-26T09:00:00-07:00"}),
+                       ("/api/event", {"start": "2026-10-24T00:00:00-07:00", "duration_s": 900, "target_w": 10}),
+                       ("/request", {"text": "cut 30%"}), ("/api/ask", {"question": "why?"}),
+                       ("/api/approvals/x/reply", {"text": "yes", "who": "ops"})]:
+        assert c.post(path, json=body).status_code == 401, path
+    assert rt.executor.calls == [] and rt.executor.dispatcher_enabled
+    assert c.get("/api/state").status_code == 200
+
+
+def test_join_link_sets_the_cookie_and_a_wrong_token_joins_nothing():
+    c, rt = client(joined=False)
+    assert c.get("/join?t=wrong", follow_redirects=False).status_code == 401
+    r = c.get(f"/join?t={TOKEN}&next=/operator.html", follow_redirects=False)
+    assert r.status_code == 303 and r.headers["location"] == "/operator.html"
+    assert "httponly" in r.headers["set-cookie"].lower() and "samesite=strict" in r.headers["set-cookie"].lower()
+    assert c.get(f"/join?t={TOKEN}&next=//evil.example", follow_redirects=False).headers["location"] == "/"
+    assert c.post("/api/dispatcher", json={"enabled": False}).status_code == 200      # the cookie now counts
+    assert rt.executor.calls[-1][:2] == ("dispatcher", False)
+
+
+def test_every_switch_records_who_and_from_where():
+    """HVE Core review fix 3: the name typed on the page is self-declared; where it came from is not."""
+    c, rt = client()
+    c.post("/api/dispatcher", json={"enabled": False, "who": "judge"})
+    assert rt.executor.calls[-1] == ("dispatcher", False, "judge (joined device testclient)")
+

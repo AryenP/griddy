@@ -85,9 +85,9 @@ class Executor:
         self.signal = sig
         await self.resolve("grid update")
 
-    async def set_policy(self, **changes) -> Schedule | None:
+    async def set_policy(self, who: str = "", **changes) -> Schedule | None:
         self.policy = self.policy.model_copy(update=changes)
-        self.tl.log("policy", reason="operator change", changes=changes, **self.policy.model_dump(mode="json"))
+        self.tl.log("policy", reason="operator change", who=who, changes=changes, **self.policy.model_dump(mode="json"))
         return await self.resolve("policy change")
 
     async def add_event(self, ev: CapEvent) -> Schedule | None:
@@ -110,9 +110,9 @@ class Executor:
         self.tl.log("note", msg=f"cap {event_id} withdrawn: {reason}", cap_withdrawn=event_id)
         return await self.resolve("cap withdrawn")
 
-    async def set_job(self, job_id: str, **changes) -> Schedule | None:
+    async def set_job(self, job_id: str, who: str = "", **changes) -> Schedule | None:
         self.job_changes.setdefault(job_id, {}).update(changes)
-        self.tl.log("policy", reason="job change", job=job_id,
+        self.tl.log("policy", reason="job change", job=job_id, who=who,
                     changes={k: (v.isoformat() if isinstance(v, datetime) else v) for k, v in changes.items()})
         return await self.resolve("job change")
 
@@ -122,9 +122,9 @@ class Executor:
         self.tl.log("policy", reason="deadline kept by owner", job=job_id, owner_reason=reason)
         return await self.resolve("deadline kept")
 
-    def set_dispatcher(self, enabled: bool) -> None:
+    def set_dispatcher(self, enabled: bool, who: str = "") -> None:
         self.dispatcher_enabled = enabled
-        self.tl.log("policy", reason="dispatcher toggle", dispatcher_enabled=enabled)
+        self.tl.log("policy", reason="dispatcher toggle", dispatcher_enabled=enabled, who=who)
         self.tick()
 
     # ------------------------------------------------------------------ solve
