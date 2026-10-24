@@ -91,6 +91,24 @@
       </div>
     </section>
 
+    <section class="panel d-hood" id="hood" aria-labelledby="hood-h" hidden>
+      <div class="panel-head">
+        <h2 id="hood-h">The neighbourhood power line <span class="d-sim">simulated around our measured sites</span></h2>
+        <button id="hood-replay" type="button" class="primary">Replay the evening peak</button>
+      </div>
+      <p id="hood-state" class="d-hood-state" aria-live="polite"></p>
+      <div class="d-hood-grid">
+        <div>
+          <div class="d-gauge" aria-hidden="true"><i id="hood-fill"></i><b class="d-gauge-limit"></b></div>
+          <div class="d-gauge-label"><span id="hood-loading">—</span><span>line limit <span id="hood-limit">—</span></span></div>
+          <svg id="hood-trace" class="d-hood-trace" viewBox="0 0 600 120" preserveAspectRatio="none" role="img" aria-label="line loading over the replay"></svg>
+          <p id="hood-diesel" class="d-hood-diesel"></p>
+        </div>
+        <ul id="hood-parts" class="d-hood-parts"></ul>
+      </div>
+      <div class="src" id="hood-src">Simulated (Aryen's decision, DECISIONS 05:45): homes and offices follow the shape of today's real load forecast; the solar farm, 20 data centers, the line limit and the diesel generator are simulated; the data centers' flexible load follows our sites' measured response. Our sites' watts are measured. The utility's cut goes to the real dispatcher.</div>
+    </section>
+
     <section class="d-day">
       <div class="panel d-map-panel">
         <div class="panel-head">

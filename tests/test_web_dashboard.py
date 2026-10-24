@@ -15,7 +15,7 @@ def test_dashboard_loads_its_scripts_and_no_external_ones():
 
 def test_posts_only_to_contract_routes():
     routes = set(re.findall(r'post\("(/api/[\w/]+)"', JS))
-    assert routes <= {"/api/iso", "/api/policy", "/api/dispatcher"}, routes
+    assert routes <= {"/api/iso", "/api/policy", "/api/dispatcher", "/api/neighbourhood"}, routes
 
 
 def test_chat_sla_is_time_to_first_token():
@@ -70,3 +70,14 @@ def test_no_global_name_is_defined_twice_across_the_page_scripts():
         for name in re.findall(r"^(?:async )?(?:function|const|let|class) ([A-Za-z_$][\w$]*)", (WEB / src).read_text(encoding="utf-8"), re.M):
             assert name not in seen, f"{name} is defined in both {seen[name]} and {src}"
             seen[name] = src
+
+
+def test_every_simulated_part_is_labelled_simulated():
+    # DECISIONS 05:45: the neighbourhood is simulated; each part on screen carries its tag, only our sites say measured
+    lines = [l.strip() for l in JS.splitlines() if l.strip().startswith("${part(")]
+    assert len(lines) == 5, lines
+    for l in lines:
+        tag = "measured" if '"Our sites"' in l else "simulated"
+        assert f'"{tag}"' in l, l
+    assert sum('"measured"' in l for l in lines) == 1
+    assert "simulated around our measured sites" in HTML and "Simulated (Aryen's decision" in HTML

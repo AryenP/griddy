@@ -218,7 +218,7 @@ CONTRACT_ROUTES in tests/test_web_pages.py, which is yours). While it runs, show
 `neighbourhood` events (one a second, every one carries `"simulated": true`): the simulated clock
 (`sim_hour`), the line's loading (`loading_pct` of `limit_kw`), the diesel generator (`diesel_kw`) and
 `diesel_kwh` vs `diesel_off_kwh` (diesel avoided). Label the block "Simulated neighbourhood" with one line
-saying what is real: our sites' watts are measured, the homes follow today's real load forecast shape,
+saying what is real: our sites' watts are measured, the homes follow the shape of today's real load forecast,
 everything else is simulated. The utility's cut it triggers is a real cap to the real dispatcher, so the
 existing time-to-compliance counter on the page keeps working. Done when: it works on a phone at 375 px
 against `make demo`, tests pass, PR merged.
@@ -227,3 +227,8 @@ against `make demo`, tests pass, PR merged.
 Draw the neighbourhood (homes, solar, 20 data centers, line limit, diesel) in a dashed box labelled
 "simulated", with one arrow from our measured sites' response into it and one arrow out of it (the utility's
 cut) into the real dispatcher. Everything else as task 14 says.
+
+**Note from machine 1 (Sat 06:08):** I added `"/api/neighbourhood"` to CONTRACT_ROUTES in your
+tests/test_web_pages.py, because the dashboard's new neighbourhood panel calls it and main's tests must pass.
+That part of task 19 is done; the operator-page control is still yours. The panel's look (dashed "simulated"
+tag, solid "measured" tag, `.d-sim` / `.d-meas` in web/dashboard.css) is the pattern to reuse on your pages.
