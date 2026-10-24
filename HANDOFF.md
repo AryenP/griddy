@@ -88,7 +88,7 @@ and the snapshot gains `"approvals": [ApprovalRequest]` (all statuses), `"explan
 `"agent_model"`, and `"cap_events": [CapEvent]` (the caps in force or upcoming, `target_w` resolved). Parsed
 requests are logged as `{"kind": "intake", "data": {"intake": IntakeResult, "who"}}` (since Sat 03:15; before
 that they shared the `event` kind); `event` now only ever carries a CapEvent. Each new schedule's explanation arrives as `{"kind": "note", "data": {"schedule_id",
-"explanation": Explanation}}`. Shortfall events carry `shortfall_kind` (`deadline` | `cap`), not `kind`.
+"explanation": Explanation}}`. Shortfall events carry `shortfall_kind` (`deadline` | `cap`), not `kind`. `Schedule.background_w` (since Sat 03:55) is measured load outside the plan that the solver counted against the cap, and `planned_w` includes it; a re-solve for it logs `{"kind": "note", "data": {"msg": "re-solve: load outside the plan ...", "trigger": "background", "background_w"}}`.
 Approval flow (live on main since Sat 01:45): the owner of a job is asked first whenever a deadline could
 slip; `approve` -> the slipped finish becomes the deadline, a new time -> that deadline, `no ...` -> the
 deadline turns hard and the solver goes over the cap instead, which creates an operator request with

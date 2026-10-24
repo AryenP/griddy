@@ -389,6 +389,12 @@ def build_report(timeline_path: str | Path, window: tuple[float, float] | None =
         shortfalls.append(f"the {ROLLING_S:.0f}-s mean never reached the {cap:.2f} W cap in the window")
     if in_cap and baseline_w is None:
         shortfalls.append(f"no power samples in the {BASELINE_S:.0f} s before the cap: no baseline")
+    for job in PROGRESS:
+        done = next((e for e in run.states if e.data.get("job") == job and e.data.get("state") == "done"
+                     and e.t <= start), None)
+        if done:
+            shortfalls.append(f"{job} had already finished at {_fmt(done.t)}, before the window: "
+                              f"its work in the window is 0 by construction")
     return Report(
         run_id=run.run_id, window_start=start, window_end=end, baseline_w=baseline_w, event_w=event_w,
         reduction_pct=reduction, time_to_compliance_s=ttc, energy_wh=wh, cost_usd=usd, co2_g=co2,
