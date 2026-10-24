@@ -2,8 +2,8 @@
 # What this Mac supports. Run first; paste output into DECISIONS.md.
 set -u
 echo "== machine"; sysctl -n machdep.cpu.brand_string 2>/dev/null; sw_vers 2>/dev/null
-echo "== powermetrics (needs sudo; two 1-second samples)"
-sudo powermetrics --samplers cpu_power,gpu_power -i 1000 -n 2 2>/dev/null | grep -E "CPU Power|GPU Power|ANE Power|Combined Power" || echo "powermetrics failed: run 'sudo -v' first"
+echo "== powermetrics (needs sudo, or the passwordless rule; one 1-second sample)"
+sudo /usr/bin/powermetrics --samplers cpu_power,gpu_power -i 1000 -n 1 2>/dev/null | grep -E "CPU Power|GPU Power|ANE Power|Combined Power" || echo "powermetrics failed: run 'sudo -v' first"
 echo "== ollama"; ollama --version 2>/dev/null && ollama list 2>/dev/null | head -5 || echo "ollama missing: brew install ollama && ollama pull qwen3:4b-instruct"
 echo "== python"
 # Use the project venv when it exists so the probe sees the same packages the app does.

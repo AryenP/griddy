@@ -8,8 +8,11 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import fcntl
+import os
 import re
 import time
+from pathlib import Path
 
 from core.timeline import Timeline
 from core.types import PowerReading
@@ -17,6 +20,13 @@ from core.types import PowerReading
 _LINE = re.compile(r"^(CPU|GPU|ANE|Combined) Power(?: \([^)]*\))?:\s*(\d+(?:\.\d+)?)\s*mW", re.M)
 _HEADER = "*** Sampled system activity"
 SAMPLERS = "cpu_power,gpu_power"
+POWERMETRICS = "/usr/bin/powermetrics"      # absolute, with fixed arguments: the passwordless sudoers rule
+                                            # (team/README.md) allows exactly this command line and no other
+LOCK = Path(os.getenv("BROWNOUT_METER_LOCK", "runs/.meter.lock"))
+
+
+class MeterBusy(RuntimeError):
+    """Another Brownout process is already measuring power on this Mac."""
 
 
 def parse_sample(text: str) -> dict[str, float]:
@@ -37,15 +47,38 @@ def reading_from(fields: dict[str, float], t: float | None = None) -> PowerReadi
 class PowerMeter:
     def __init__(self, timeline: Timeline | None = None, interval_ms: int = 1000):
         self.tl, self.interval_ms = timeline, interval_ms
+        self._lock_fh = None
         self.latest: PowerReading | None = None
         self.subscribers: list = []
         self._proc: asyncio.subprocess.Process | None = None
         self._task: asyncio.Task | None = None
 
+    def _acquire(self):
+        """One power-measuring run per Mac: powermetrics sees the whole SoC, so a second run's load
+        would land in the first run's numbers. Exclusive lock, released when the process exits."""
+        LOCK.parent.mkdir(parents=True, exist_ok=True)
+        fh = open(LOCK, "a+")
+        try:
+            fcntl.flock(fh, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            fh.seek(0)
+            holder = fh.read().strip() or "unknown"
+            fh.close()
+            raise MeterBusy(f"another run is measuring power on this Mac ({holder}); wait for it to finish")
+        fh.seek(0); fh.truncate(); fh.write(f"pid {os.getpid()} since {time.strftime('%H:%M:%S')}"); fh.flush()
+        self._lock_fh = fh
+
+    def _release(self):
+        if self._lock_fh:
+            fcntl.flock(self._lock_fh, fcntl.LOCK_UN)
+            self._lock_fh.close()
+            self._lock_fh = None
+
     async def start(self):
+        self._acquire()
         # `sudo -n`: never prompt from inside the app; fail fast with a clear message instead.
         self._proc = await asyncio.create_subprocess_exec(
-            "sudo", "-n", "powermetrics", "--samplers", SAMPLERS, "-i", str(self.interval_ms),
+            "sudo", "-n", POWERMETRICS, "--samplers", SAMPLERS, "-i", str(self.interval_ms),
             stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
         )
         self._task = asyncio.create_task(self._read())
@@ -53,7 +86,9 @@ class PowerMeter:
         await asyncio.sleep(0.5)
         if self._proc.returncode is not None:
             err = (await self._proc.stderr.read()).decode(errors="replace").strip()
-            raise RuntimeError(f"powermetrics exited {self._proc.returncode}: {err or 'run `sudo -v` first'}")
+            self._release()
+            raise RuntimeError(f"powermetrics exited {self._proc.returncode}: {err or 'run `sudo -v` first'}"
+                               " (or install the passwordless rule: see team/README.md, unattended runs)")
 
     async def _read(self):
         buf: list[str] = []
@@ -91,6 +126,7 @@ class PowerMeter:
                 await asyncio.wait_for(self._proc.wait(), 3)
             except asyncio.TimeoutError:
                 self._proc.kill()
+        self._release()
 
 
 async def _main(seconds: int):

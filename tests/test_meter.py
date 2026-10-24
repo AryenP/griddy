@@ -43,3 +43,17 @@ def test_meter_splits_on_headers_only():
         m._emit(block)
     m._emit("GPU Power: 56 mW\n")          # orphan line: ignored
     assert [r.combined_w for r in got] == [1.29, 1.29]
+
+
+def test_only_one_run_measures_power_at_a_time(tmp_path, monkeypatch):
+    import pytest
+
+    import meter.powermetrics as pm
+    monkeypatch.setattr(pm, "LOCK", tmp_path / ".meter.lock")
+    a, b = pm.PowerMeter(), pm.PowerMeter()
+    a._acquire()
+    with pytest.raises(pm.MeterBusy, match="another run is measuring power"):
+        b._acquire()
+    a._release()
+    b._acquire()                          # free again once the first run releases it
+    b._release()
