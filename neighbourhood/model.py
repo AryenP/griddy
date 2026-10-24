@@ -47,6 +47,8 @@ class Neighbourhood:
         self.pending_withdraw: str | None = None      # a call to take back (replay stopped or finished)
         self.nothing_to_shed = False
         self._warned_no_baseline = False
+        self._warned_nothing = False
+        self.cut_skipped = False                      # this replay's cut was not sent: nothing of ours to shed
         self.diesel_kwh = 0.0
         self.diesel_off_kwh = 0.0
         self.last: dict | None = None
@@ -166,7 +168,8 @@ class Neighbourhood:
                  "dc_flexible_share": self.flex, "response": r, "ours_w": ours_w, "line_kw": demand - diesel,
                  "demand_kw": demand, "limit_kw": self.limit, "loading_pct": loading, "diesel_kw": diesel,
                  "diesel_kwh": self.diesel_kwh, "diesel_off_kwh": self.diesel_off_kwh, "cap_id": self.cap_id,
-                 "cap_baseline_w": self.cap_baseline_w, "nothing_to_shed": self.nothing_to_shed,
+                 "cap_baseline_w": self.cap_baseline_w, "nothing_to_shed": self.nothing_to_shed or self.cut_skipped,
+                 "cut_skipped": self.cut_skipped,
                  "inputs": "homes: shape of today's ISO load forecast; data centers: our sites' measured response"}
         self.last = state
         self.history.append(state)
@@ -195,6 +198,17 @@ class Neighbourhood:
                 self.tl.log("note", msg="neighbourhood: the line needs a cut but our sites have no 60-s baseline yet",
                             simulated=True)
             return
+        idle = getattr(getattr(self.ex, "cal", None), "idle_w", 0.0) or 0.0
+        if base - idle < float(self.cfg.get("min_flexible_w", 3.0)):
+            # nothing of ours runs above idle: a cut would sit inside the idle floor and only make a shortfall and an
+            # operator request (Krish K7). The line still needs the cut; ours sends none, and the page says why.
+            self.cut_skipped = True
+            if not self._warned_nothing:
+                self._warned_nothing = True
+                self.tl.log("note", msg=f"neighbourhood: the line needs a cut but our sites have nothing to shed "
+                                        f"({base:.2f} W at an idle floor of {idle:.2f} W): no cut sent to the real "
+                                        f"dispatcher", simulated=True)
+            return
         remaining = float(self.scenario()["seconds"]) - (now - self.scenario_start)
         ev = CapEvent(source="simulated", start=datetime.fromtimestamp(now).astimezone(), duration_s=int(remaining + 30),
                       target_pct=round(pct, 1),
@@ -209,7 +223,7 @@ class Neighbourhood:
         if self.cap_id:                                   # a call from an earlier replay is still in force
             self.pending_withdraw = self.cap_id
         self.scenario_start, self.cap_id, self.cap_baseline_w = now, None, None
-        self._warned_no_baseline = False
+        self._warned_no_baseline = self._warned_nothing = self.cut_skipped = False
         self.diesel_kwh = self.diesel_off_kwh = 0.0
         self._last_t = None
         self.tl.log("note", msg=f"neighbourhood: {self.scenario().get('name', 'scenario')} replay started (simulated)",

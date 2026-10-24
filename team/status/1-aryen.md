@@ -215,3 +215,10 @@ The 06:40 run's calibration was clean, but the lid was closed: the Mac cycled th
 maintenance) from 06:44, so the baseline run has 15-min gaps; I stopped the chain at 07:58 (DECISIONS 08:00).
 Nothing recorded from it, no demo-stable tag. Needs Aryen: open the lid (keep it on the charger), then machine 1
 re-runs make evidence3 (about 30 min, Mac otherwise idle) and writes the morning brief after it.
+
+## 2026-10-24 08:17 PT — tick: Krish's K7 re-check merged, follow-ons fixed
+Done: merged krish/k7-recheck (7 of 9 K1 findings fixed, #1 partly: flagged not removed, #4 open by choice). Fixed his
+follow-on: no cut is sent to the real dispatcher when our sites have nothing to shed (test added). DECISIONS 08:20
+corrects 08:00 (no three-policy run is the record). 373 tests pass. Lid still closed (08:15).
+Next: re-run the evidence when the lid is open; re-tag after a live check of the fixes.
+Blockers / needs Aryen: open the lid.

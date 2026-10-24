@@ -152,3 +152,18 @@ def test_stopping_the_replay_takes_back_its_call(tmp_path):
     assert call and n.pending_cap.source == "simulated"
     n.stop(now=t0 + 60)
     assert n.pending_withdraw == call
+
+
+def test_no_cut_is_sent_when_our_sites_have_nothing_to_shed(tmp_path):
+    # Krish K7: an idle Mac's baseline sits on its idle floor; a cut there only makes a shortfall and an operator ask
+    from types import SimpleNamespace
+    n = hood(tmp_path)
+    n.ex.cal = SimpleNamespace(idle_w=0.5)
+    n.ex.base = 1.2
+    t0 = 6_000_000.0
+    n.start(now=t0)
+    for s in range(91):
+        n.ex.power.append((t0 + s, 1.2))
+        n.tick(now=t0 + s)
+    assert n.pending_cap is None and n.cap_id is None and n.last["cut_skipped"] and n.last["nothing_to_shed"]
+    assert n.last["diesel_kwh"] == pytest.approx(n.last["diesel_off_kwh"])   # nothing shed, same diesel
