@@ -165,7 +165,9 @@ function renderHood() {
   const sentence = [];
   if (running) {
     sentence.push(`Simulated ${simClock(d.sim_hour)}: the line carries ${fixed(d.line_kw, 0)} kW, ${fixed(load, 0)}% of its limit.`);
-    if (d.cap_id) sentence.push("The utility called for a cut: our sites shed for real and the simulated data centers follow.");
+    if (d.cut_skipped) sentence.push("The line needs a cut, but our sites had nothing running to shed, so no cut was sent to the real dispatcher: give a job work before the replay.");
+    else if (d.cap_id && d.nothing_to_shed) sentence.push("The utility called for a cut, but our sites had nothing running to shed, so the simulated data centers hold: give a job work before the replay.");
+    else if (d.cap_id) sentence.push("The utility called for a cut: our sites shed for real and the simulated data centers follow.");
     if (d.diesel_kw > 0) sentence.push(`The diesel generator covers ${fixed(d.diesel_kw, 0)} kW.`);
   } else if (S.hoodHist.length) {
     sentence.push(`Replay finished: diesel ${sig(d.diesel_kwh)} kWh with Brownout as it ran, ${sig(d.diesel_off_kwh)} kWh if our sites had ignored the cut (simulated kWh over the replayed evening).`);
