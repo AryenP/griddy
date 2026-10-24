@@ -5,7 +5,7 @@ Integer units inside the model:
   work   milli-slots of GPU-speed running: one slot on the GPU = 1000, one on the CPU =
          1000 x measured cpu_rate / gpu_rate
 Objective per slot = W x slot_h x (w_cost x price/mean_price + w_carbon x carbon/mean_carbon),
-plus a chat-degrade penalty. Normalising by the horizon mean makes cost and carbon comparable
+plus a chat-degrade penalty, plus a tie-breaker (slot index) far below any real price difference. Normalising by the horizon mean makes cost and carbon comparable
 without inventing an exchange rate between dollars and grams.
 """
 from __future__ import annotations
@@ -17,6 +17,7 @@ from ortools.sat.python import cp_model
 from core.types import Calibration, Job, Policy
 
 SCALE = 1000
+OBJ_SCALE = 1_000_000   # objective resolution; leaves room for the tie-breaker below
 
 
 @dataclass
@@ -84,7 +85,7 @@ def build(inp: Inputs, relax: Relax = Relax()) -> Built:
     cmean = (sum(inp.carbons) / S) or 1.0
     wc, wg = objective_weights(inp.policy)
     # integer objective cost of running 1 W for slot s
-    unit = [SCALE * slot_h * (wc * max(p, 0.0) / pmean + wg * c / cmean)
+    unit = [OBJ_SCALE * slot_h * (wc * max(p, 0.0) / pmean + wg * c / cmean)
             for p, c in zip(inp.prices, inp.carbons)]
 
     b = Built(model=m)
@@ -119,7 +120,9 @@ def build(inp: Inputs, relax: Relax = Relax()) -> Built:
                 run.append(v)
                 w = inp.cal.jobs[job.id][d].delta_w
                 power[s].append(round(w * 1000) * v)
-                obj.append(round(w * unit[s]) * v)
+                # + s: among equally priced slots prefer the earlier one (finish sooner), so the
+                # optimum is unique and the schedule is reproducible from its inputs
+                obj.append((round(w * unit[s]) + s) * v)
             m.Add(sum(run) <= 1)
             if job.id in inp.policy.never_pause:
                 m.Add(sum(run) == 1)
