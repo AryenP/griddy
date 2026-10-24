@@ -61,3 +61,5 @@ Evidence is no longer re-run after every change: the only evidence run tonight i
 - **E. Final evidence run** at 06:40 (scheduled), then record it like A and B, then `make tag-stable`.
 - **F. Morning brief** at the top of team/status/1-aryen.md and in vault 132's summary: what changed overnight,
   the final numbers, what needs Aryen today. Done when: written after E.
+- **DONE 06:08: simulated neighbourhood line** (Aryen 05:35, DECISIONS 05:45): model, real cap to the real
+  dispatcher, dashboard panel with every simulated part labelled; live check 06:07 (diesel 0 vs 62.9 kWh simulated).

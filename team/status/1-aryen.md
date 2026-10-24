@@ -168,3 +168,15 @@ Done: ERCOT end to end in run 20261024-045659 (DECISIONS 05:17): CAISO, then ERC
 No new teammate commits, PRs or [supervisor] issues; both queues deep.
 Next: 06:40 final evidence run (the Mac stays idle from 06:30), then the three-way proof table and the morning brief.
 Blockers / needs Aryen: laptop battery test output; the .env command for Azure.
+
+## 2026-10-24 06:08 PT — simulated neighbourhood line, team roles, laptop fleet
+Done: Aryen changed rule 1 (DECISIONS 05:45): a labelled SIMULATED neighbourhood power line now surrounds the
+real sites. Homes follow the shape of today's real load forecast, 20 simulated data centers follow our sites'
+measured response, a line limit and a diesel generator; the utility's cut goes to the real dispatcher. Dashboard
+panel with the evening-peak replay, every part tagged simulated or measured; live check 06:07: our sites shed to
+0.3 W, line peaked at 87 % of its limit, diesel 0 kWh vs 62.9 kWh had they ignored the cut (simulated).
+Percent-below-baseline readout on the dashboard (93 % in a live check). Laptop fleet code adapted to the first
+probe (battery reading updates about once a minute). Team: machine 4 supervises every 10 min, machine 3 reviews
+and audits (K1-K3), machine 2 builds (18, 19, 14, 15, ...). 313 tests pass.
+Next: the Mac is quiet from 06:28; final evidence run 06:40; then the proof table and the morning brief.
+Blockers / needs Aryen: the .env command for Azure; battery tests on the other two laptops.
