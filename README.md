@@ -40,8 +40,20 @@ powermetrics on one M2 Pro; computed from the runs' timelines only.
 | [03:10](docs/evidence/compare-20261024-025349-vs-20261024-024609-baseline.md) (13f6b3b) | dispatcher off | 21.18 W | 0 % | never | planned ✅ |
 | | **dispatched** | **1.64 W** | **99 %** | **7 s** | planned ✅ |
 
+Against the honest naive policy too, one run each, same call (09:15 run of record, DECISIONS 09:46; 315-327 s
+from each cap start, cap 15.10 W):
+
+| Policy | Mean power under the cap | Seconds at or under the cap | Time to compliance | Training steps in the window |
+|---|:---:|:---:|:---:|:---:|
+| [Ignore the call](docs/evidence/compare-20261024-093434-vs-20261024-091909-baseline.md) | 20.85 W | 0 % | never | 5899 |
+| [Pause everything](docs/evidence/compare-20261024-093434-vs-20261024-092650-pause_all.md) | 0.80 W | 99 % | 4 s | 19 |
+| **Brownout** | **14.34 W** | **93 %** | **12 s** | **1575** |
+
+Brownout keeps the training job moving on the CPU under the cap, about 83 times the work of pausing
+everything, and asks the owner about the ~19-minute slip instead of breaking the cap.
+
 > Read this as a signal, not a guarantee: two short runs on a laptop, not a fleet, and the comparison here is
-> against ignoring the call. A run against "pause everything" is next. Laptop watts make the dollar figures
+> against ignoring the call and, in the second table, against pausing everything. Laptop watts make the dollar figures
 > fractions of a cent; the claim is compliance in seconds with the work still delivered. The live
 > request → owner refusal → operator approval run is in
 > [docs/evidence/demo-flow-live-20261024.md](docs/evidence/demo-flow-live-20261024.md), and the responsible-design
