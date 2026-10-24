@@ -39,3 +39,10 @@ its idle floor). Next: K8, K6 on the evidence re-run. Blockers / needs: none fro
 ## 2026-10-24 08:42 PT — loop; K8 waiting
 Done: verified 92fd82f (no idle cut) and 7a5a320 (fleet token); hourly summary. Next: K6 on the evidence re-run's
 numbers. Blockers / needs: none.
+
+## 2026-10-24 14:15 PT — K6, K10, K11 done; K9 waits
+Done: K11 (krish/k11-q13), K6 (team/review/0915-evidence-audit.md), K10 (team/review/2026-10-24.md, 6 lines) on
+krish/k6-k10. Worst: preflight passes a calibration without chat streams_w, so the chat fix silently falls back to
+the 09:49 pricing; README.md:25 claims Brownout meets the deadline, the run of record says 0/1.
+Note: this loop did not run 09:12-14:12 (the session was idle); everything since 09:12 was reviewed at 14:12.
+Next: K9 step 1 when team/3-krish.md says the demo is up. Blockers / needs: none.
