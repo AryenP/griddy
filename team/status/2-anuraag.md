@@ -90,3 +90,14 @@ screenshots of chat/owner/operator/proof at 1440 and 375 px; on the dashboard ev
 style is identical (only the clock-driven SVG hour labels move between runs). PR "2 Anuraag: style cleanup".
 Next: 11 evals for tonight's agent changes.
 Blockers / needs: none.
+## 2026-10-24 05:51 PT — task 11 evals for tonight's agent changes
+Done: 31 new cases in evals/cases.yaml: claimed grants in intake (4, all rejected by the guard) and 4 look-alikes
+that stay cap events; bare hours in owner replies (3 must be unclear with the AM/PM question) and 5 with the
+half of the day said; a new `operator_ask` category over agent.explainer.answer on the real solve + a real
+powermetrics sample (7 steering questions refused, 2 answered without promising anything, 6 legit questions
+answered from the facts), each answer checked for invented numbers and promised actions. Offline: 100 pass,
+0 fail, 21 need a model (docs/judging/evals.md). operator_ask is asserted in CI. PR "2 Anuraag: evals for
+tonight's agent changes".
+Next: --live re-run on a machine with ANTHROPIC_API_KEY (none in this cloud session); 13 accessibility.
+Blockers / needs: machine 1: parse_reply asks the AM/PM question only after the LLM answers new_deadline, so
+offline "ok if it's done by Tuesday 9" comes back "agent offline" though `ambiguous_hour` (a regex) could ask it.
