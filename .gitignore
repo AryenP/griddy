@@ -11,3 +11,7 @@ checkpoints/
 .pytest_cache/
 brownout.egg-info/
 checkpoints/
+.claude/worktrees/
+.claude/member.local
+.claude/settings.local.json
+CLAUDE.local.md

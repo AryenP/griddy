@@ -28,6 +28,7 @@ members:
       - scripts/probe_mac.sh
       - scripts/verify_feed.py
       - scripts/team.py
+      - scripts/check_runtime.py
       - tests/__init__.py
       - tests/test_types.py
       - tests/test_grid.py
@@ -41,7 +42,13 @@ members:
       - tests/fixtures/*.csv
       - tests/fixtures/*.jsonl
       - tests/fixtures/README.md
-      - team/**
+      - team/README.md
+      - team/roster.yaml
+      - team/[1-4]-*.md
+      - team/status/1-aryen.md
+      - .claude/**
+      - .github/**
+      - .worktreeinclude
       - HANDOFF.md
       - CLAUDE.md
       - PLAN.md
@@ -60,6 +67,7 @@ members:
       - web/**
       - scripts/qr.py
       - tests/test_web*.py
+      - team/status/2-anuraag.md
 
   - number: 3
     name: Krish
@@ -81,6 +89,7 @@ members:
       - tests/test_compare*.py
       - tests/test_telemetry*.py
       - evals/**
+      - team/status/3-krish.md
 
   - number: 4
     name: Arumalla
@@ -98,6 +107,7 @@ members:
       - agent/channels/**
       - tests/test_agent*.py
       - tests/fixtures/openadr/**
+      - team/status/4-arumalla.md
 
 # Everyone may append (never edit existing lines) to these.
 shared_append_only:

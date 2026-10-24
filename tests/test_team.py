@@ -35,9 +35,17 @@ def test_assigned_future_paths_do_not_overlap():
     probes = ["web/index.html", "web/owner.html", "scripts/qr.py", "agent/reporter.py", "agent/llm.py",
               "agent/intake.py", "telemetry/__init__.py", "docs/devpost.md", "api/routes.py",
               "tests/fixtures/openadr/event.json", "config/isos.yaml", "config/jobs.yaml",
-              "web/operator.html", "evals/cases.yaml", "agent/channels/slack.py"]
+              "web/operator.html", "evals/cases.yaml", "agent/channels/slack.py",
+              "team/status/1-aryen.md", "team/status/2-anuraag.md", "team/status/3-krish.md",
+              "team/status/4-arumalla.md", ".claude/settings.json", ".github/workflows/ci.yml"]
     for p in probes:
         assert len(_owners(p)) == 1, (p, _owners(p))
+
+
+def test_status_files_belong_to_their_writer():
+    for f in (ROOT / "team" / "status").glob("*.md"):
+        o = _owners(f"team/status/{f.name}")
+        assert len(o) == 1 and f.name.startswith(f"{o[0]}-"), f.name
 
 
 def test_every_member_has_an_assignment_file():

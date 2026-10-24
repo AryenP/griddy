@@ -27,6 +27,22 @@ The demo runs on **this MacBook (Apple silicon)**. No external hardware. Power i
 - Owner/operator channel: `web/owner.html` on the judge's phone; Slack if time; Teams documented as the production adapter.
 - Tests: pytest. `make test` green before every commit after M1.
 
+## Team (four machines, one repo)
+Start with `team/README.md`: `uv run python scripts/team.py whoami --save` says which machine you are and
+which `team/<n>-<name>.md` is your plan. Edit only files your roster entry owns (a hook blocks the rest; CI
+re-checks every PR). Shared knowledge lives in the repo, not in anyone's Claude memory: put lessons below
+(machine 1) or ask for them in your `team/status/<n>-<name>.md`.
+
+## Learned on the demo Mac (keep; add new ones here)
+- Chat model is `qwen3:4b-instruct`. Plain `qwen3:4b` always thinks and leaks reasoning into replies.
+- sudo's cache is per terminal: run `sudo -v` in the same terminal that starts the meter. Never prompt inside the app.
+- powermetrics (macOS 15) prints `GPU Power` twice per sample; split samples on the header line only.
+- Python output piped through `grep` is block-buffered; read `runs/<id>/timeline.jsonl` for live progress.
+- Never run two `ollama pull`s at once: they corrupt the partial download.
+- PJM needs `PJM_API_KEY`; CAISO and ERCOT are keyless. Slots are in the ISO's local time.
+- Equal-price slots tie in CP-SAT; the model breaks ties toward earlier slots so solves are reproducible.
+- Chat latency SLA is time to first token (streamed); total latency is reply length / tokens per second.
+
 ## Working style
 - Build in `PLAN.md` order; a milestone is done when its "done when" is true on this Mac.
 - Small commits. `make demo` must come up from cold in under 2 minutes from M3 on.
