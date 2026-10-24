@@ -122,3 +122,13 @@ CONTRACT_ROUTES; a test asserts every number is labelled simulated or measured. 
 from contract-shaped messages (no horizontal scroll). PR "2 Anuraag: neighbourhood replay".
 Next: 14 architecture diagram with the simulated neighbourhood, then 15 driver card.
 Blockers / needs: a run against make demo on the demo Mac (this cloud session has no calibration or meter).
+## 2026-10-24 06:03 PT — task 14 architecture diagram
+Done: docs/judging/architecture.svg, hand-written, 1200x800, light background: ISO feeds -> GridWatcher ->
+CP-SAT solver -> Schedule -> Executor -> knobs -> workloads; powermetrics -> meter -> timeline -> receipts;
+owner/operator approvals through the negotiator; the LLM agent beside the solver with arrows only to intake,
+explanations and negotiation, and "agent/ returns data only: no code path to the executor or a knob" (checked:
+agent/ imports nothing from controller/). The simulated neighbourhood in a dashed box with its config numbers
+(config/neighbourhood.yaml), our measured response in, the utility's cut out to the real solver. Every box names
+its file. PR "2 Anuraag: architecture diagram".
+Next: 15 driver card.
+Blockers / needs: machine 1 links it from README.md and docs/devpost.md.
