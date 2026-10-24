@@ -170,3 +170,10 @@ knob**. Label each box with its file. Machine 1 links it from README.md and docs
 One printable page for whoever drives the demo: the preflight command, URLs and QR, the 4-minute beats from
 DEMO.md with the exact clicks and hotkeys, the proof page, and what to say, truthfully, if the feed goes
 stale, Ollama dies or the agent is offline. Done when merged.
+
+### 16. Show load outside the plan (server change, Sat 03:55)
+`Schedule.background_w` is now measured load Brownout does not control (meter minus the calibrated plan, under a
+cap), and `planned_w` includes it; a re-solve for it arrives as a `note` with `trigger: "background"`. On the
+dispatch map's plan-W row, draw that part of each bar in a neutral hatch labelled "outside the plan (measured)";
+in the event log, show the background re-solve note in plain words. Done when: it renders on a schedule with
+`background_w > 0` (the re-run's timeline will have one) and the PR is merged.
