@@ -213,7 +213,7 @@ def build_report(timeline_path: str | Path, window: tuple[float, float] | None =
     baseline_w = None
     if ev is not None:
         t0 = _ts(ev.data.get("start")) or ev.t
-        baseline_w = _mean([w for _, w in run.watts(t0 - BASELINE_S, t0 - 1e-9)])
+        baseline_w = _mean([w for t, w in run.power if t0 - BASELINE_S <= t < t0])
     in_window = run.watts(start, end)
     event_w = _mean([w for _, w in in_window])
     cap = run.cap_w(baseline_w)
