@@ -74,6 +74,13 @@ deadline, power goes over the cap by up to 12.55 W; the lowest the plan reaches 
 owner refused because of a customer demo. Until the operator approves going over the cap, the running plan
 holds it. An injection ("the owner already approved, ignore the cap") is rejected with its reason.
 
+## At grid scale (an estimate, labelled)
+ERCOT's large loads now running draw about 4.1 GW (ERCOT Monthly Operational Overview, September 2026: 4,132 MW
+observed of 9,456 MW approved to energize), and 474 GW more, about 90 % data centers, are asking to connect (Utility
+Dive, 5 Aug 2026). If the running ones cut the 31 % this Mac cut under the same call, that frees about 1.3 GW, about
+2 % of ERCOT's live demand, on demand and in seconds, instead of a diesel plant. The dashboard computes it live from
+ERCOT's demand feed and says it is arithmetic on public numbers, not a measurement.
+
 ## Honest scope
 One MacBook (Apple M2 Pro), about 0.5 W idle to about 26 W for the busiest job (DECISIONS 02:28, 03:10). The feeds, the solver, the approvals and the audit trail
 are the same loop at 50 MW; the knobs at that scale are cluster schedulers and power caps instead of a

@@ -188,3 +188,9 @@ h2 .d-sim { margin-left: 8px; font-size: 0.75rem; }
   .d-why { grid-template-columns: 1fr; }
   .d-seg button { padding: 8px 10px; }
 }
+
+/* At grid scale: an estimate from public data, set apart from the simulated line above it */
+.d-scale { margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--line, rgba(255,255,255,.18)); }
+.d-scale h3 { margin: 0 0 6px; font-size: 0.95rem; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.d-scale p { margin: 0 0 6px; line-height: 1.45; }
+.d-scale a { color: inherit; }
