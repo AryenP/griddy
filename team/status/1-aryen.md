@@ -16,7 +16,8 @@
 - **Team:** no open PRs or [supervisor] issues at 10:15. Machine 2 last active 06:04 (queue: 21, 22, 12, 20);
   machine 3 last 08:42 (queue: K6 now, K10 review the chat fix, K11 judge Q13, K9 waits for the demo);
   machine 4 last 05:46.
-- **Needs Aryen:** (1) `sudo -v` in a terminal, then machine 1 runs `make calibrate` and `make evidence-chat`;
+- **Needs Aryen:** (1) in a terminal, Mac idle ~20 min after: `sudo -v && make evidence-chat && make evidence-chat-judge`
+  (calibrates chat at 1/2/4 streams, then the 2-stream worst case, then one person chatting with 15 s to read);
   (2) the .env command for the Application Insights connection string; (3) the workshop quote (config/site.yaml);
   (4) judges' access to the private repo before Sun 08:50; (5) yes/no on the Foundry deployment; (6) rotate the
   Anthropic key; (7) change the Mac password. After the hackathon: `sudo pmset -a disablesleep 0`.
