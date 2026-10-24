@@ -22,6 +22,8 @@ solver_time_limit_s: 2
 # plan has run settle_s) counts against the cap; a move of more than background_delta_w re-solves. Measured
 # Sat 03:33 (evidence3, run 20261024-032821): ~1.2 W appeared on the GPU with no Brownout action while only
 # CPU training ran (13.4 W), which put the machine over a 14.55 W cap for the rest of the run.
+# Chat in that estimate is priced from the requests in service over the same window (calibrated curve), not the
+# plan's 60-s traffic mean: one streaming reply draws most of the GPU (evidence-chat, Sat 09:49).
 # Idle is re-measured in place, only ever lower, when the plan leaves only idle drawing (deferrable jobs paused,
 # chat planned and measured at <= idle_busy_max busy streams): evidence3 re-run Sat 04:09 calibrated idle at
 # 2.22 W while the runs measured 0.35-0.45 W, which priced CPU training over a cap it fit under.

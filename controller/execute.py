@@ -18,6 +18,7 @@ from datetime import datetime
 from core.timeline import Timeline
 from core.types import (Calibration, CapEvent, GridSignal, Job, PlanAction, Policy, PowerReading,
                         Schedule, SlotPlan)
+from dispatcher.model import chat_w
 from dispatcher.solve import load_jobs, solve
 
 from .baseline import baseline_plan, pause_all_plan
@@ -53,6 +54,7 @@ class Executor:
         self._plan_t = 0.0                       # when the plan in force last changed
         self.fleet = None                        # fleet.hub.Fleet when laptops may join (set by the runtime)
         self.background_w = 0.0                  # measured load outside the plan, as passed to the last solve
+        self.chat_streams: deque[tuple[float, int]] = deque(maxlen=600)   # (t, chat requests in service)
 
     # ------------------------------------------------------------------ inputs
     def on_power(self, r: PowerReading) -> None:
@@ -260,6 +262,8 @@ class Executor:
             if not st:
                 continue
             self.tl.log("state", **{**st, "job": j})
+            if j == "chat" and st.get("inflight") is not None:
+                self.chat_streams.append((st.get("t", time.time()), int(st["inflight"])))
             if st.get("state") == "done" and j not in self.finished:
                 self.finished.add(j)
                 newly_done.append(j)
@@ -304,7 +308,9 @@ class Executor:
         The meter reads the whole machine; the plan covers idle and Brownout's jobs only. Once the current
         plan has run a settled window, measured minus that calibrated plan is load nobody scheduled (the
         display, another app, a site's cooling). When it moves by more than `background_delta_w`, the solver
-        must count it against the cap. Not while chat traffic is off the plan: that is the traffic re-solve's."""
+        must count it against the cap. Chat is priced from the requests in service over the same window, so a
+        burst of replies is not outside load. Not while chat traffic is off the plan: that is the traffic
+        re-solve's."""
         r, s, plan = self.policy.replan, self.schedule, self.plan
         if not (self.dispatcher_enabled and s and plan and r and plan.mode == "dispatcher") or plan.cap_w is None \
                 or plan.planned_w is None:
@@ -320,8 +326,26 @@ class Executor:
         xs = [w for t, w in self.power if t > now - window]
         if len(xs) < window // 2:
             return None
-        bg = max(0.0, sum(xs) / len(xs) - (plan.planned_w - s.background_w))
+        expected = plan.planned_w - s.background_w
+        chat = self._chat_w_measured(now - window)
+        if chat is not None:      # chat is not outside load: price what it served in this window, not the plan's guess
+            expected += chat[1] - chat[0]
+        bg = max(0.0, sum(xs) / len(xs) - expected)
         return bg if abs(bg - s.background_w) > r.get("background_delta_w", 0.5) else None
+
+    def _chat_w_measured(self, since: float) -> tuple[float, float] | None:
+        """(planned, measured) chat watts for the window from `since`: what the plan priced chat at, and the
+        calibrated curve over the requests the proxy actually had in service at each sample. A judge's reply
+        streams for a few seconds at most of the GPU's power (evidence-chat, Sat 09:49), far from the 60-s mean."""
+        job = next((j for j in self.jobs() if j.kind == "interactive"), None)
+        a = next((x for x in self.plan.actions if job and x.job == job.id), None) if self.plan else None
+        ns = [n for t, n in self.chat_streams if t > since]
+        if job is None or a is None or len(ns) < 3:
+            return None
+        cal, conc = self.solve_cal(), a.concurrency or 0
+        busy = self.schedule.chat_busy_streams
+        planned = chat_w(job, cal, min(conc, conc if busy is None else busy))
+        return planned, sum(chat_w(job, cal, min(n, conc)) for n in ns) / len(ns)
 
     def idle_drift(self) -> float | None:
         """A lower idle floor, measured in place, when the plan leaves only idle drawing power.

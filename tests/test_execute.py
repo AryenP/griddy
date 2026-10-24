@@ -133,6 +133,33 @@ async def test_load_outside_the_plan_under_a_cap_resolves(rig, monkeypatch):
     assert e.background_drift() == pytest.approx(0.0)
 
 
+async def test_chat_replies_under_a_cap_are_not_outside_load(rig, monkeypatch):
+    """A judge's reply streams for a few seconds at full chat power while the 60-s traffic mean stays near 0
+    (evidence-chat, Sat 09:49). Priced from the requests in service over the meter's window, it is chat, not
+    load outside the plan, so it does not pause and resume training."""
+    e, clock, tmp = rig
+    e.policy = e.policy.model_copy(update={"replan": {
+        "background_window_s": 20, "settle_s": 5, "background_delta_w": 0.5, "chat_busy_delta": 0.5}})
+    monkeypatch.setattr(ex.Executor, "chat_busy", staticmethod(lambda: 0.0))
+    monkeypatch.setattr(ex, "load_jobs", lambda cal: [j for j in jobs() if j.id != "batch"])
+    await e.on_signal(signal([5.0] * 4 + [50.0] * 92))
+    await e.add_event(CapEvent(source="ui", start=SLOTS[0], duration_s=3600, target_w=15.5))
+    assert e.plan.planned_w == pytest.approx(13.0)          # 1 W idle + 12 W GPU training; chat priced at 0 streams
+
+    def replies(seconds, with_samples):
+        for k in range(seconds):
+            clock["t"] += 1
+            n = k % 2                                         # one request in service half the time
+            e.on_power(PowerReading(t=clock["t"], combined_w=13.0 + 2.0 * n))
+            if with_samples:
+                e.chat_streams.append((clock["t"], n))
+
+    replies(30, with_samples=False)
+    assert e.background_drift() == pytest.approx(1.0, abs=0.05)   # without the samples, chat looks like outside load
+    replies(30, with_samples=True)
+    assert e.background_drift() is None
+
+
 async def test_no_background_resolve_without_a_cap(rig, monkeypatch):
     e, clock, _ = rig
     e.policy = e.policy.model_copy(update={"replan": {"background_window_s": 20, "settle_s": 5, "background_delta_w": 0.5}})
