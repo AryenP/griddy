@@ -84,6 +84,11 @@ Friday night (plain qwen3:4b), against the 2 s SLA we had written down. We chang
 replies stream, and the SLA is time to first token p95 <= 1.0 s. On qwen3:4b-instruct the worst TTFT
 p95 measured 0.29 s idle and 0.24 s with training on the GPU; total p95 for 256 tokens is 5.0–8.9 s
 idle and 8.3–15.7 s with training, reported beside it and not promised.
+Chat during a cap: our first measured run with real chat traffic during the cap failed (run 20261024-094941,
+docs/evidence/20261024-094941.md): power never got under the 19.68 W cap (mean 26.46 W) and time to first token
+p95 rose from 0.20 s to 4.56 s. On this Mac one streaming reply draws most of the GPU, so busy chat alone is above
+a 30 % cut. The fix keeps chat at full speed and asks the operator instead (DECISIONS 10:00 and after); its
+re-run is not recorded yet, so we do not claim chat keeps its SLA under a cap.
 
 ## Responsible design
 - The solver decides, the LLM explains and negotiates, the controller executes. The LLM has no code
@@ -93,6 +98,8 @@ idle and 8.3–15.7 s with training, reported beside it and not promised.
 - A human owner approves any deadline slip; refusals are respected and logged with name and time.
 - Approvals gate the risky action: the running plan holds the utility's cap until the operator approves
   exceeding exactly the caps in force; a refusal keeps the cap and is not asked again.
+- Slowing chat is the operator's call too: chat keeps full concurrency under a cap, and the operator's ask says
+  how many watts slowing it would save; only their "no" to going over the cap lets the plan slow chat.
 - Free text is data, never instructions: 16 of 16 prompt-injection evals are rejected offline, all by rules
   before any model call (121-case suite, docs/judging/evals.md, 05:51); the earlier live run passed 86 of 90 on
   Claude Sonnet 5.5 with 12 of 12 injections rejected (docs/evidence/evals-live-20261024.md).
@@ -121,6 +128,9 @@ centers following our measured response); every measured number stays measured (
   "offline"; the agent now uses structured outputs, found only by running the evals live.
 - OR-Tools' own Ctrl-C handler, run from a worker thread, reset SIGINT so Ctrl-C killed the runtime without
   its shutdown; turned off, with a regression test.
+- We priced chat per stream (the 4-stream watts divided by 4). Measured, one busy stream draws most of what four
+  do, so under a cap the plan cut chat to one stream on its own: requests queued, replies started 4.5 s late, and
+  power barely moved. Calibration now measures chat at 1, 2 and 4 streams, and only the operator may slow chat.
 - Power measurement measures the whole chip: overlapping calibrations and even our own test runs polluted the
   numbers. The meter now holds an exclusive lock, evidence runs use isolated job state, and the night loop
   does no heavy work while power is measured.
