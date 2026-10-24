@@ -10,9 +10,10 @@ from typing import Literal
 from opentelemetry import trace
 from pydantic import BaseModel, Field
 
-from agent.explainer import ungrounded
+from agent.explainer import allowed_numbers, numbers, ungrounded
+from agent.intake import guard
 from agent.llm import LLM, OFFLINE, AgentOffline
-from core.types import ApprovalRequest, Job, OwnerDecision, Shortfall
+from core.types import ApprovalRequest, Job, OwnerDecision, Schedule, Shortfall
 
 tracer = trace.get_tracer("brownout.agent")
 
@@ -52,6 +53,94 @@ async def draft_ask(shortfall: Shortfall, job: Job, llm: LLM) -> ApprovalRequest
             pass
         span.set_attribute("agent.llm_used", used)
         return ApprovalRequest(job_id=job.id, owner=job.owner, shortfall=shortfall, message=message)
+
+
+# ---------------------------------------------------------------------------
+# Operator ask: the cap cannot be held (DEMO.md 3:00)
+# ---------------------------------------------------------------------------
+
+CAP_JOB = "power_cap"   # job_id the runtime uses for operator approvals of going over a cap
+
+
+def _running(schedule: Schedule, i: int) -> str:
+    out = []
+    for jid, row in schedule.assignments.items():
+        if i < len(row) and row[i].run:
+            a = row[i]
+            out.append(f"{jid} on {a.device}" + (f" at concurrency {a.concurrency}" if a.concurrency > 1 else ""))
+    return ", ".join(out) or "only idle power"
+
+
+def _slot_facts(schedule: Schedule) -> list[str]:
+    """The worst over-cap slot (cap, planned watts, what runs) and the plan's lowest power while capped."""
+    capped = [i for i, cap in enumerate(schedule.caps_w) if cap is not None and i < len(schedule.planned_w)]
+    over = [i for i in capped if schedule.planned_w[i] > schedule.caps_w[i]]
+    if not over:
+        return []
+    worst = max(over, key=lambda i: (schedule.planned_w[i] - schedule.caps_w[i], -i))
+    low = min(capped, key=lambda i: (schedule.planned_w[i], i))
+    facts = [f"in the slot from {schedule.slots[worst]:%H:%M} the cap is {schedule.caps_w[worst]:.1f} W and the "
+             f"plan needs {schedule.planned_w[worst]:.1f} W ({_running(schedule, worst)})"]
+    if schedule.planned_w[low] < schedule.planned_w[worst]:
+        facts.append(f"the lowest the plan goes while the cap holds is {schedule.planned_w[low]:.1f} W, from "
+                     f"{schedule.slots[low]:%H:%M} ({_running(schedule, low)})")
+    return facts
+
+
+def _sentence(text: str) -> str:
+    text = text.strip().rstrip(".")
+    return text[:1].upper() + text[1:] + "." if text else ""
+
+
+def _operator_template(cap: Shortfall, shortfalls: list[Shortfall], schedule: Schedule, operator: str,
+                       refused: dict[str, str]) -> str:
+    """The deterministic operator ask: the solver's facts, then exactly the options it proved."""
+    parts = [f"{operator}: the power cap cannot be held.", _sentence(cap.message)]
+    parts += [_sentence(f) for f in _slot_facts(schedule)]
+    slips = [sf.message for sf in shortfalls if sf.kind == "deadline" and sf.message]
+    if refused:
+        why = "; ".join(f'"{r}"' for r in refused.values() if r)
+        parts.append(f"The other option, a deadline slip for {', '.join(sorted(refused))}, was refused by its "
+                     f"owner" + (f" ({why})." if why else "."))
+    elif slips:
+        parts.append("The other option the solver found is the job owners' call: " + _sentence("; ".join(slips)))
+    else:
+        parts.append("No deadline slip closes the gap.")
+    parts.append(f"Approve going over the cap by up to {cap.amount:.2f} W for this event, "
+                 f"or reply no with your reason.")
+    return " ".join(p for p in parts if p)
+
+
+_OPERATOR_SYSTEM = """Rewrite this message to a data-center operator as one short, plain message (at most four
+sentences). Keep every number and time exactly as written. Add no facts and no options: the operator may only
+approve going over the cap or say no with a reason. Never suggest pausing, stopping or moving a job."""
+
+
+async def draft_operator_ask(shortfalls: list[Shortfall], schedule: Schedule, llm: LLM, operator: str,
+                             refused: dict[str, str] | None = None) -> ApprovalRequest:
+    """The solver could not hold the cap: ask the operator to approve going over it, offering only what the
+    solver proved. `refused` maps job id -> the owner's reason for each deadline slip they refused."""
+    with tracer.start_as_current_span("agent.draft_operator_ask") as span:
+        cap = next((sf for sf in shortfalls if sf.kind == "cap"), None)
+        if cap is None:
+            raise ValueError("draft_operator_ask needs a cap shortfall")
+        refused = refused or {}
+        template = _operator_template(cap, shortfalls, schedule, operator, refused)
+        message, used = template, False
+        try:
+            text = await llm.text(_OPERATOR_SYSTEM, template)
+            keeps_amount = numbers(text) & allowed_numbers([f"{cap.amount:.2f}"])
+            acts = guard(text, {"knob", "instructions", "secrets"})
+            if text and keeps_amount and not ungrounded(text, [template]) and not acts:
+                message, used = text, True
+            else:
+                span.set_attribute("agent.rejected_numbers", sorted(ungrounded(text, [template])))
+        except AgentOffline:
+            pass
+        span.set_attribute("agent.llm_used", used)
+        if used:
+            span.set_attribute("agent.model", llm.name)
+        return ApprovalRequest(job_id=CAP_JOB, owner=operator, shortfall=cap, message=message)
 
 
 # ---------------------------------------------------------------------------
