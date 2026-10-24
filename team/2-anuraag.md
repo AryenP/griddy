@@ -264,3 +264,18 @@ In `scripts/preflight.py` (yours): when `config/fleet.yaml` lists any site and `
 print WARN "laptops listed but FLEET_TOKEN is empty: anyone on the Wi-Fi could post a laptop's watts" with the fix
 "set FLEET_TOKEN in .env and give it to each laptop (fleet/README.md)". Never print the token. Test with a
 monkeypatched config. Done when: merged.
+
+### 23. Phones join before they act (Sat 15:10, from Microsoft's HVE Core review), do first, small
+The workshop's review found that any phone on the venue Wi-Fi could approve going over the cap or flip the dispatcher.
+Machine 1 gated those routes (HANDOFF "Who may act"): this Mac is trusted; any other device must join once through
+`/join?t=<token>&next=<page>`, which sets a cookie. Your side:
+1. `scripts/qr.py`: the owner and operator QR codes become `{PUBLIC_URL}/join?t=<token>&next=/owner.html` (and
+   `/operator.html`), token from `api.access.operator_token()`. The chat QR stays as it is (chat is open). Never print
+   the token anywhere else.
+2. `web/approvals.js`: send `"owner"` with every reply: the owner the console acts as (`O.owner` on owner.html, the
+   operator's name on operator.html). Without it a judge who types their own name in "who" gets a 403.
+3. Show the three new answers in words wherever `routeError` runs: 401 "this phone has not joined: scan the QR code",
+   403 "this request is for <owner>", 429 "too many requests from this device; wait a minute".
+Done when: `make qr`, scan the owner QR on a phone, refuse a slip, and the reply lands (200); a phone that opened
+`/owner.html` directly gets the 401 sentence; tests cover the QR URLs.
+

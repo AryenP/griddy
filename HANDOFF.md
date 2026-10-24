@@ -73,7 +73,7 @@ chat has `concurrency`, `inflight`, `p95_60s` (total latency), `ttft_p95_60s` (t
 | POST | `/request` | `{"text": str, "who"?: str}` free text or a voice transcript | `{"intake": IntakeResult, "schedule": Schedule \| null}` |
 | POST | `/openadr/event` | an OpenADR 3.1 EVENT object | `{"intake": IntakeResult, "schedule": Schedule \| null}` |
 | GET | `/api/approvals?owner=&status=pending` | | `[ApprovalRequest]` |
-| POST | `/api/approvals/{id}/reply` | `{"text": str, "who": str}` | `{"decision": OwnerDecision, "schedule": Schedule \| null}` |
+| POST | `/api/approvals/{id}/reply` | `{"text": str, "who": str, "owner"?: str}` (`owner`: the owner this console acts as, else `who`; any other owner gets 403) | `{"decision": OwnerDecision, "schedule": Schedule \| null}` |
 | GET | `/api/explain` | | `Explanation` for the current schedule |
 | POST | `/api/ask` | `{"question": str}` operator asks "why is training paused?" | `Explanation` answered from live state only |
 | GET | `/api/report?run=<id>\|latest` | | `Report` |
@@ -84,6 +84,17 @@ chat has `concurrency`, `inflight`, `p95_60s` (total latency), `ttft_p95_60s` (t
 | POST | `/api/sites/{site_id}/calibration` | the laptop's own calibration `{"idle_w", "delta_w", "rate_mb_s", "samples", "window_s", "threads", "measured_at", "machine", "meter"}` | `{"site", "status": "stored"}` |
 | GET | `/api/runs/{run_id}/series` | | `{"run_id", "policy", "dispatcher_enabled", "machine", "started", "ended", "power": [[t, W]], "caps": [{"id", "start", "end", "target_w", "target_pct", "source", "reason"}], "actions": [{"t", "job", ...}], "shortfalls": [{"t", "shortfall_kind", "job_id", "message"}]}`: the measured record for drawing (since Sat 03:40). Run ids only: a path is a 404 on every run route |
 | GET | `/api/trace?n=50` | | recent OpenTelemetry spans `[{"name","start","end","attributes",...}]` |
+| GET | `/join?t=<token>&next=/operator.html` | | 303 to `next` (same-site paths only) with the HttpOnly `brownout_op` cookie; wrong token 401 (since Sat 15:10) |
+
+**Who may act (since Sat 15:10, Microsoft HVE Core review; api/access.py).** Every POST that moves a knob, a cap or an
+approval (`/api/policy`, `/api/iso`, `/api/dispatcher`, `/api/jobs/{id}`, `/api/event`, `/api/neighbourhood`, `/request`,
+`/openadr/event`, `/api/approvals/{id}/reply`, `/api/ask`) answers **401** unless the caller is this Mac (loopback or its own
+LAN address) or a device that joined: the `brownout_op` cookie from `/join`, or the token in `X-Brownout-Token`. The token
+is `OPERATOR_TOKEN` (.env), else `api.access.operator_token()` (runs/.operator_token). Reads (`/api/state`, approvals,
+runs, reports, `/ws`) and chat stay open. `/request` and `/api/ask` also answer **429** past 10 calls a minute from one
+device. Every switch body takes an optional `"who"` (default "operator"); the timeline records it as
+`"<who> (this Mac | joined device <ip>)"`. The `power_cap` approval is decided by rules only: a plain yes approves, a no
+holds the cap, anything else comes back `unclear` and stays pending.
 
 WebSocket adds `{"kind": "approval", "data": ApprovalRequest}` whenever a request is created or changes
 status (and `{"kind": "approval", "data": {"request_id", "who", "decision": OwnerDecision}}` for each reply),

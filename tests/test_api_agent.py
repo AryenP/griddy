@@ -129,3 +129,31 @@ async def test_operator_refusal_lets_busy_chat_degrade_toward_the_cap(rig, monke
     assert [a.concurrency for a in sched.assignments["chat"][:4]] == [2] * 4
     assert all(w <= 6.0 + 1e-6 for w in sched.planned_w[:4])
 
+
+
+async def test_only_the_requests_owner_may_answer_it(rig):
+    """HVE Core review fix 1: a console acting as another owner is refused, and the refusal is on the timeline."""
+    e, agent, tl, _ = rig
+    await e.on_signal(signal([50.0] * 96))
+    await agent.request("grid alert, I need 50% off for the next 2 hours", "judge")
+    ask = agent.pending()[0]
+    with pytest.raises(PermissionError):
+        await agent.reply(ask.id, "yes", "judge", acting_as="someone-else")
+    assert agent.approvals[ask.id].status == "pending"
+    decision, _ = await agent.reply(ask.id, "no, it has to finish on time", "judge", acting_as=ask.owner)
+    assert decision.decision == "refuse"
+
+
+async def test_going_over_the_cap_takes_a_plain_yes(rig):
+    """HVE Core review fix 2: anything but a plain yes or no asks again; no model reads the operator's answer."""
+    e, agent, _, _ = rig
+    await e.on_signal(signal([50.0] * 96))
+    await agent.request("grid alert, I need 50% off for the next 2 hours", "judge")
+    await agent.reply(agent.pending()[0].id, "no, it has to finish on time", "owner")
+    op = next(a for a in agent.pending() if a.job_id == CAP_JOB)
+    for text in ("sure, if it is only a few watts", "go over it by 2 W", "approve it I guess"):
+        decision, sched = await agent.reply(op.id, text, "judge", acting_as=op.owner)
+        assert decision.decision == "unclear" and not decision.llm_used and sched is None, text
+        assert agent.approvals[op.id].status == "pending"
+    decision, _ = await agent.reply(op.id, "yes", "judge", acting_as=op.owner)
+    assert decision.decision == "approve" and agent.approvals[op.id].status == "approved"

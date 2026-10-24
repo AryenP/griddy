@@ -74,10 +74,10 @@ class Runtime:
             await asyncio.sleep(0.25)
         raise TimeoutError(f"no {iso} signal after 150 s")
 
-    async def switch_iso(self, iso: str):
+    async def switch_iso(self, iso: str, who: str = ""):
         loc = config.isos["isos"][iso]["locations"]
         location = settings.location if iso == settings.iso else (loc[0] if isinstance(loc, list) else loc)
-        self.tl.log("policy", reason="iso change", iso=iso, location=location)
+        self.tl.log("policy", reason="iso change", iso=iso, location=location, who=who)
         return await self._start_watcher(iso, location)
 
     async def start(self):

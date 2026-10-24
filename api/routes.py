@@ -8,13 +8,15 @@ from pathlib import Path
 from typing import Literal
 
 import httpx
-from fastapi import APIRouter, Header, HTTPException, WebSocket
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi import APIRouter, Header, HTTPException, Request, WebSocket
+from fastapi.responses import FileResponse, RedirectResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 from core.config import available_isos, settings
 from core.types import CapEvent
 from workloads.base import WL
+
+from . import access
 
 WEB = Path("web")
 RUNS = Path("runs")
@@ -23,18 +25,22 @@ RUNS = Path("runs")
 class PolicyIn(BaseModel):
     objective: Literal["cost", "carbon", "balanced"] | None = None
     power_cap_w: float | None = Field(default=None, description="explicit null clears the cap")
+    who: str = "operator"
 
 
 class IsoIn(BaseModel):
     iso: str
+    who: str = "operator"
 
 
 class DispatcherIn(BaseModel):
     enabled: bool
+    who: str = "operator"
 
 
 class JobIn(BaseModel):
     deadline: datetime | None = None
+    who: str = "operator"
 
 
 class EventIn(BaseModel):
@@ -74,6 +80,7 @@ class SiteCalibration(BaseModel):
 
 class NeighbourhoodIn(BaseModel):
     action: Literal["start", "stop"]
+    who: str = "operator"
 
 
 class ChatIn(BaseModel):
@@ -93,10 +100,27 @@ class AskIn(BaseModel):
 class ReplyIn(BaseModel):
     text: str = Field(min_length=1, max_length=4000)
     who: str
+    owner: str | None = Field(default=None, description="the owner this console acts as; else `who`")
 
 
 def make_router(rt) -> APIRouter:
     r = APIRouter()
+    paid = access.RateLimit(n=10, per_s=60)       # /request and /api/ask each cost a model call
+
+    def by(who: str, request: Request) -> str:
+        """The name typed on the page (self-declared) and where the call came from (not)."""
+        return f"{who} ({access.require(request)})"
+
+    @r.get("/join")
+    async def join(t: str = "", next: str = "/operator.html"):
+        """A phone joins once (the owner and operator QR codes carry this link): sets the cookie the action
+        routes check, then opens the page. A wrong token joins nothing."""
+        if not hmac.compare_digest(t, access.operator_token()):
+            raise HTTPException(401, "wrong or missing join token: use the QR code from `make qr`")
+        dest = next if next.startswith("/") and not next.startswith("//") else "/"
+        resp = RedirectResponse(dest, status_code=303)
+        resp.set_cookie(access.COOKIE, t, httponly=True, samesite="strict", max_age=2 * 86400)
+        return resp
 
     @r.websocket("/ws")
     async def ws(sock: WebSocket):
@@ -138,8 +162,10 @@ def make_router(rt) -> APIRouter:
         return rt.fleet.calibrate(site_id, body.model_dump())
 
     @r.post("/api/neighbourhood")
-    async def neighbourhood(body: NeighbourhoodIn):
+    async def neighbourhood(body: NeighbourhoodIn, request: Request):
         """Start or stop the SIMULATED neighbourhood's time-lapse (config/neighbourhood.yaml scenario)."""
+        who = by(body.who, request)
+        rt.tl.log("policy", reason=f"neighbourhood replay {body.action}", who=who)
         if not rt.neighbourhood.enabled:
             raise HTTPException(404, "no neighbourhood configured (config/neighbourhood.yaml)")
         return rt.neighbourhood.start() if body.action == "start" else rt.neighbourhood.stop()
@@ -149,39 +175,43 @@ def make_router(rt) -> APIRouter:
         return rt.snapshot()
 
     @r.post("/api/policy")
-    async def policy(body: PolicyIn):
-        changes = body.model_dump(exclude_unset=True)
+    async def policy(body: PolicyIn, request: Request):
+        who = by(body.who, request)
+        changes = body.model_dump(exclude_unset=True, exclude={"who"})
         if not changes:
             raise HTTPException(400, "nothing to change")
-        s = await rt.executor.set_policy(**changes)
+        s = await rt.executor.set_policy(who=who, **changes)
         return s.model_dump(mode="json") if s else None
 
     @r.post("/api/iso")
-    async def iso(body: IsoIn):
+    async def iso(body: IsoIn, request: Request):
+        who = by(body.who, request)
         if body.iso not in available_isos():
             raise HTTPException(400, f"{body.iso} not available: {available_isos()}")
-        sig = await rt.switch_iso(body.iso)
+        sig = await rt.switch_iso(body.iso, who=who)
         return {"grid": sig.model_dump(mode="json"),
                 "schedule": rt.executor.schedule.model_dump(mode="json") if rt.executor.schedule else None}
 
     @r.post("/api/dispatcher")
-    async def dispatcher(body: DispatcherIn):
-        rt.executor.set_dispatcher(body.enabled)
+    async def dispatcher(body: DispatcherIn, request: Request):
+        rt.executor.set_dispatcher(body.enabled, who=by(body.who, request))
         return {"enabled": rt.executor.dispatcher_enabled}
 
     @r.post("/api/jobs/{job_id}")
-    async def job(job_id: str, body: JobIn):
+    async def job(job_id: str, body: JobIn, request: Request):
+        who = by(body.who, request)
         if job_id not in {j.id for j in rt.executor.jobs()} or job_id == "chat":
             raise HTTPException(404, f"no deferrable job {job_id}")
-        s = await rt.executor.set_job(job_id, **body.model_dump(exclude_unset=True))
+        s = await rt.executor.set_job(job_id, who=who, **body.model_dump(exclude_unset=True, exclude={"who"}))
         return s.model_dump(mode="json") if s else None
 
     @r.post("/api/event")
-    async def event(body: EventIn):
+    async def event(body: EventIn, request: Request):
+        who = access.require(request)
         if (body.target_w is None) == (body.target_pct is None):
             raise HTTPException(400, "give exactly one of target_w or target_pct")
         ev = CapEvent(source="ui", start=body.start, duration_s=body.duration_s, target_w=body.target_w,
-                      target_pct=body.target_pct, reason=body.reason, raw=body.model_dump_json())
+                      target_pct=body.target_pct, reason=body.reason or f"set from {who}", raw=body.model_dump_json())
         try:
             s = await rt.executor.add_event(ev)
         except ValueError as e:
@@ -192,15 +222,18 @@ def make_router(rt) -> APIRouter:
         return m.model_dump(mode="json") if m is not None else None
 
     @r.post("/request")
-    async def request(body: RequestIn):
+    async def request(body: RequestIn, request: Request):
+        who = by(body.who, request)
+        paid.check(request)
         try:
-            result, sched = await rt.agent.request(body.text, body.who)
+            result, sched = await rt.agent.request(body.text, who)
         except ValueError as e:                      # e.g. % cap before a measured baseline exists
             raise HTTPException(409, str(e))
         return {"intake": _dump(result), "schedule": _dump(sched)}
 
     @r.post("/openadr/event")
-    async def openadr(event: dict):
+    async def openadr(event: dict, request: Request):
+        access.require(request)
         try:
             result, sched = await rt.agent.openadr(event, who="openadr")
         except ValueError as e:
@@ -212,17 +245,22 @@ def make_router(rt) -> APIRouter:
         return [_dump(a) for a in rt.agent.pending(owner, status or None)]
 
     @r.post("/api/approvals/{request_id}/reply")
-    async def reply(request_id: str, body: ReplyIn):
+    async def reply(request_id: str, body: ReplyIn, request: Request):
+        who = by(body.who, request)
         try:
-            decision, sched = await rt.agent.reply(request_id, body.text, body.who)
+            decision, sched = await rt.agent.reply(request_id, body.text, who, acting_as=body.owner or body.who)
         except KeyError:
             raise HTTPException(404, f"no approval request {request_id}")
+        except PermissionError as e:
+            raise HTTPException(403, str(e))
         except ValueError as e:
             raise HTTPException(409, str(e))
         return {"decision": _dump(decision), "schedule": _dump(sched)}
 
     @r.post("/api/ask")
-    async def ask(body: AskIn):
+    async def ask(body: AskIn, request: Request):
+        access.require(request)
+        paid.check(request)
         return _dump(await rt.agent.ask(body.question))
 
     @r.get("/api/explain")
