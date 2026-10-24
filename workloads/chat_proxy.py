@@ -7,6 +7,9 @@ latency is recorded; p95 over the last 60 s is in /status and the status file.
 from __future__ import annotations
 
 import asyncio
+import json
+import os
+import signal
 import time
 from collections import deque
 
@@ -60,21 +63,25 @@ class ChatIn(BaseModel):
 def make_app(max_concurrency: int) -> FastAPI:
     app = FastAPI(title="brownout chat proxy")
     lim = Limiter(max_concurrency)
-    lat: deque[tuple[float, float]] = deque(maxlen=5000)
+    lat: deque[tuple[float, float, float]] = deque(maxlen=5000)   # (t, total_s, ttft_s)
     state = {"max_tokens": CFG.get("max_tokens", 256), "served": 0, "errors": 0}
     client = httpx.AsyncClient(base_url=settings.ollama_url, timeout=120)
 
     def snapshot() -> dict:
         now = time.time()
-        recent = [l for t, l in lat if now - t <= 60]
+        recent = [(l, f) for t, l, f in lat if now - t <= 60]
         return {"job": "chat", "state": "running" if lim.limit > 0 else "paused", "device": "gpu",
                 "concurrency": lim.limit, "inflight": lim.inflight, "max_tokens": state["max_tokens"],
-                "p95_60s": p95(recent), "n_60s": len(recent), "served": state["served"],
+                "p95_60s": p95([l for l, _ in recent]), "ttft_p95_60s": p95([f for _, f in recent]),
+                "n_60s": len(recent), "served": state["served"],
                 "errors": state["errors"], "model": settings.ollama_model, "t": now}
 
     async def follow_control():
-        # knobs write runs/control/chat.json; apply changes within ~250 ms
+        # knobs write runs/control/chat.json; apply changes within ~250 ms. Exit if the runtime died.
+        parent = os.getppid()
         while True:
+            if os.getppid() != parent:
+                os.kill(os.getpid(), signal.SIGTERM)
             c = read_json(control_path("chat"))
             if "concurrency" in c and int(c["concurrency"]) != lim.limit:
                 await lim.set(int(c["concurrency"]))
@@ -89,23 +96,34 @@ def make_app(max_concurrency: int) -> FastAPI:
 
     @app.post("/chat")
     async def chat(body: ChatIn):
-        t0 = time.time()
+        t0 = time.time()          # includes time queued behind the concurrency limit
+        ttft, parts, tokens = None, [], None
         async with lim:
             n = min(body.max_tokens or state["max_tokens"], state["max_tokens"])
             try:
-                r = await client.post("/api/chat", json={
-                    "model": settings.ollama_model, "messages": body.messages, "stream": False,
-                    "think": CFG.get("think", False), "options": {"num_predict": n}})
-                r.raise_for_status()
+                async with client.stream("POST", "/api/chat", json={
+                        "model": settings.ollama_model, "messages": body.messages, "stream": True,
+                        "think": CFG.get("think", False), "options": {"num_predict": n}}) as r:
+                    r.raise_for_status()
+                    async for line in r.aiter_lines():
+                        if not line:
+                            continue
+                        d = json.loads(line)
+                        piece = d.get("message", {}).get("content", "")
+                        if piece and ttft is None:
+                            ttft = time.time() - t0
+                        parts.append(piece)
+                        if d.get("done"):
+                            tokens = d.get("eval_count")
             except httpx.HTTPError as e:
                 state["errors"] += 1
                 raise HTTPException(502, f"ollama: {e!r}")
         dt = time.time() - t0
-        lat.append((time.time(), dt))
+        ttft = dt if ttft is None else ttft
+        lat.append((time.time(), dt, ttft))
         state["served"] += 1
-        d = r.json()
-        return {"reply": d["message"]["content"], "latency_s": round(dt, 3),
-                "tokens": d.get("eval_count"), "max_tokens": n}
+        return {"reply": "".join(parts), "latency_s": round(dt, 3), "ttft_s": round(ttft, 3),
+                "tokens": tokens, "max_tokens": n}
 
     @app.get("/status")
     async def status():

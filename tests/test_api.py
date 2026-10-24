@@ -75,3 +75,14 @@ def test_dispatcher_toggle_and_state():
     c, _ = client()
     assert c.post("/api/dispatcher", json={"enabled": False}).json() == {"enabled": False}
     assert c.get("/api/state").json() == {"dispatcher_enabled": False}
+
+
+def test_runs_lists_runtime_runs_only(tmp_path):
+    import json as _json
+    from api.routes import list_runs
+    for name, first in [("a", {"t": 1.0, "kind": "note", "data": {"msg": "runtime start", "dispatcher_enabled": True}}),
+                        ("b-baseline", {"t": 2.0, "kind": "note", "data": {"msg": "runtime start", "dispatcher_enabled": False}}),
+                        ("c-solve", {"t": 3.0, "kind": "grid", "data": {}})]:
+        (tmp_path / name).mkdir()
+        (tmp_path / name / "timeline.jsonl").write_text(_json.dumps(first) + "\n")
+    assert [(r["run_id"], r["dispatcher_enabled"]) for r in list_runs(tmp_path)] == [("a", True), ("b-baseline", False)]

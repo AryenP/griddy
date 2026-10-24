@@ -1,4 +1,4 @@
-.PHONY: ollama setup demo baseline calibrate solve report compare test probe qr clean
+.PHONY: ollama setup demo baseline calibrate chat-sweep solve report compare test probe qr clean
 
 PY ?= uv run
 RUN ?= latest
@@ -19,6 +19,9 @@ baseline: ollama ## dispatcher off: same jobs, run-everything policy, for the co
 
 calibrate: ollama ## measure per-job watt deltas and the idle floor with powermetrics
 	sudo -v && $(PY) python -m controller.feasibility --calibrate $(ARGS)
+
+chat-sweep: ollama ## chat TTFT/total latency by concurrency x max_tokens (idle GPU, then with training)
+	$(PY) python -m controller.feasibility --chat-sweep $(ARGS)
 
 solve:          ## print the 24-h schedule for the live price curve
 	$(PY) python -m dispatcher.solve --print

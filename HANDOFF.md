@@ -48,7 +48,7 @@ files served from `web/` at `/`, so `web/index.html` is `/` and `web/chat.html` 
 Field names are exactly the pydantic models in `core/types.py` (`model_dump(mode="json")`). Job status
 objects are what the workloads write to `runs/control/<job>.status.json` (see `workloads/*.py`):
 train has `step`, `loss`, `rate` (steps/s); batch has `items_done`, `total`, `fraction`, `rate` (items/s);
-chat has `concurrency`, `inflight`, `p95_60s`, `n_60s`, `max_tokens`, `model`. All have `state`, `device`, `t`.
+chat has `concurrency`, `inflight`, `p95_60s` (total latency), `ttft_p95_60s` (time to first token), `n_60s`, `max_tokens`, `model`. All have `state`, `device`, `t`.
 
 **HTTP**
 | Method | Path | Body | Returns |
@@ -59,7 +59,7 @@ chat has `concurrency`, `inflight`, `p95_60s`, `n_60s`, `max_tokens`, `model`. A
 | POST | `/api/dispatcher` | `{"enabled": bool}` | `{"enabled": bool}`; off = baseline (run everything) |
 | POST | `/api/jobs/{id}` | `{"deadline": iso8601 \| null}` | new Schedule (owner/negotiator changed a deadline) |
 | POST | `/api/event` | `{"start": iso8601, "duration_s": int, "target_w"?: W, "target_pct"?: % of measured baseline, "reason"}` | new Schedule with the cap |
-| POST | `/api/chat` | `{"messages": [{"role","content"}], "max_tokens"?: int}` | `{"reply", "latency_s", "tokens", "max_tokens"}` |
+| POST | `/api/chat` | `{"messages": [{"role","content"}], "max_tokens"?: int}` | `{"reply", "latency_s", "ttft_s", "tokens", "max_tokens"}` |
 
 **Agent and receipts routes** (machine 1 wires them as machines 3 and 4 deliver; code against them now):
 | Method | Path | Body | Returns |
