@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Brownout operator</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="phone operator">
+  <header class="phone-top">
+    <h1>Grid operator</h1>
+    <p class="cap">You are the utility. Ask for power back in your own words or send an OpenADR event; the solver re-plans and the agent reads it back.</p>
+    <div class="badges"><span id="conn" class="badge">connecting</span><span id="agent" class="badge">agent ?</span><span id="me" class="badge">operator ?</span></div>
+    <div class="keys"><kbd>E</kbd> request box · <kbd>A</kbd> ask box</div>
+  </header>
+
+  <main>
+    <section class="panel power-strip">
+      <div class="power-now"><span id="power-now">—</span><small> W now</small> <span class="sep">·</span> <span id="power-mean">—</span><small> W 10-s mean</small></div>
+      <div class="src" id="power-src">waiting for powermetrics</div>
+    </section>
+
+    <section class="panel">
+      <h2>Tell it what you need</h2>
+      <p class="cap">e.g. “grid alert, I need 30% off for the next twenty minutes”</p>
+      <div id="transcript-label" class="transcript-label" hidden>transcript (browser speech recognition): check it, then send</div>
+      <textarea id="req-text" rows="3" maxlength="4000" placeholder="Type or dictate the request"></textarea>
+      <div class="btn-row">
+        <button id="req-send" class="primary" type="button">Send request</button>
+        <button id="mic" type="button" hidden>Dictate</button>
+        <span id="mic-note" class="src"></span>
+      </div>
+      <div id="req-result" class="result"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Active cap events</h2>
+      <p class="cap">Countdown to the end of each cap, and the time from its start until the 10-s mean of measured watts is at or under the cap.</p>
+      <div id="events"><p class="empty">no cap events since this page opened</p></div>
+      <div class="src" id="events-src"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Waiting for you</h2>
+      <p class="cap">When the cap can't be met without breaking a deadline the owner kept, the solver asks the operator.</p>
+      <div id="op-approvals" class="board"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Ask why</h2>
+      <p class="cap">Answered from the live schedule and the solver's facts only.</p>
+      <textarea id="ask-text" rows="2" maxlength="1000" placeholder="e.g. why is training paused?"></textarea>
+      <div class="btn-row"><button id="ask-send" type="button">Ask</button></div>
+      <div id="ask-result" class="result"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Current slot</h2>
+      <div id="sched-now"><p class="empty">no schedule yet</p></div>
+    </section>
+
+    <section class="panel">
+      <h2>OpenADR 3.1 EVENT</h2>
+      <p class="cap">Paste the EVENT object a utility's VTN sends (JSON).</p>
+      <textarea id="adr-text" rows="6" class="mono" spellcheck="false" placeholder='{"objectType": "EVENT", "intervalPeriod": {...}, "intervals": [...]}'></textarea>
+      <div class="btn-row"><button id="adr-send" type="button">Send OpenADR event</button></div>
+      <div id="adr-result" class="result"></div>
+    </section>
+  </main>
+
+  <script src="common.js"></script>
+  <script src="approvals.js"></script>
+  <script src="operator.js"></script>
+</body>
+</html>
