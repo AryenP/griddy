@@ -3,6 +3,12 @@
   "contentVersion": "1.0.0.0",
   "parameters": {
     "environmentName": { "value": "${AZURE_ENV_NAME}" },
-    "location": { "value": "${AZURE_LOCATION}" }
+    "location": { "value": "${AZURE_LOCATION}" },
+    "deployFoundry": { "value": "${AZURE_DEPLOY_FOUNDRY=false}" },
+    "principalId": { "value": "${AZURE_PRINCIPAL_ID}" },
+    "modelName": { "value": "${AZURE_MODEL_NAME=gpt-4o-mini}" },
+    "modelVersion": { "value": "${AZURE_MODEL_VERSION=2024-07-18}" },
+    "modelSku": { "value": "${AZURE_MODEL_SKU=GlobalStandard}" },
+    "modelCapacity": { "value": "${AZURE_MODEL_CAPACITY=10}" }
   }
 }

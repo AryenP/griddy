@@ -7,7 +7,7 @@ Sources: Hive prize page (read 3:47 PM), Devpost (8:15 PM), every sponsor Slack 
 |---|---|---|---|
 | **Microsoft Challenge** — Built for the Real World | $3,800 + Surface laptop per member + present at the Delta/Frontier FDE tech talk + 1:1 senior-FDE mentorship; 2nd = talk + mentorship | The whole project is shaped around their five criteria | Operator/FDE quote on slide 1; Agent Framework + App Insights live; DR-style baseline + time-to-compliance; deterministic controller; honest shortfall |
 | **Most Technically Advanced Hack** | NuPhy Air60 HE per member | Closed-loop control on real hardware, two meters, checkpointing, OpenADR intake | Nothing extra; show the architecture diagram |
-| **Best Solo Hack** | AirPods Pro 3 | You are solo | Say so on Devpost |
+| ~~Best Solo Hack~~ | AirPods Pro 3 | Not eligible: four people build Brownout (team/roster.yaml) | Do not opt in |
 | **Best Planet-First Social Impact** | Parks pass per member | Grid flexibility = fewer peaker plants; EPRI 10–30% | One slide with the EPRI number; stronger if the EO flood tenants ship |
 | **Hyphenate** — Autonomous Systems for Finance | $8k / $5k / $3k + expedited interview top 5 | Weak domain fit (finance), but zero extra work beyond the required demo video; their judges asked for "the moment" and we have one | **Demo video required**; open with the owner-refusal moment; one line on cost of curtailment penalties (finance angle) |
 

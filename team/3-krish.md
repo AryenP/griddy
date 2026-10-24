@@ -57,6 +57,19 @@ The 06:40 run was void (lid closed, DECISIONS 08:00). When machine 1 re-runs it,
 Sunday 10:30 AM (CLAUDE.md); today's 10:00 is the Microsoft workshop. Devpost is due Sunday 08:50.
 Your #2 (preflight WARN for an empty FLEET_TOKEN) went to Anuraag as task 22.
 
+### K9 (Sat 09:55). Your Surface as a real second site (the demo's "more than one machine"), about 20 min
+Your Surface Pro 11 reads its battery (K4), and your Claude runs on it, so it can do this itself. All on your
+laptop, unplugged, Power mode "Best performance" (Settings > System > Power). Read `fleet/README.md` first.
+1. Reachability (no change on either machine): `curl -s -o NUL -w "%{http_code}" http://10.0.6.240:8080/api/state`.
+   Machine 1 keeps `make demo` running on the Mac from about 10:00. 200 means you can join; anything else (or a
+   timeout) means the venue Wi-Fi blocks laptop-to-laptop traffic: write that in your status file and stop here.
+2. If 200: write "reachable" in `team/status/3-krish.md`. Machine 1 then adds `krish-surface` to
+   `config/fleet.yaml` (its lane) and says so in this file.
+3. Then calibrate (about 6 min): `python fleet/agent.py --mac http://10.0.6.240:8080 --site krish-surface --calibrate`
+   and join: `python fleet/agent.py --mac http://10.0.6.240:8080 --site krish-surface`. Leave it running and
+   unplugged; note the time you started and stopped in your status file.
+Done when: the dashboard lists your Surface as online with its measured watts, or your status says why it cannot.
+
 ### K4. If one of the Windows laptops is yours
 Tell Aryen in your status file. After 07:20 you may be asked to join it to the demo: `fleet/README.md`.
 
