@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Brownout</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+</head>
+<body>
+  <header class="top">
+    <div class="claim">
+      <h1>Brownout</h1>
+      <p>When the grid runs short, the plan for AI data centers is diesel generators. This is the alternative.</p>
+    </div>
+    <div class="controls">
+      <span id="conn" class="badge">connecting</span>
+      <span id="agent" class="badge">agent ?</span>
+      <label>ISO <select id="iso"></select></label>
+      <label>Objective
+        <select id="objective">
+          <option value="cost">cost</option>
+          <option value="carbon">carbon</option>
+          <option value="balanced">balanced</option>
+        </select>
+      </label>
+      <button id="dispatcher" class="toggle" type="button">DISPATCHER ON</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="row numbers">
+      <div class="tile big">
+        <div class="label">Measured power</div>
+        <div class="value" id="watts">—</div>
+        <div class="src" id="watts-src">waiting for powermetrics</div>
+      </div>
+      <div class="tile">
+        <div class="label">Cost at live price</div>
+        <div class="value" id="cost">—</div>
+        <div class="src" id="cost-src">waiting for grid feed</div>
+      </div>
+      <div class="tile">
+        <div class="label">Carbon at live mix</div>
+        <div class="value" id="carbon">—</div>
+        <div class="src" id="carbon-src">waiting for grid feed</div>
+      </div>
+      <div class="tile">
+        <div class="label">Chat p95 (60 s)</div>
+        <div class="value" id="p95">—</div>
+        <div class="src" id="p95-src">waiting for chat proxy</div>
+      </div>
+    </section>
+
+    <section class="row curves">
+      <div class="panel">
+        <div class="panel-head">
+          <h2>Next 24 h: price, carbon and the schedule</h2>
+          <span id="feed-age" class="badge">no feed</span>
+        </div>
+        <div class="chart-box"><canvas id="curve"></canvas></div>
+        <div class="strips" id="strips"></div>
+        <div class="legend">
+          <span><i class="sw price"></i>price $/MWh (left)</span>
+          <span><i class="sw carbon"></i>carbon gCO2/kWh (right)</span>
+          <span><i class="sw run-gpu"></i>job runs on GPU</span>
+          <span><i class="sw run-cpu"></i>job runs on CPU</span>
+          <span><i class="sw now"></i>current slot</span>
+        </div>
+        <div class="src" id="curve-src">waiting for grid feed and schedule</div>
+      </div>
+    </section>
+
+    <section class="row jobs" id="jobs"></section>
+
+    <section class="row bottom">
+      <div class="panel">
+        <h2>Solver says</h2>
+        <div id="plan" class="plan"></div>
+        <ul id="explanations" class="explanations"></ul>
+        <div class="src" id="solve-src"></div>
+      </div>
+      <div class="panel">
+        <h2>Event log</h2>
+        <ol id="log" class="log"></ol>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
