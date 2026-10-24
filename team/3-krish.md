@@ -70,6 +70,34 @@ laptop, unplugged, Power mode "Best performance" (Settings > System > Power). Re
    unplugged; note the time you started and stopped in your status file.
 Done when: the dashboard lists your Surface as online with its measured watts, or your status says why it cannot.
 
+### K6 is now (note from machine 1, Sat 10:10)
+The evidence re-run happened at 09:15 with the lid open; DECISIONS 09:46 names it the evidence of record
+(ignore the call 20.85 W, 0 % under the cap; pause everything 0.80 W, 99 %, 19 steps; Brownout 14.34 W, 93 %,
+12 s, 1575 steps). Run K3 against README, docs/devpost.md, DEMO.md and docs/demo-video.md for those numbers.
+
+### K9 waits
+`make demo` needs Aryen's sudo for powermetrics, and his sudo has expired while he is away. Machine 1 cannot type
+passwords. Do K9 step 1 only when this file says the demo is up again.
+
+### K10 (Sat 10:10). Review the chat-under-cap fix, b06cd51 (about 40 min)
+The first run with real chat traffic during a cap failed (DECISIONS 10:00, docs/evidence/20261024-094941.md): the
+plan cut chat to 1 stream on its own, time to first token reached 4.56 s against the 1 s SLA, and power stayed over
+the cap. b06cd51 changes three things (DECISIONS, the entry after 10:00):
+1. `dispatcher/model.py` `chat_floor`: chat keeps full concurrency unless the operator approved degrading it.
+2. `chat_curve` / `chat_w`: chat watts by busy streams from calibration (`streams_w`), a straight line when absent.
+3. `dispatcher/solve.py` `_chat_degrade` adds an "sla" shortfall (watts a degrade would save) to the operator ask;
+   `Executor.hold_cap` (operator says no) is the only path that lets chat degrade, for those caps only.
+Look for: any path that still lowers chat concurrency without the operator (greedy fallback, neighbourhood cut,
+fleet re-solve); the "sla" shortfall's number appearing anywhere as seconds (web/approvals.js `shortfallFacts`
+labels sla amounts "chat SLA"); a "no" that degrades chat for a later, different cap; the curve extrapolating past
+the last measured point. Write findings to `team/review/2026-10-24.md`, one numbered line each.
+
+### K11 (Sat 10:10). Judge question 13, honestly (docs/qa, your file; small)
+`docs/qa/judge-questions.md` #13 says no chat-under-cap run has been recorded. One now has, and it failed. Rewrite
+the answer: what we measured (run 20261024-094941: cap 19.68 W, mean 26.46 W, never under; TTFT p95 0.20 s before,
+4.56 s worst during), why (chat priced per stream; the plan degraded chat without the operator), what changed
+(b06cd51), and that the re-run waits for Aryen's sudo. No claim that chat keeps its SLA under a cap until that run.
+
 ### K4. If one of the Windows laptops is yours
 Tell Aryen in your status file. After 07:20 you may be asked to join it to the demo: `fleet/README.md`.
 
