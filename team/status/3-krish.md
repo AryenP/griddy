@@ -26,3 +26,7 @@ K4: yes, one of the Windows laptops is Krish's: Microsoft Surface Pro, 11th Edit
 (WMI BatteryStatus readable; plugged in at 05:59). Ready to join after 07:20 per fleet/README.md when asked.
 Next: re-run K3 after the 06:40 evidence run lands; issues for every K1/K3 finding once gh works.
 Blockers / needs: Krish — gh auth login (no PRs or issues opened yet; branches pushed).
+
+## 2026-10-24 06:42 PT — K5 done, K6 waiting
+Done: K5 on krish/k5-merged-prs; K2 counts updated; hourly summary on krish/review-0642. Next: K6 after the 06:40
+evidence run lands (~07:20). Blockers / needs: Krish — gh auth login (K0: PRs for K1, K2, K3, K5).
