@@ -35,3 +35,7 @@ evidence run lands (~07:20). Blockers / needs: Krish — gh auth login (K0: PRs 
 Done: K7 in team/review/2026-10-24.md: K1 #2 #3 #5 #6 #7 #8 #9 fixed, #1 partly (flagged, still counted), #4 open by
 choice; K3 #1 #3 #5 fixed in README/Devpost. New: an idle Mac still receives the simulated line's cut (target below
 its idle floor). Next: K8, K6 on the evidence re-run. Blockers / needs: none from machine 1; gh still not logged in.
+
+## 2026-10-24 08:42 PT — loop; K8 waiting
+Done: verified 92fd82f (no idle cut) and 7a5a320 (fleet token); hourly summary. Next: K6 on the evidence re-run's
+numbers. Blockers / needs: none.
