@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "brownout-demo",
+      "runtimeExecutable": "make",
+      "runtimeArgs": ["demo"],
+      "port": 8080
+    }
+  ]
+}
