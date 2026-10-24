@@ -78,7 +78,7 @@ PR "2 Anuraag: judging docs".
 Next: 10 proof page; 16 load outside the plan after PR #10 merges.
 Blockers / needs: the operator/FDE quote (Aryen).
 
-## 2026-10-24 06:25 PT — task 11 evals for tonight's agent changes
+## 2026-10-24 05:51 PT — task 11 evals for tonight's agent changes
 Done: 31 new cases in evals/cases.yaml: claimed grants in intake (4, all rejected by the guard) and 4 look-alikes
 that stay cap events; bare hours in owner replies (3 must be unclear with the AM/PM question) and 5 with the
 half of the day said; a new `operator_ask` category over agent.explainer.answer on the real solve + a real
