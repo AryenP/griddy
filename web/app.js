@@ -1,4 +1,4 @@
-// Brownout dashboard. One WebSocket (/ws, HANDOFF.md contract), field names from core/types.py.
+// Griddy dashboard. One WebSocket (/ws, HANDOFF.md contract), field names from core/types.py.
 // Every number on screen carries its source and its age; missing data says what is missing.
 // Layout: the live load trace and its readout (web/trace.js), the 24-hour map (web/map.js) with a slot
 // inspector, the jobs, why this plan, the event log, and the receipts (web/receipts.js).

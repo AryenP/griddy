@@ -1,4 +1,4 @@
-# Devpost draft: Brownout
+# Devpost draft: Griddy
 
 Draft for the Cal Hacks 13.0 submission (due Sun 25 Oct, 8:50 AM PT). Every "to be measured" is filled
 from the demo Mac's own runs (`make report`, `make compare`) after the final rehearsal; none is typed
@@ -21,7 +21,7 @@ the result in watts.
 - EPRI DCFlex: 10–30 % peak-reduction potential from flexible data centers (Reuters, 8 Oct 2026).
 
 ## What it does
-Brownout is a grid-aware compute dispatcher. It reads the live grid (CAISO and ERCOT prices, day-ahead
+Griddy is a grid-aware compute dispatcher. It reads the live grid (CAISO and ERCOT prices, day-ahead
 curve, load forecast, fuel mix, alerts) with the timestamp and age of every number, schedules each AI
 job over the next 24 hours with a CP-SAT solver against cost, carbon, deadlines and a chat SLA
 (time to first token p95 <= 1.0 s, replies streamed), executes the current slot on a real machine (pause/resume with checkpoints, concurrency, GPU vs CPU),
@@ -55,9 +55,9 @@ the same call (run of record 09:15, DECISIONS 09:46; 315-327 s from each cap sta
 |---|---|---|---|---|
 | Ignore the call | 20.85 W | 0 % | never | 5899 |
 | Pause everything | 0.80 W | 99 % | 4 s | 19 |
-| Brownout | 14.34 W | 93 % | 12 s | 1575 (315 s; 1625 over ignore's 327 s) |
+| Griddy | 14.34 W | 93 % | 12 s | 1575 (315 s; 1625 over ignore's 327 s) |
 
-Brownout keeps training on the CPU under the cap, about 83 times the work of pausing everything, and asks the
+Griddy keeps training on the CPU under the cap, about 83 times the work of pausing everything, and asks the
 owner about the ~19-minute slip. Two earlier attempts are void and say why (DECISIONS 04:25, 08:00).
 
 Calibration on qwen3:4b-instruct (03:10, Mac otherwise idle): idle 0.51 W; chat +25.6 W at concurrency 4;
@@ -67,7 +67,7 @@ skipped (CAISO SP15 day-ahead, live), OPTIMAL in 0.06 s; ERCOT solved in 0.04 s.
 boundary: measured 18.5 W → 2.17 W within ~4 s and back to 17.5 W when it ended, with no input in between.
 
 ## The moment (live, real model; docs/evidence/demo-flow-live-20261024.md)
-The utility types "we need you at half your draw for the next two hours"; Brownout reads back "about 8.9 W
+The utility types "we need you at half your draw for the next two hours"; Griddy reads back "about 8.9 W
 of the 17.7 W measured baseline, 02:36 to 04:36". The training owner is asked; they answer "no, this has to
 finish on time, it's a customer demo". The operator then gets the solver's honest answer: keeping every
 deadline, power goes over the cap by up to 12.55 W; the lowest the plan reaches under the cap is 0.4 W; the
