@@ -58,7 +58,9 @@ class Window:
         return statistics.fmean(self.samples), len(self.samples)
 
 
-async def chat_traffic(stop: asyncio.Event, n: int):
+async def chat_traffic(stop: asyncio.Event, n: int, gap_s: float = 0.0):
+    """`n` users sending the calibration prompts; each waits `gap_s` after a reply before its next request
+    (0: back to back, as calibration needs; a pause to read is what a judge on a phone does)."""
     prompts = CHAT["calibration_prompts"]
     url = f"http://127.0.0.1:{CHAT['proxy_port']}/chat"
     async with httpx.AsyncClient(timeout=120) as c:
@@ -67,6 +69,8 @@ async def chat_traffic(stop: asyncio.Event, n: int):
             while not stop.is_set():
                 await c.post(url, json={"messages": [{"role": "user", "content": prompts[i % len(prompts)]}]})
                 i += n
+                if gap_s:
+                    await asyncio.sleep(gap_s)
         await asyncio.gather(*(worker(k) for k in range(n)))
 
 

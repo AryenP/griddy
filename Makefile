@@ -1,4 +1,4 @@
-.PHONY: evidence evidence3 evidence-chat preflight tag-stable ollama setup demo baseline calibrate chat-sweep solve report compare test probe qr clean
+.PHONY: evidence evidence3 evidence-chat evidence-chat-judge preflight tag-stable ollama setup demo baseline calibrate chat-sweep solve report compare test probe qr clean
 
 PY ?= uv run
 # sudo for powermetrics: no prompt when the passwordless rule for /usr/bin/powermetrics is installed
@@ -44,6 +44,12 @@ evidence-chat: ollama ## unattended (~12 min): calibrate (chat at 1, 2, 4 stream
 	E=runs/evidence-state-$$(date +%Y%m%d-%H%M%S); \
 	$(PY) python -m controller.feasibility --calibrate && \
 	BROWNOUT_CHECKPOINT_DIR=$$E/dispatched $(PY) python -m api.app --headless --duration 450 $(EVIDENCE3_ARGS) --chat-load 2 --chat-at 30 && \
+	$(PY) python -m agent.reporter --run latest; s=$$?; kill $$K 2>/dev/null; exit $$s
+
+evidence-chat-judge: ollama ## unattended (~8 min, after evidence-chat's calibration): one person chatting during the evidence cap (a reply, 15 s to read, the next), then its report
+	($(SUDO_PM)) || exit 1; ( while sudo -n -v 2>/dev/null; do sleep 50; done ) & K=$$!; \
+	E=runs/evidence-state-$$(date +%Y%m%d-%H%M%S); \
+	BROWNOUT_CHECKPOINT_DIR=$$E/dispatched $(PY) python -m api.app --headless --duration 450 $(EVIDENCE3_ARGS) --chat-load 1 --chat-gap 15 --chat-at 30 && \
 	$(PY) python -m agent.reporter --run latest; s=$$?; kill $$K 2>/dev/null; exit $$s
 
 evidence3: ollama ## unattended (~30 min): calibrate, then ignore-the-call, pause-everything and dispatched runs, same tight scenario, two comparisons

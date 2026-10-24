@@ -180,10 +180,11 @@ async def chat_load(rt: "Runtime", args) -> None:
     calibration prompts in config/jobs.yaml; the timeline says this traffic was scripted."""
     from controller.feasibility import chat_traffic
     await asyncio.sleep(args.chat_at)
-    rt.tl.log("note", msg=f"scripted chat traffic: {args.chat_load} stream(s) of real requests to the real model "
+    gap = f", each waiting {args.chat_gap:g} s after a reply" if args.chat_gap else ", back to back"
+    rt.tl.log("note", msg=f"scripted chat traffic: {args.chat_load} stream(s) of real requests to the real model{gap} "
                           f"(prompts: config/jobs.yaml calibration_prompts)", trigger="scripted_chat",
-              streams=args.chat_load)
-    await chat_traffic(asyncio.Event(), args.chat_load)
+              streams=args.chat_load, gap_s=args.chat_gap)
+    await chat_traffic(asyncio.Event(), args.chat_load, args.chat_gap)
 
 
 async def amain(args):
@@ -227,5 +228,6 @@ if __name__ == "__main__":
     ap.add_argument("--cap-for", type=int, default=300, help="headless: cap duration in seconds")
     ap.add_argument("--chat-load", type=int, default=0, help="headless: scripted real chat requests, this many streams")
     ap.add_argument("--chat-at", type=int, default=30, help="headless: seconds after start the chat traffic begins")
+    ap.add_argument("--chat-gap", type=float, default=0.0, help="headless: seconds each stream waits after a reply")
     logging.basicConfig(level=logging.WARNING)
     asyncio.run(amain(ap.parse_args()))

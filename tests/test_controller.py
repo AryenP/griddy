@@ -80,3 +80,25 @@ def test_train_pause_resume_roundtrip(tmp_path):
             p.wait(30)
         except subprocess.TimeoutExpired:
             p.kill()
+
+
+async def test_scripted_chat_waits_after_each_reply(monkeypatch):
+    """`--chat-gap`: one person reading each reply before the next question, not back-to-back streams."""
+    import asyncio
+    import time
+
+    import controller.feasibility as feas
+    stop, sent = asyncio.Event(), []
+
+    class FakeClient:                       # TEST FAKE: records when each request was sent
+        def __init__(self, **kw): pass
+        async def __aenter__(self): return self
+        async def __aexit__(self, *a): return False
+        async def post(self, url, json):
+            sent.append(time.monotonic())
+            if len(sent) == 3:
+                stop.set()
+
+    monkeypatch.setattr(feas.httpx, "AsyncClient", FakeClient)
+    await asyncio.wait_for(feas.chat_traffic(stop, 1, gap_s=0.05), 2)
+    assert len(sent) == 3 and all(b - a >= 0.045 for a, b in zip(sent, sent[1:]))
