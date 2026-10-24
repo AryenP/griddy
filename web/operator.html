@@ -14,7 +14,7 @@
     <h1>Grid operator</h1>
     <p class="cap">You are the utility. Ask for power back in your own words or send an OpenADR event; the solver re-plans and the agent reads it back.</p>
     <div class="badges"><span id="conn" class="badge">connecting</span><span id="agent" class="badge">agent ?</span><span id="me" class="badge">operator ?</span></div>
-    <div class="keys"><kbd>E</kbd> request box · <kbd>A</kbd> ask box</div>
+    <div class="keys"><kbd>E</kbd> request box · <kbd>A</kbd> ask box · <kbd>N</kbd> neighbourhood replay</div>
   </header>
 
   <main>
@@ -23,6 +23,16 @@
       <div class="src" id="power-src">waiting for powermetrics</div>
     </section>
 
+    <section class="panel sim" id="nb">
+      <div class="panel-head"><h2>Simulated neighbourhood</h2><span class="badge sim">SIMULATED</span></div>
+      <p class="cap" id="nb-what">Real: our sites' watts (measured). The homes follow the shape of today's real ISO load forecast. Everything else in this box is simulated.</p>
+      <div class="btn-row">
+        <button id="nb-toggle" type="button" disabled>Replay the evening peak (simulated)</button>
+        <span id="nb-note" class="src" aria-live="polite"></span>
+      </div>
+      <div id="nb-now" class="nb-grid"><p class="empty">waiting for the server</p></div>
+      <div class="src" id="nb-src"></div>
+    </section>
     <section class="panel">
       <h2>Tell it what you need</h2>
       <p class="cap">e.g. “grid alert, I need 30% off for the next twenty minutes”</p>

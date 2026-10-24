@@ -204,3 +204,15 @@ def test_lexer_sees_nested_and_untagged_templates():
     src = 'const a = html`<b>${x ? `<i>${y}</i>` : "a/b"}</b>`; const r = /[`"\']/g; const s = `<p>${z}</p>`;'
     tags = templates(src)
     assert ("html", "<b></b>") in tags and ("", "<i></i>") in tags and ("", "<p></p>") in tags
+
+
+def test_operator_neighbourhood_labels_every_number():
+    # DECISIONS 05:45: the neighbourhood is SIMULATED except our sites' watts; every number on the page says which
+    src = read("operator.js")
+    body = src[src.index("function renderNeighbourhood"):src.index("async function toggleNeighbourhood")]
+    labels = re.findall(r'<div class="label">([^<]+)</div>', body)
+    assert len(labels) == 5 and all(l.endswith(("(simulated)", "(measured)")) for l in labels), labels
+    assert [l for l in labels if l.endswith("(measured)")] == ["Our sites (measured)"]
+    page = read("operator.html")
+    assert 'id="nb"' in page and "SIMULATED" in page and "Simulated neighbourhood" in page
+    assert '"/api/neighbourhood"' in src and 'd.simulated === true' in src
