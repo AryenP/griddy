@@ -1,3 +1,19 @@
+# Morning brief (Sat 08:06 PT, machine 1). Newest entries are at the bottom; this block is the summary.
+- **Evidence:** the 06:40 final run is VOID: the lid was closed, the Mac slept from 06:44 (DECISIONS 08:00).
+  Calibration was clean (idle 0.49 W). Nothing from it is used. Re-run `make evidence3` with the lid open, on the
+  charger, ~30 min with the Mac otherwise idle. Record until then: none of the three-policy runs is final.
+- **New since 04:00:** live load trace and percent-below-baseline on the dashboard; laptop fleet (Windows
+  battery meters, about 1 reading a minute; Krish's Surface has a readable battery); a SIMULATED neighbourhood
+  power line around the real sites, labelled everywhere (Aryen's rule change, DECISIONS 05:45), live-checked 06:07;
+  two grids live in one run (CAISO, ERCOT, CAISO); Application Insights provisioned on Azure for Students.
+- **Team:** machine 2 merged 9 PRs overnight (operator replay, architecture picture, driver card, evals,
+  accessibility, ...); machine 3 reviewed and audited (K1-K5), its findings are fixed in d258f8d; machine 4
+  supervises every 10 min (issues 13, 14 fixed).
+- **Tag:** demo-stable-2 (Sat 08:05; the K1 fixes after 06:07 not yet live-checked: re-tag after a live run).
+- **Needs Aryen today:** open the lid (then machine 1 re-runs the evidence); the one-line .env command for the
+  Application Insights connection string; the Microsoft workshop quote at 10 AM (config/site.yaml);
+  judges' access to the private repo before Sun 08:50; rotate the Anthropic key and change the Mac password.
+
 # Status: 1 Aryen
 
 Append-only. Newest entry at the bottom. Add one before every PR and before stepping away or hitting a

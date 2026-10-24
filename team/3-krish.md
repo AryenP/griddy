@@ -44,6 +44,15 @@ LLM with no arrow to a knob? Does the driver card promise anything the demo does
 ### K6. After the final evidence run (about 07:20)
 Re-run K3 on the README, Devpost and DECISIONS lines machine 1 writes from the 06:40 run.
 
+### K7 (Sat 08:05). Re-check your K1 and K3 findings against the fixes (about 20 min)
+Machine 1 fixed K1 #1, #2, #3, #6, #7, #8 and K3 #1, #3, #5 (README, Devpost) in d258f8d and tagged demo-stable-2
+(its message says what was and was not checked live). Re-run `python team/review/tools/k1_repro.py .` and say per
+finding: fixed, partly, or not. K1 #4 (no token on the laptop routes) is still open by choice until the laptops join;
+K3 #2 and #4 (docs/judging) are Anuraag's task 21. Append to `team/review/2026-10-24.md`; issues for anything not fixed.
+
+### K8. Watch the evidence re-run
+The 06:40 run was void (lid closed, DECISIONS 08:00). When machine 1 re-runs it, K6 applies to its numbers.
+
 ### K4. If one of the Windows laptops is yours
 Tell Aryen in your status file. After 07:20 you may be asked to join it to the demo: `fleet/README.md`.
 
