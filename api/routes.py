@@ -72,6 +72,10 @@ class RequestIn(BaseModel):
     who: str = "operator"
 
 
+class AskIn(BaseModel):
+    question: str = Field(min_length=1, max_length=2000)
+
+
 class ReplyIn(BaseModel):
     text: str = Field(min_length=1, max_length=4000)
     who: str
@@ -164,6 +168,10 @@ def make_router(rt) -> APIRouter:
         except ValueError as e:
             raise HTTPException(409, str(e))
         return {"decision": _dump(decision), "schedule": _dump(sched)}
+
+    @r.post("/api/ask")
+    async def ask(body: AskIn):
+        return _dump(await rt.agent.ask(body.question))
 
     @r.get("/api/explain")
     async def explain():

@@ -89,7 +89,9 @@ and `"agent_model"`. Each new schedule's explanation arrives as `{"kind": "note"
 Approval flow (live on main since Sat 01:45): the owner of a job is asked first whenever a deadline could
 slip; `approve` -> the slipped finish becomes the deadline, a new time -> that deadline, `no ...` -> the
 deadline turns hard and the solver goes over the cap instead, which creates an operator request with
-`job_id: "power_cap"`. `/api/ask` arrives with machine 4's phase 2.
+`job_id: "power_cap"`, drafted by `negotiator.draft_operator_ask` (carries the owner's refusal reason).
+`POST /api/ask` is live: `{"question"}` -> `Explanation` from the live state; instructions in the question are
+refused, never acted on. Intake now returns `kind: "rejected"` (with `reason`) for injection attempts.
 Pages: `/` dashboard, `/chat` (or `/chat.html`), `/owner.html`, `/operator.html`.
 
 Real captured timelines for building against before the API is up: `tests/fixtures/real_timeline_*.jsonl`

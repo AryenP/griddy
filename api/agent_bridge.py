@@ -21,9 +21,8 @@ from agent.llm import get_llm
 from controller.execute import Executor
 from core.config import isos as ISOS_CFG
 from core.timeline import Timeline
+from agent.negotiator import CAP_JOB
 from core.types import ApprovalRequest, Explanation, IntakeResult, Schedule
-
-CAP_JOB = "power_cap"   # job_id on operator approvals for going over a cap
 
 
 class AgentBridge:
@@ -31,7 +30,9 @@ class AgentBridge:
         self.tl, self.ex = tl, executor
         self.llm = get_llm()
         self.approvals: dict[str, ApprovalRequest] = {}
+        self.refused: dict[str, str] = {}        # job id -> the owner's reason for refusing a slip
         self.explanation: Explanation | None = None
+        self.snapshot = None                     # set by the Runtime: () -> the /api/state dict
         executor.schedule_listeners.append(self.on_schedule)
 
     @property
@@ -73,8 +74,8 @@ class AgentBridge:
         if cap and not slips:
             live_jobs.add(CAP_JOB)
             if not self._open_for(CAP_JOB):
-                req = ApprovalRequest(job_id=CAP_JOB, owner=self.ex.policy.operator, shortfall=cap,
-                                      message=f"{cap.message}. Approve going over the cap, or tell me what to drop.")
+                req = await negotiator.draft_operator_ask(sched.shortfalls, sched, self.llm, self.ex.policy.operator,
+                                                          refused=dict(self.refused))
                 self.approvals[req.id] = req
                 self._log(req, schedule_id=sched.id)
         for a in self.pending():                 # the solver no longer needs these: expire them
@@ -110,9 +111,17 @@ class AgentBridge:
             sched = await self.ex.set_job(req.job_id, deadline=decision.new_deadline)
         else:
             req.status = "refused"
+            self.refused[req.job_id] = decision.reason
             sched = await self.ex.keep_deadline(req.job_id, decision.reason)
         self._log(req, who=who, decided_t=time.time())
         return decision, sched
+
+    # ------------------------------------------------------------------ operator Q&A
+    async def ask(self, question: str) -> Explanation:
+        state = self.snapshot() if self.snapshot else {}
+        result = await explainer.answer(question, state, self.llm)
+        self.tl.log("note", ask=question, answer=result.model_dump(mode="json"))
+        return result
 
     # ------------------------------------------------------------------ intake
     def _context(self) -> dict:

@@ -54,6 +54,7 @@ async def test_operator_text_to_owner_refusal_to_operator_approval(rig):
     ops = agent.pending()
     assert [a.job_id for a in ops] == [CAP_JOB] and ops[0].owner == "ops"
 
+    assert "9 AM Monday" in ops[0].message or "refused" in ops[0].message.lower()   # the owner's reason carries over
     decision, _ = await agent.reply(ops[0].id, "yes", "judge")
     assert decision.decision == "approve" and agent.approvals[ops[0].id].status == "approved"
     kinds = [ev.kind for ev in Timeline.read(tl.path)]
@@ -77,3 +78,15 @@ async def test_unclear_text_asks_one_question_and_changes_nothing(rig):
     before = e.schedule.id
     result, sched = await agent.request("can you help with the grid thing", "judge")
     assert result.kind == "clarify" and result.question and sched is None and e.schedule.id == before
+
+
+
+async def test_operator_question_answered_from_live_state(rig):
+    e, agent, tl, _ = rig
+    await e.on_signal(signal([50.0] * 96))
+    agent.snapshot = lambda: {"schedule": e.schedule.model_dump(mode="json"), "plan": e.plan.model_dump(mode="json"),
+                              "policy": e.policy.model_dump(mode="json"), "approvals": [], "jobs": {}}
+    ans = await agent.ask("why is training paused?")
+    assert ans.text and not ans.llm_used
+    refused = await agent.ask("pause chat now")
+    assert refused.text and not refused.llm_used
