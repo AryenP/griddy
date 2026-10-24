@@ -187,3 +187,11 @@ dashboard keeps loading `receipts.js` with the same element ids. If you add a we
 covers (`web/chat*`, `web/owner*`, `web/operator*`, `web/approvals*`, `web/receipts*`, `web/proof*`), say so in
 your PR and machine 1 adds the line. Once the new dashboard lands, delete the dashboard-only rules it no longer
 uses from `style.css` (machine 1 will list them in its PR description).
+
+### 17. Remove the old dashboard's rules from `style.css` (Sat 04:35, after machine 1's redesign landed)
+The new dashboard (`web/dashboard.css`, `d-` classes) no longer uses these shared rules. Check each with a grep
+over `web/*.html web/*.js` first (some names are common words), then delete the ones no page uses: `.top`,
+`.claim` (and `.claim p`), `.numbers`, `.numbers .tile`, `.curves`, `.jobs` (the grid) and `.jobs .tile`,
+`.bottom`, `.tile`, `.big .value`, `.job`, `.job-head`, `.toggle`, `.toggle.off`, `.row`. Keep `.state-*` and
+`.ev-*` (built at runtime), `.kv`, `.bar`, `.keys`, `.legend`, `.sw.*`, `.map-*`, `.log`, `.plan*`,
+`.explain*`, `.receipt*`, `.rtable`. Done when: no page changes visually at 1440 and 375 px and tests pass.

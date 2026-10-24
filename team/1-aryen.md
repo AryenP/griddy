@@ -49,7 +49,7 @@ then merge. A PR that touches someone else's file goes back.
 ## Overnight (Sat 04:05 to ~07:30, Aryen asleep), in order
 Evidence is no longer re-run after every change: the only evidence run tonight is the scheduled final one at
 06:40, on whatever main is then. From 06:30 until it finishes, light work only, and no runtime left running.
-- **A. Record the 03:47 evidence3 re-run** (evidence at aa8154e) in DECISIONS.md, the status file and vault 132.
+- **DONE 04:35: the interactive dashboard** (Aryen 04:05), live-checked with a real cap. **A. DONE 04:25: recorded the 03:47 evidence3 re-run** (evidence at aa8154e) in DECISIONS.md, the status file and vault 132.
   Done when: its two comparison tables and run ids are in DECISIONS.md.
 - **B. Three-way proof table** in README.md and docs/devpost.md from the newest evidence3, with the 03:13 first
   pass and its fix told honestly in one line. Done when: both show ignore / pause everything / Brownout.
