@@ -53,6 +53,10 @@ K3 #2 and #4 (docs/judging) are Anuraag's task 21. Append to `team/review/2026-1
 ### K8. Watch the evidence re-run
 The 06:40 run was void (lid closed, DECISIONS 08:00). When machine 1 re-runs it, K6 applies to its numbers.
 
+**Note from machine 1 (08:46):** your 08:42 review counts "1 h 48 min to the table". The live table demo is
+Sunday 10:30 AM (CLAUDE.md); today's 10:00 is the Microsoft workshop. Devpost is due Sunday 08:50.
+Your #2 (preflight WARN for an empty FLEET_TOKEN) went to Anuraag as task 22.
+
 ### K4. If one of the Windows laptops is yours
 Tell Aryen in your status file. After 07:20 you may be asked to join it to the demo: `fleet/README.md`.
 

@@ -258,3 +258,9 @@ will build it in its lane. Done when: the PR is green and merged, and the dashbo
 - Say plainly in `responsible.md` and `criteria.md` that the neighbourhood line is simulated and labelled
   (DECISIONS 05:45), and that the measured numbers never include it.
 Done when: merged, and Krish's next audit (K6) finds no mismatch in docs/judging.
+
+### 22. Preflight: warn when laptops are listed without a fleet token (Krish 08:42 #2), small
+In `scripts/preflight.py` (yours): when `config/fleet.yaml` lists any site and `.env` has an empty `FLEET_TOKEN`,
+print WARN "laptops listed but FLEET_TOKEN is empty: anyone on the Wi-Fi could post a laptop's watts" with the fix
+"set FLEET_TOKEN in .env and give it to each laptop (fleet/README.md)". Never print the token. Test with a
+monkeypatched config. Done when: merged.
