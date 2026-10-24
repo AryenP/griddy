@@ -139,3 +139,10 @@ what to say, the optional neighbourhood replay with its "simulated" line, and a 
 (stale feed, Ollama, agent offline, no meter, odd input, Application Insights lag). No numbers beyond what the
 screen shows. PR "2 Anuraag: driver card" (the N hotkey arrives with PR #20).
 Next: 12 failure drills.
+## 2026-10-24 05:00 PT — design system across the pages
+Done: new tokens and restyle of every shared class in web/style.css (black and grey, power in white, Saira);
+live kit in web/common.js (rolling readouts, cap gauge, 3D grid scene); operator power strip with readouts and
+the gauge; proof page draws Brownout's line in white. Branch anurag/ui-kit. Checked at 375 and 1440 px from
+tests/fixtures (operator fed the evidence3 Brownout run, owner the 02:34 demo-flow ask); no horizontal scroll.
+Next: dashboard adoption on anurag/dashboard-3d for machine 1 to review (its files are machine 1's).
+Blockers / needs: Aryen: review and take the dashboard branch (index.html, app.js, dashboard.css).
