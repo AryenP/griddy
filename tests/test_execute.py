@@ -142,3 +142,48 @@ async def test_no_background_resolve_without_a_cap(rig, monkeypatch):
         clock["t"] += 1
         e.on_power(PowerReading(t=clock["t"], combined_w=40.0))
     assert e.background_drift() is None
+
+
+async def test_idle_floor_is_remeasured_in_place_when_only_idle_runs(rig, monkeypatch):
+    # a 9 W calibrated idle prices any training over a 14.5 W cap; the measured 0.5 W idle fits GPU training (12 W)
+    e, clock, tmp = rig
+    e.policy = e.policy.model_copy(update={"replan": {
+        "background_window_s": 20, "settle_s": 5, "background_delta_w": 0.5, "chat_busy_delta": 0.5, "idle_busy_max": 0.05}})
+    monkeypatch.setattr(ex.Executor, "chat_busy", staticmethod(lambda: 0.0))
+    monkeypatch.setattr(ex, "load_jobs", lambda cal: [j for j in jobs() if j.id != "batch"])
+    e.cal = e.cal.model_copy(update={"idle_w": 9.0})          # a calibration taken while something else ran
+    await e.on_signal(signal([5.0] * 4 + [50.0] * 92))
+    await e.add_event(CapEvent(source="ui", start=SLOTS[0], duration_s=3600, target_w=14.5))
+    assert ctl(tmp, "train")["state"] == "pause"              # 9 + 6 > 14.5 on the calibrated idle
+    for _ in range(30):
+        clock["t"] += 1
+        e.on_power(PowerReading(t=clock["t"], combined_w=0.5))
+    idle = e.idle_drift()
+    assert idle == pytest.approx(0.5)
+    e.cal = e.cal.model_copy(update={"idle_w": idle})
+    await e.resolve("drift: idle")
+    assert ctl(tmp, "train")["state"] == "run" and e.plan.planned_w <= 14.5   # 0.5 + 12 W on the GPU fits
+    for _ in range(30):
+        clock["t"] += 1
+        e.on_power(PowerReading(t=clock["t"], combined_w=12.6))
+    assert e.idle_drift() is None                             # a job is running: idle is not measurable
+
+
+async def test_idle_floor_never_rises_and_needs_quiet_chat(rig, monkeypatch):
+    e, clock, _ = rig
+    e.policy = e.policy.model_copy(update={"replan": {"background_window_s": 20, "settle_s": 5,
+                                                      "background_delta_w": 0.5, "idle_busy_max": 0.05}})
+    busy = {"v": 0.0}
+    monkeypatch.setattr(ex.Executor, "chat_busy", staticmethod(lambda: busy["v"]))
+    monkeypatch.setattr(ex, "load_jobs", lambda cal: [j for j in jobs() if j.id != "batch"])
+    await e.on_signal(signal([5.0] * 4 + [50.0] * 92))
+    await e.add_event(CapEvent(source="ui", start=SLOTS[0], duration_s=3600, target_w=1.2))   # nothing fits
+    for _ in range(30):
+        clock["t"] += 1
+        e.on_power(PowerReading(t=clock["t"], combined_w=3.0))
+    assert e.idle_drift() is None                             # above the calibrated 1 W: background, not idle
+    busy["v"] = 1.0
+    for _ in range(30):
+        clock["t"] += 1
+        e.on_power(PowerReading(t=clock["t"], combined_w=0.2))
+    assert e.idle_drift() is None                             # chat has traffic: not an idle reading

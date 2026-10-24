@@ -22,5 +22,8 @@ solver_time_limit_s: 2
 # plan has run settle_s) counts against the cap; a move of more than background_delta_w re-solves. Measured
 # Sat 03:33 (evidence3, run 20261024-032821): ~1.2 W appeared on the GPU with no Brownout action while only
 # CPU training ran (13.4 W), which put the machine over a 14.55 W cap for the rest of the run.
+# Idle is re-measured in place, only ever lower, when the plan leaves only idle drawing (deferrable jobs paused,
+# chat planned and measured at <= idle_busy_max busy streams): evidence3 re-run Sat 04:09 calibrated idle at
+# 2.22 W while the runs measured 0.35-0.45 W, which priced CPU training over a cap it fit under.
 replan: {chat_busy_delta: 0.5, watts_drift_pct: 20, watts_drift_min_w: 2.0, min_interval_s: 60,
-         background_window_s: 20, settle_s: 5, background_delta_w: 0.5}
+         background_window_s: 20, settle_s: 5, background_delta_w: 0.5, idle_busy_max: 0.05}
