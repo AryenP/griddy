@@ -145,6 +145,16 @@ function slotEndLabel(sc, i) {
   return isoLabel(local + ":00" + (m ? off : "Z"));
 }
 
+// The solver's "running plan: ..." fact (dispatcher/solve.py) when the cap cannot be met as asked. While an
+// approval is pending and the cap is held, say so in plain words (DECISIONS 02:55). null when there is none.
+function runningPlanLine(sc, plan) {
+  const fact = sc && sc.explanations.find((e) => e.startsWith("running plan: "));
+  if (!fact) return null;
+  const mode = fact.slice("running plan: ".length);
+  const waiting = plan && plan.needs_approval && plan.needs_approval.length;
+  return mode.startsWith("cap held") && waiting ? `Cap held while the operator decides (${mode})` : `Running plan: ${mode}`;
+}
+
 // Keyboard shortcuts that never fire while typing in a box.
 function hotkeys(map) {
   document.addEventListener("keydown", (e) => {

@@ -8,8 +8,8 @@
 const P = {
   operator: null, agent: null, agentModel: null, schedule: null, reqs: new Map(),
   power: [],                 // PowerReading {t, combined_w}, oldest first, last POWER_KEEP_S seconds
-  events: new Map(),         // CapEvent id -> CapEvent, from `event` WS messages since this page opened
-  loadedT: null, loadErr: null,
+  events: new Map(),         // CapEvent id -> CapEvent: the snapshot's cap_events, then `event` WS messages
+  plan: null, loadedT: null, loadErr: null,
 };
 const POWER_KEEP_S = 3 * 3600;
 const MEAN_S = 10;          // the compliance test: 10-s rolling mean of measured watts at or under the cap
@@ -102,7 +102,7 @@ function eventCard(ev) {
 function renderEvents() {
   const list = [...P.events.values()].sort((a, b) => Date.parse(b.start) - Date.parse(a.start));
   if (!list.length) {
-    setHTML($("events"), html`<p class="empty">no cap events since this page opened</p>`);
+    setHTML($("events"), html`<p class="empty">no cap in force or upcoming</p>`);
     $("events-src").textContent = "";
     return;
   }
@@ -124,8 +124,10 @@ function renderSlot() {
     return html`<li><b>${job}</b> ${a.run ? html`runs on ${a.device}${a.concurrency ? ` at concurrency ${a.concurrency}` : ""}` : "paused"}</li>`;
   });
   const cap = sc.caps_w[i];
+  const running = runningPlanLine(sc, P.plan);
   setHTML($("sched-now"), html`<div class="plan-head">slot ${isoLabel(sc.slots[i])}: planned ${fixed(sc.planned_w[i], 1)} W
       ${cap != null ? html`<span class="${sc.planned_w[i] > cap + 1e-6 ? "bad-text" : ""}">vs cap ${fixed(cap, 1)} W</span>` : "(no cap)"}</div>
+    ${running ? html`<div class="warn-line">${running}</div>` : ""}
     <ul class="explanations">${rows}</ul>
     ${sc.shortfalls.map((s) => html`<div class="warn-line">short (${s.kind}${s.job_id ? `, ${s.job_id}` : ""}): ${s.message}</div>`)}
     <div class="src">planned from calibrated watts, not measured · ${jobPlanLine(sc, "power_cap")} · CP-SAT ${sc.solver_status} · solved ${age(sc.solve_t)}${sc.on_stale_data ? " · on last known grid data" : ""}</div>`);
@@ -245,13 +247,15 @@ function handle(msg) {
     case "snapshot":
       P.operator = (d.policy && d.policy.operator) || null;
       P.agent = d.agent; P.agentModel = d.agent_model || null;
-      P.schedule = d.schedule || null;
+      P.schedule = d.schedule || null; P.plan = d.plan || null;
       addPower(d.power);
+      for (const e of d.cap_events || []) P.events.set(e.id, e);   // caps in force or upcoming, target_w resolved
       for (const q of d.approvals || []) { P.reqs.set(q.id, q); board.upsert(q); }
-      renderBadges(); renderPower(); renderSlot(); loadPending();
+      renderBadges(); renderPower(); renderSlot(); renderEvents(); loadPending();
       break;
+    case "plan": P.plan = d; renderSlot(); break;
     case "power": addPower(d); renderPower(); break;
-    case "event":
+    case "event":   // a CapEvent (parsed requests arrive as `intake` since Sat 03:15; the id check skips older ones)
       if (d.id && d.start && d.duration_s != null) { P.events.set(d.id, d); renderEvents(); }
       break;
     case "approval":
