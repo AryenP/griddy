@@ -1,20 +1,22 @@
 """The roster must give every tracked file exactly one owner (or mark it shared), so no two
 machines can edit the same file."""
-import fnmatch
 import subprocess
+import sys
 from pathlib import Path
 
 import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "scripts"))
+from team import match  # noqa: E402
 R = yaml.safe_load((ROOT / "team" / "roster.yaml").read_text())
 # kit material committed at M0 that nobody edits during the hackathon
 FROZEN = (".court/*", "report/*", "RESEARCH.md", "TRACKS.md", "reports/.gitkeep", "runs/.gitkeep",
-          "*/__init__.py")
+          "**/__init__.py")
 
 
 def _owners(path):
-    return [m["number"] for m in R["members"] if any(fnmatch.fnmatch(path, g) for g in m["owns"])]
+    return [m["number"] for m in R["members"] if any(match(path, g) for g in m["owns"])]
 
 
 def test_tracked_files_have_one_owner():
@@ -26,7 +28,7 @@ def test_tracked_files_have_one_owner():
         o = _owners(f)
         if len(o) > 1:
             problems.append(f"{f}: owned by {o}")
-        if not o and not any(fnmatch.fnmatch(f, p) for p in FROZEN):
+        if not o and not any(match(f, p) for p in FROZEN):
             problems.append(f"{f}: no owner")
     assert not problems, "\n".join(problems)
 
@@ -51,3 +53,10 @@ def test_status_files_belong_to_their_writer():
 def test_every_member_has_an_assignment_file():
     for m in R["members"]:
         assert (ROOT / m["assignment"]).exists(), m["assignment"]
+
+
+def test_globs_are_path_aware():
+    assert match("docs/devpost.md", "docs/*") and not match("docs/judging/x.md", "docs/*")
+    assert match("docs/judging/x.md", "docs/judging/**") and match("api/a/b.py", "api/**")
+    assert match("team/2-anuraag.md", "team/[1-4]-*.md") and not match("team/status/1-aryen.md", "team/[1-4]-*.md")
+    assert match("agent/__init__.py", "**/__init__.py") and match("x.py", "**/x.py")

@@ -64,13 +64,12 @@ members:
   - telemetry/**
   - infra/**
   - azure.yaml
-  - docs/**
+  - docs/*
   - README.md
   - config/isos.yaml
   - tests/test_report*.py
   - tests/test_compare*.py
   - tests/test_telemetry*.py
-  - evals/**
   - agent/__init__.py
   - agent/llm.py
   - agent/intake.py
@@ -81,23 +80,29 @@ members:
   - tests/fixtures/openadr/**
 - number: 2
   name: Anuraag
-  role: Frontend (everything the judge sees and touches) - PAUSED Sat 01:45 PT; files moved to machine 1
+  role: Evals, judging docs, pre-demo preflight (frontend now built by machine 1)
   github: ARP-source
   emails:
   - anuraagpunnam6@gmail.com
   assignment: team/2-anuraag.md
   branch_prefix: anurag/
   owns:
+  - evals/**
+  - tests/test_evals*.py
+  - docs/judging/**
+  - scripts/preflight.py
+  - tests/test_preflight.py
   - team/status/2-anuraag.md
 - number: 3
   name: Krish
-  role: Proof and production (receipts, telemetry, submission) - PAUSED Sat 01:45 PT; files moved to machine 1
+  role: 'Supervisor: reviews, tests and verifies machines 1 and 2; never edits code'
   github: krishteli
   emails:
   - krishteli62@gmail.com
   assignment: team/3-krish.md
   branch_prefix: krish/
   owns:
+  - team/review/**
   - team/status/3-krish.md
 - number: 4
   name: Arumalla

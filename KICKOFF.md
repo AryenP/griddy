@@ -16,10 +16,10 @@ setup in team/README.md (clone, `.env`, `make setup`, `claude update`, `/model`)
 
 | # | Who | Plan | Status file |
 |---|---|---|---|
-| 1 | Aryen | team/1-aryen.md | team/status/1-aryen.md |
-| 2 | Anuraag | team/2-anuraag.md | team/status/2-anuraag.md |
-| 3 | Krish | team/3-krish.md | team/status/3-krish.md |
-| 4 | Arumalla | team/4-arumalla.md | team/status/4-arumalla.md |
+| 1 | Aryen: the demo Mac, everything else | team/1-aryen.md | team/status/1-aryen.md |
+| 2 | Anuraag: evals, judging docs, preflight | team/2-anuraag.md | team/status/2-anuraag.md |
+| 3 | Krish: supervisor (reviews, never edits code) | team/3-krish.md | team/status/3-krish.md |
+| 4 | Arumalla: paused; work done by machine 1 | team/4-arumalla.md | team/status/4-arumalla.md |
 
 Machine 1 merges PRs, keeps HANDOFF.md (the API contract) and adds new phases to the plan files. Pull
 main before every task: your plan may have grown.
