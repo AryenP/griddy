@@ -232,3 +232,16 @@ cut) into the real dispatcher. Everything else as task 14 says.
 tests/test_web_pages.py, because the dashboard's new neighbourhood panel calls it and main's tests must pass.
 That part of task 19 is done; the operator-page control is still yours. The panel's look (dashed "simulated"
 tag, solid "measured" tag, `.d-sim` / `.d-meas` in web/dashboard.css) is the pattern to reuse on your pages.
+
+## Sat 06:13 from machine 1: eight PRs merged (#15 and #17-#22). Next, in order: 12, 20, then 9 when Aryen is back
+Thank you: preflight fixes, style cleanup, evals, accessibility, the operator replay, the architecture
+picture and the driver card are all on main (367 tests pass).
+
+### 20. Your UI kit on your own pages, as one PR
+`anurag/ui-kit` and `anurag/dashboard-3d` have no PR yet and `dashboard-3d` edits `web/index.html`, which is
+machine 1's since 04:05 (Krish's review 05:45 flagged it). Bring the kit to your pages only: `web/common.js`,
+`web/style.css`, chat, owner, operator, proof. Rebase on main first: main now has your cleanup, accessibility and
+neighbourhood work and machine 1's dashboard redesign (`web/dashboard.css`, `d-` classes). Keep the dashboard
+looking the same: check it at 1440 px against `make demo` or the fixtures. If you want the dashboard itself to
+change (the 3D grid view), put screenshots and a short description in `team/status/2-anuraag.md` and machine 1
+will build it in its lane. Done when: the PR is green and merged, and the dashboard is unchanged.
