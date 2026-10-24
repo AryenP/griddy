@@ -30,11 +30,12 @@ solve:          ## print the 24-h schedule for the live price curve
 	$(PY) python -m dispatcher.solve --print
 
 EVIDENCE_ARGS ?= --cap-pct 30 --cap-at 120 --cap-for 300 --deadline train=2
-evidence: ollama ## ONE password, ~25 min, Mac otherwise idle: calibrate, dispatcher-off run, dispatched run, same scripted cap, compare
+evidence: ollama ## unattended (~25 min, Mac otherwise idle): calibrate, then dispatcher-off and dispatched runs from identical fresh job state with the same scripted cap, then compare
 	($(SUDO_PM)) || exit 1; ( while sudo -n -v 2>/dev/null; do sleep 50; done ) & K=$$!; \
+	E=runs/evidence-state-$$(date +%Y%m%d-%H%M%S); \
 	$(PY) python -m controller.feasibility --calibrate && \
-	POLICY=baseline $(PY) python -m api.app --headless --duration 450 $(EVIDENCE_ARGS) && \
-	$(PY) python -m api.app --headless --duration 450 $(EVIDENCE_ARGS) && \
+	BROWNOUT_CHECKPOINT_DIR=$$E/baseline POLICY=baseline $(PY) python -m api.app --headless --duration 450 $(EVIDENCE_ARGS) && \
+	BROWNOUT_CHECKPOINT_DIR=$$E/dispatched $(PY) python -m api.app --headless --duration 450 $(EVIDENCE_ARGS) && \
 	$(PY) python scripts/compare.py; s=$$?; kill $$K 2>/dev/null; exit $$s
 
 report:         ## render compliance report + charts from a timeline
