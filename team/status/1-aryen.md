@@ -69,3 +69,8 @@ Done: tick: no PRs or issues open; Anuraag's queue has F2-F5 + judging docs unst
 Next: `make evidence` on 13f6b3b (approval gate, structured outputs, fresh evidence state) running unattended ~25 min;
 then record the comparison and do the DEMO pass on the pages.
 Blockers / needs Aryen: none.
+
+## 2026-10-24 02:47 PT — tick (light: evidence run measuring power)
+Done: no PRs or [supervisor] issues; main CI green (13f6b3b, 1ec9ff8).
+Next: record the evidence comparison when the run finishes; DEMO pass on the pages; tag.
+Blockers / needs Aryen: none.
