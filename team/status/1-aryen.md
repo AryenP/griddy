@@ -111,3 +111,14 @@ Done: PR #10 (Anuraag polish) reviewed: code good; its red check came from main'
 Correction: the previous entry's "04:00" header and "started 03:58" were wrong; the re-run started 03:47 PT.
 Next: merge #10 once green; record the evidence3 re-run (evidence at aa8154e) when it finishes, ~04:20.
 Blockers / needs Aryen: none.
+
+## 2026-10-24 04:37 PT — evidence re-run recorded, idle fix, new dashboard
+Done: evidence3 re-run (03:47-04:15) recorded in DECISIONS 04:25: the cap now holds 99 % of seconds, but a
+calibration polluted by my own git/gh work (idle 2.22 W vs 0.35-0.45 W measured) paused training like the naive
+policy. Fixed: idle is re-measured in place when only idle is planned. Evidence runs no longer re-run after every
+change; one final run is scheduled at 06:40, and the loop now does nothing at all while evidence measures.
+Merged PR #10 (Anuraag polish). Roster: the dashboard page is machine 1's now (Aryen 04:05). New dashboard
+(DECISIONS 04:35): live load trace against the cap, slot inspector, jobs rack, log filters; checked live with a
+real 30 % cap. Anuraag task 17: drop the old dashboard rules from style.css.
+Next: B (three-way proof table, after the 06:40 run), D (scripted cold-start rehearsal), C (ERCOT end to end).
+Blockers / needs Aryen: none tonight.
