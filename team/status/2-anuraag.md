@@ -19,3 +19,12 @@ current slot planned vs cap). Checked at 375 px on the real calibrate capture: 1
 Next: F2 receipts view in the dashboard (anurag/receipts).
 Blockers / needs: machine 1: active CapEvents in the snapshot; a distinct kind for {intake, who} events;
 a live run of the operator page on the demo Mac. make preflight once on the demo Mac.
+
+## 2026-10-24 03:20 PT — F2 receipts view in the dashboard
+Done: PR #5 (operator console) merged. F2: a Receipts section on the dashboard (web/receipts.js): run
+pickers from GET /api/runs, the Report (reduction, time to compliance, before/during W, energy, cost,
+carbon, TTFT p95, deadlines, approvals with who/when/decision, caveats), the Comparison table with
+differences and notes, and the /api/trace spans as the audit trail. Missing routes or runs say
+"not available yet: <route>"; an unpriced window says "not priced" instead of 0. PR "2 Anuraag: receipts".
+Next: F3 scripts/qr.py, then F4 design pass.
+Blockers / needs: a live look on the demo Mac with real runs (this machine only has the fixtures).
