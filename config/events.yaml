@@ -13,6 +13,7 @@
 # Our sites are a laptop; the scale lines say what the same measured cut means at the operator's scale.
 
 replay_seconds: 120           # how long a replay lasts on screen, whatever its real window
+baseline_s: 20                # our sites' measured baseline: the mean over this many seconds before the replay starts
 
 events:
   - id: uri-2021

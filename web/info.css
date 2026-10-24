@@ -1,0 +1,32 @@
+/* The info page (info.html): every graph and every source, in a quiet monitoring style (Aryen, Sat 16:30): a near-black
+   page, soft dark cards with large radii, big thin numbers, small muted labels, one mint accent for live and measured.
+   Loaded after style.css and dashboard.css; it changes the look, never the content. */
+body.dash.d {
+  --bg: #08090a; --panel: #121415; --panel2: #191c1d; --line: rgba(255, 255, 255, 0.07);
+  --text: #f0f4f2; --muted: #8f9b98; --ok: #7df0bf; --off: #1d2122; --action: #2f6fe0;
+  --font: "Inter", "SF Pro Text", system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 15.5px; padding: 18px 22px 40px; max-width: 1560px; letter-spacing: -0.005em;
+  background:
+    radial-gradient(1200px 600px at 10% -10%, rgba(125, 240, 191, 0.07), transparent 60%),
+    radial-gradient(900px 500px at 100% 0%, rgba(90, 168, 255, 0.06), transparent 60%), var(--bg);
+}
+body.dash.d .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 22px; padding: 20px 22px;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 20px 40px -24px rgba(0, 0, 0, 0.7); }
+body.dash.d h2 { font-size: 0.82rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+body.dash.d .src { color: #6b7774; font-size: 0.74rem; }
+body.dash.d button, body.dash.d select { border-radius: 999px; border-color: var(--line); background: var(--panel2); }
+
+/* top bar: the same pill navigation as the grid page */
+.i-nav { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; padding: 8px 10px 8px 18px; border-radius: 999px;
+  background: rgba(18, 20, 21, 0.8); border: 1px solid var(--line); }
+.i-nav b { font-size: 1.05rem; font-weight: 650; }
+.i-nav nav { margin-left: auto; display: flex; gap: 4px; padding: 4px; border-radius: 999px; background: rgba(255, 255, 255, 0.04); }
+.i-nav nav a { color: var(--muted); text-decoration: none; padding: 6px 14px; border-radius: 999px; font-size: 0.85rem; }
+.i-nav nav a[aria-current="page"] { color: #06120d; background: var(--ok); }
+body.dash.d .d-top { margin-bottom: 14px; }
+body.dash.d .d-claim h1 { display: none; }
+body.dash.d .d-claim p { font-size: 1rem; }
+
+/* numbers: big and thin */
+body.dash.d .d-big, body.dash.d .d-num, body.dash.d .d-watts { font-weight: 300; letter-spacing: -0.02em; }
+body.dash.d .d-state { font-weight: 600; }

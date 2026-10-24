@@ -3,8 +3,11 @@ import re
 from pathlib import Path
 
 WEB = Path(__file__).resolve().parents[1] / "web"
-HTML = (WEB / "index.html").read_text(encoding="utf-8")
+HTML = (WEB / "info.html").read_text(encoding="utf-8")        # the dashboard moved to info.html (Sat 16:30)
 JS = (WEB / "app.js").read_text(encoding="utf-8")
+WORLD_HTML = (WEB / "index.html").read_text(encoding="utf-8")  # the judge's page: the 3D grid world
+DEMO_JS = (WEB / "demo.js").read_text(encoding="utf-8")
+WORLD_JS = (WEB / "world.js").read_text(encoding="utf-8")
 
 
 def test_dashboard_loads_its_scripts_and_no_external_ones():
@@ -80,3 +83,21 @@ def test_replay_panel_shows_real_data_with_its_sources_and_labels_estimates():
     assert "ev.data_source" in JS and "a.source" in JS and "i.source" in JS and "ev.report_url" in JS
     assert JS.count('class="d-sim">estimate') >= 2          # the operator's-scale line and ERCOT right now
     assert 'post("/api/replay", { action: "start", event:' in JS
+
+
+def test_the_judge_page_is_the_3d_world_and_its_dock():
+    """index.html (Sat 16:30): the grid as a 3D world drawn without a library, four choices and four numbers."""
+    assert re.findall(r'<script src="([^"]+)"', WORLD_HTML) == ["common.js", "world.js", "demo.js"]
+    assert '<canvas id="world"' in WORLD_HTML and 'href="/info.html"' in WORLD_HTML
+    assert "simulated" not in WORLD_HTML.lower() + DEMO_JS.lower()
+    assert set(re.findall(r'postJSON\(\s*[`"](/api/[\w/${}]+)', DEMO_JS)) <= {"/api/replay", "/api/jobs/${job}"}
+    assert "prefers-reduced-motion" in WORLD_JS and "REDUCE" in WORLD_JS          # no motion for those who ask
+    assert "ev.data_source" in DEMO_JS and "ev.report_url" in DEMO_JS and "estimate" in DEMO_JS
+    assert "measured by powermetrics" in WORLD_HTML + DEMO_JS
+
+
+def test_world_draws_only_what_it_is_given():
+    """Every quantity in the 3D world comes from World.set(): the fuel mix, served and needed, our watts."""
+    for field in ("mix", "served", "needed", "ours_w", "baseline_w", "alert", "campus"):
+        assert f"d.{field}" in WORLD_JS or f"S.data.{field}" in WORLD_JS, field
+    assert not re.search(r"Math\.random\(\)\s*\*\s*\d+\s*[,)]", WORLD_JS.split("function smoke")[0].split("function drawPlant")[0])

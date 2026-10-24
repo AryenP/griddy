@@ -29,7 +29,7 @@ from core.timeline import Timeline
 from core.types import CapEvent
 
 ROLL_S = 10.0          # our sites' response: their 10-s measured mean
-BASELINE_S = 60.0      # over the measured mean in the 60 s before the replay
+BASELINE_S = 20.0      # over the measured mean in the 20 s before the replay (a job started just before still counts)
 ROOT = Path(__file__).resolve().parents[1]
 # EIA-930 fuel names -> config/isos.yaml emission factor rows (petroleum has no row there: the "Other" default)
 EIA_FUELS = {"Coal": "Coal", "Natural Gas": "Natural Gas", "Nuclear": "Nuclear", "Solar": "Solar", "Wind": "Wind",
@@ -50,7 +50,7 @@ def load_series(ev: dict) -> pd.DataFrame:
     weights = pd.Series({c: factors[EIA_FUELS[c]] for c in gen.columns})
     total = gen.sum(axis=1)
     df["carbon_g_kwh"] = (gen * weights).sum(axis=1) / total.where(total > 0)
-    return df[["demand_forecast_mw", "demand_mw", "carbon_g_kwh"]]
+    return pd.concat([df[["demand_forecast_mw", "demand_mw", "carbon_g_kwh"]], gen.add_prefix("mix:")], axis=1)
 
 
 def at(series: pd.DataFrame, t: datetime) -> dict:
@@ -167,7 +167,7 @@ class Replay:
         if self.event is not None:
             self.stop(now)
         self.event, self.start_t, self.fired = self.events[eid], now, []
-        xs = [w for t, w in self.ex.power if now - BASELINE_S <= t <= now]
+        xs = [w for t, w in self.ex.power if now - float(self.cfg.get("baseline_s", BASELINE_S)) <= t <= now]
         self.baseline_w = sum(xs) / len(xs) if xs else None
         idle = getattr(getattr(self.ex, "cal", None), "idle_w", 0.0) or 0.0
         self.nothing_to_shed = self.baseline_w is not None and self.baseline_w - idle < float(self.cfg.get("min_flexible_w", 3.0))
@@ -227,7 +227,9 @@ class Replay:
                  "progress": min(1.0, s_into / self.seconds), "demand_mw": grid["demand_mw"],
                  "forecast_mw": grid["demand_forecast_mw"],
                  "gap_mw": (grid["demand_forecast_mw"] - grid["demand_mw"]) if grid["demand_mw"] is not None and grid["demand_forecast_mw"] is not None else None,
-                 "carbon_g_kwh": grid["carbon_g_kwh"], "fired": [f["label"] for f in self.fired],
+                 "carbon_g_kwh": grid["carbon_g_kwh"],
+                 "mix_mw": {k[4:]: v for k, v in grid.items() if k.startswith("mix:") and v is not None},
+                 "fired": [f["label"] for f in self.fired],
                  "cut_kinds": sorted(self.caps), "baseline_w": self.baseline_w, "ours_w": ours,
                  "measured_cut_pct": None if cut is None else 100 * cut, "nothing_to_shed": self.nothing_to_shed,
                  "asked_cut_pct": max(self.asked.values()) if self.asked else None,

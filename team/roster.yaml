@@ -32,6 +32,11 @@ members:
   - scripts/verify_feed.py
   # the dashboard page (Aryen, Sat 04:05); the other pages and the shared web/style.css + web/common.js stay with 2
   - web/index.html
+  - web/info.html
+  - web/world.js
+  - web/world.css
+  - web/info.css
+  - web/demo.js
   - web/app.js
   - web/map.js
   - web/trace.js

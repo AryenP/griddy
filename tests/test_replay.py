@@ -20,7 +20,7 @@ def rig(tmp_path, watts=20.0, t0=None):
     t0 = time.time() if t0 is None else t0
     ex = FakeExecutor()
     for k in range(60):
-        ex.power.append((t0 - 60 + k, watts))
+        ex.power.append((t0 - 60 + k, watts))     # the baseline is the last 20 s of these
     return Replay(Timeline(run_id="r", root=tmp_path), ex), ex, t0
 
 
@@ -46,6 +46,7 @@ def test_alerts_reach_the_dispatcher_at_their_real_times_and_end(tmp_path):
     assert r.baseline_w == pytest.approx(20.0) and not r.nothing_to_shed
     st = r.tick(now=t0 + 0.5)                       # the Flex Alert days before and Brownout's flag fire at once
     assert st["demand_mw"] and st["forecast_mw"] and st["carbon_g_kwh"] > 0
+    assert st["mix_mw"]["Natural Gas"] > 10000 and {"Solar", "Wind", "Nuclear"} <= set(st["mix_mw"])   # EIA-930, real
     warn = r.pending_caps.pop()
     assert warn.source == "replay" and warn.target_w == pytest.approx(16.0) and "Flex Alert" in warn.reason
     eea3 = next(a for a in r.catalog()[2]["alerts"] if "EEA 3" in a["label"] and a["kind"] == "emergency")
