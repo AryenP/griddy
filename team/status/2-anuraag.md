@@ -78,7 +78,7 @@ PR "2 Anuraag: judging docs".
 Next: 10 proof page; 16 load outside the plan after PR #10 merges.
 Blockers / needs: the operator/FDE quote (Aryen).
 
-## 2026-10-24 05:50 PT — task 18 preflight fixes (cloud session for machine 2)
+## 2026-10-24 05:44 PT — task 18 preflight fixes (cloud session for machine 2)
 Done: check_sudo probes the exact powermetrics line the sudoers rule allows (same as the Makefile's SUDO_PM),
 not `sudo -n true`; the demo-tag FAIL hint says "tag this commit once the rehearsal passes: make tag-stable"
 (the newest tag moves to the detail). Tests cover both. PR "2 Anuraag: preflight fixes".
