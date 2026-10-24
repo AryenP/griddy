@@ -52,3 +52,12 @@ for that job). Chart.js removed (nothing external to fetch for the map). Control
 capture. PR "2 Anuraag: design pass and dispatch map".
 Next: F5 polish (hotkeys, captions, layout jumps), then judging docs.
 Blockers / needs: none.
+
+## 2026-10-24 04:45 PT — task 8 judging docs
+Done: F5 polish in review (PR #10, CI fixed by merging main). Task 8: docs/judging/{criteria,production,
+compliance,responsible,customer}.md; every number cited to a DECISIONS.md timestamp or RESEARCH.md section
+(checked with grep), "to be measured" where it is not measured, quote "to be collected". Re-ran the offline
+evals on current main: 74 pass, 0 fail, 16 need a model, injections 12/12 (docs/judging/evals.md).
+PR "2 Anuraag: judging docs".
+Next: 10 proof page; 16 load outside the plan after PR #10 merges.
+Blockers / needs: the operator/FDE quote (Aryen).
