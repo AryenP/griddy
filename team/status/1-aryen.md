@@ -180,3 +180,13 @@ probe (battery reading updates about once a minute). Team: machine 4 supervises 
 and audits (K1-K3), machine 2 builds (18, 19, 14, 15, ...). 313 tests pass.
 Next: the Mac is quiet from 06:28; final evidence run 06:40; then the proof table and the morning brief.
 Blockers / needs Aryen: the .env command for Azure; battery tests on the other two laptops.
+
+## 2026-10-24 06:13 PT — tick: eight PRs merged, two supervisor issues fixed
+Done: merged #15 preflight fixes, #16 Arumalla status, #17 style cleanup, #18 evals, #19 accessibility, #20
+operator neighbourhood replay, #21 architecture picture, #22 driver card (status-file conflicts kept both sides);
+367 tests pass. Fixed and closed Arumalla's #13 (ERCOT's seven-day forecast flattened the simulated homes; now
+today's points in the ISO's time zone) and #14 (laptop readings now show their age). README and Devpost link the
+architecture picture and state the simulated neighbourhood plainly. Queues: Anuraag 12 then 20 (UI kit on his
+own pages; his dashboard-3d branch crosses machine 1's lane), Krish K0 (open PRs for K1-K3), K5, K6.
+Next: quiet from 06:28; final evidence 06:40; then record it, check #13 live with ISO=ERCOT, and the morning brief.
+Blockers / needs Aryen: the .env command for Azure; battery tests on the other two laptops.
