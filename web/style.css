@@ -196,7 +196,7 @@ textarea.mono { font-family: ui-monospace, "Cascadia Mono", Menlo, monospace; fo
 }
 
 /* ---------- the 24-hour dispatch map (web/map.js) ---------- */
-.map { margin: 6px 0 2px; }
+.map { margin: 6px 0 2px; min-height: 250px; }   /* reserved so the page does not jump when the schedule arrives */
 .map-grid { --label: 92px; display: grid; grid-template-columns: var(--label) repeat(var(--n), minmax(0, 1fr));
   column-gap: 1px; row-gap: 5px; position: relative; align-items: stretch; }
 .map-label { grid-column: 1; align-self: center; padding-right: 8px; font-size: 0.95rem; color: var(--muted); line-height: 1.15; }
@@ -229,3 +229,5 @@ textarea.mono { font-family: ui-monospace, "Cascadia Mono", Menlo, monospace; fo
   .map-hour:not(.h6) { visibility: hidden; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }

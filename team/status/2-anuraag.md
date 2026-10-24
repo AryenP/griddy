@@ -53,6 +53,14 @@ capture. PR "2 Anuraag: design pass and dispatch map".
 Next: F5 polish (hotkeys, captions, layout jumps), then judging docs.
 Blockers / needs: none.
 
+## 2026-10-24 04:20 PT — F5 polish
+Done: PR #9 (design pass, dispatch map) merged. F5: dashboard hotkeys D (dispatcher), 1/2/3 (objective),
+R (receipts) with a key legend in the header; a one-line "what you're seeing" caption on the map, why-this-plan,
+event log and receipts panels; the map reserves its height so the page does not jump when the schedule
+arrives. Operator E/A hotkeys were already in. PR "2 Anuraag: polish".
+Next: 8 judging docs, then 10 proof page.
+Blockers / needs: none.
+
 ## 2026-10-24 04:45 PT — task 8 judging docs
 Done: F5 polish in review (PR #10, CI fixed by merging main). Task 8: docs/judging/{criteria,production,
 compliance,responsible,customer}.md; every number cited to a DECISIONS.md timestamp or RESEARCH.md section
