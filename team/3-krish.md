@@ -119,6 +119,19 @@ operational overview (p. 8: 4,132 MW observed of 9,456 MW approved to energize) 
 GW queue, about 90 % data centers). Open both links, check every number and date against the page, and check the
 arithmetic (4,132 x 31.2 % against ERCOT's live demand). Write mismatches in the review file; machine 1 fixes them.
 
+### K14 (Sat 15:16). Be a judge with only the repo, on your own laptop (about 45 min) — do this before K12 and K13
+The organizers told Aryen what they look for: grounded in reality, a repo they can read to see how it works,
+impact (lives, money), and evals that are real, verifiable and impressive. You are the closest thing we have to a
+judge who has never seen the code. On your Surface, in a NEW folder:
+1. `git clone`, then `uv sync --extra dev`, then `make verify` (or `uv run python scripts/verify.py`). It needs no
+   Mac and no network: it recomputes every published number from the raw timelines in docs/evidence/runs/.
+2. `uv run pytest -q` and `uv run python -m evals` (offline agent evals).
+3. Read only README.md for 10 minutes, then answer in writing, without looking at anything else: what does it do,
+   how does it decide, what is measured and what is simulated, what is the impact, how would you check a number.
+4. Write `team/review/judge-dry-run.md`: every command that failed or needed something not in the README, every
+   question the README did not answer, every number you could not trace to a source, timed (minutes) per step.
+Done when: the file is on krish/judge-dry-run and says what you would score and why.
+
 ### K4. If one of the Windows laptops is yours
 Tell Aryen in your status file. After 07:20 you may be asked to join it to the demo: `fleet/README.md`.
 
