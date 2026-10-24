@@ -2,6 +2,8 @@
 reword these; it may not invent them. Also the plain-text table `make solve` prints."""
 from __future__ import annotations
 
+from datetime import datetime
+
 from core.types import Calibration, GridSignal, Job, Schedule
 
 
@@ -14,7 +16,6 @@ def _ranges(idx: list[int], slots, slot_minutes: int) -> str:
             prev = i
             continue
         end = slots[prev].timestamp() + slot_minutes * 60
-        from datetime import datetime
         out.append(f"{slots[start]:%a %H:%M}-{datetime.fromtimestamp(end, tz=slots[0].tzinfo):%H:%M}")
         if i is not None:
             start = prev = i
@@ -36,23 +37,28 @@ def explain(s: Schedule, sig: GridSignal, jobs: list[Job], deadline_slot: dict[s
                 facts.append(f"{j.id} runs in every slot at concurrency {j.max_concurrency} (never paused)")
             continue
         on = [i for i, x in enumerate(a) if x.run]
-        feasible = range(min(deadline_slot[j.id], len(a)))
-        off = [i for i in feasible if not a[i].run]
+        window = range(min(deadline_slot[j.id], len(a)))
+        capped_off = [i for i in window if not a[i].run and s.caps_w[i] is not None]
+        price_off = [i for i in window if not a[i].run and s.caps_w[i] is None]
         if not on:
             facts.append(f"{j.id}: no slots scheduled")
             continue
         p_on = sum(prices[i] for i in on) / len(on)
         line = f"{j.id} runs {len(on)} slot(s) {_ranges(on, s.slots, s.slot_minutes)} at avg ${p_on:.2f}/MWh"
-        if off:
-            p_off = sum(prices[i] for i in off) / len(off)
-            line += f" vs ${p_off:.2f}/MWh avg over the {len(off)} feasible slot(s) it skipped"
+        if price_off:
+            p_off = sum(prices[i] for i in price_off) / len(price_off)
+            line += f" vs ${p_off:.2f}/MWh avg over the {len(price_off)} uncapped slot(s) it skipped"
         devs = sorted({x.device for x in a if x.run})
         line += f"; device {'/'.join(devs)}"
         facts.append(line)
+        if capped_off:
+            facts.append(f"{j.id} paused in {len(capped_off)} capped slot(s) "
+                         f"({_ranges(capped_off, s.slots, s.slot_minutes)}): it does not fit under the cap")
     capped = [i for i, c in enumerate(s.caps_w) if c is not None]
     if capped:
-        binding = [i for i in capped if s.planned_w[i] >= s.caps_w[i] - 0.5]
-        facts.append(f"power cap active in {len(capped)} slot(s); binding (within 0.5 W) in {len(binding)}")
+        head = max(s.caps_w[i] - s.planned_w[i] for i in capped)
+        facts.append(f"power cap active in {len(capped)} slot(s) ({_ranges(capped, s.slots, s.slot_minutes)}); "
+                     f"planned power stays under it with at most {head:.2f} W to spare")
     for sf in s.shortfalls:
         facts.append(f"shortfall: {sf.message}")
     if s.on_stale_data:

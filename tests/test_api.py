@@ -1,0 +1,77 @@
+"""HTTP contract tests (HANDOFF.md). TEST FIXTURE: a stand-in runtime that records what the routes
+hand it; the real Runtime needs powermetrics and runs only on the demo Mac."""
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+
+from api.routes import make_router
+from dispatcher.solve import solve
+from tests.test_dispatcher import CAL, POLICY, jobs, signal
+
+
+class FakeExecutor:
+    def __init__(self):
+        self.calls, self.dispatcher_enabled, self.schedule = [], True, None
+
+    def jobs(self):
+        return jobs()
+
+    async def set_policy(self, **c):
+        self.calls.append(("policy", c))
+        return solve(signal([50.0] * 96), jobs(), POLICY, CAL)
+
+    async def set_job(self, job_id, **c):
+        self.calls.append(("job", job_id, c))
+        return None
+
+    async def add_event(self, ev):
+        self.calls.append(("event", ev))
+        return None
+
+    def set_dispatcher(self, enabled):
+        self.dispatcher_enabled = enabled
+
+
+class FakeRuntime:
+    def __init__(self):
+        self.executor = FakeExecutor()
+
+    def snapshot(self):
+        return {"dispatcher_enabled": self.executor.dispatcher_enabled}
+
+
+def client():
+    rt = FakeRuntime()
+    app = FastAPI()
+    app.include_router(make_router(rt))
+    return TestClient(app), rt
+
+
+def test_policy_null_clears_cap_and_returns_schedule():
+    c, rt = client()
+    r = c.post("/api/policy", json={"power_cap_w": None})
+    assert r.status_code == 200 and r.json()["solver_status"] == "OPTIMAL"
+    assert rt.executor.calls == [("policy", {"power_cap_w": None})]
+    assert c.post("/api/policy", json={}).status_code == 400
+
+
+def test_event_needs_exactly_one_target():
+    c, rt = client()
+    base = {"start": "2026-10-24T00:00:00-07:00", "duration_s": 900}
+    assert c.post("/api/event", json=base).status_code == 400
+    assert c.post("/api/event", json={**base, "target_w": 10, "target_pct": 20}).status_code == 400
+    assert c.post("/api/event", json={**base, "target_pct": 30}).status_code == 200
+    ev = rt.executor.calls[-1][1]
+    assert ev.target_pct == 30 and ev.source == "ui" and ev.raw
+
+
+def test_jobs_route_rejects_chat_and_unknown():
+    c, _ = client()
+    assert c.post("/api/jobs/chat", json={"deadline": None}).status_code == 404
+    assert c.post("/api/jobs/nope", json={"deadline": None}).status_code == 404
+    assert c.post("/api/jobs/train", json={"deadline": "2026-10-24T02:00:00-07:00"}).status_code == 200
+
+
+def test_dispatcher_toggle_and_state():
+    c, _ = client()
+    assert c.post("/api/dispatcher", json={"enabled": False}).json() == {"enabled": False}
+    assert c.get("/api/state").json() == {"dispatcher_enabled": False}

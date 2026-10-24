@@ -13,9 +13,12 @@ from pathlib import Path
 import torch
 import torch.nn as nn
 
+from core.config import jobs as JOBS_CFG
+
 from .base import CHECKPOINT_DIR, WL, Worker, mps_or_cpu
 
 CFG = WL.get("train", {})
+TARGET_STEPS = next(j.get("target_steps") for j in JOBS_CFG["jobs"] if j["id"] == "train")
 SIDE = CHECKPOINT_DIR / "train.json"   # step count beside the checkpoint, readable without torch
 
 
@@ -60,6 +63,9 @@ class Train(Worker):
             self.model.load_state_dict(st["model"]); self.opt.load_state_dict(st["opt"])
             self.step_n = st["step"]
         self.gen = torch.Generator().manual_seed(self.step_n)
+
+    def done(self) -> bool:
+        return bool(TARGET_STEPS) and self.step_n >= TARGET_STEPS
 
     def checkpoint(self):
         self.ckpt.parent.mkdir(parents=True, exist_ok=True)
