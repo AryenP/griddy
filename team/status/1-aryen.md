@@ -84,3 +84,8 @@ Blockers / needs Aryen: none.
 Done: pause_all baseline, measured work done, projected deadlines for dispatcher-off runs; README restructured (accordion-style); PRs #6 #7 merged; cap_events + intake kind for Anuraag.
 Next: record the 3-way comparison (ignore / pause everything / Brownout) in DECISIONS and the README proof table.
 Blockers / needs Aryen: none.
+
+## 2026-10-24 03:11 PT — tick (light: evidence3 calibrating)
+Done: merged PR #8 (intake kind + cap-held follow-ups on the pages). No [supervisor] issues.
+Next: record the evidence3 three-way comparison when it finishes; README proof table.
+Blockers / needs Aryen: none.
