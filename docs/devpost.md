@@ -87,8 +87,11 @@ idle and 8.3–15.7 s with training, reported beside it and not promised.
 Chat during a cap: our first measured run with real chat traffic during the cap failed (run 20261024-094941,
 docs/evidence/20261024-094941.md): power never got under the 19.68 W cap (mean 26.46 W) and time to first token
 p95 rose from 0.20 s to 4.56 s. On this Mac one streaming reply draws most of the GPU, so busy chat alone is above
-a 30 % cut. The fix keeps chat at full speed and asks the operator instead (DECISIONS 10:00 and after); its
-re-run is not recorded yet, so we do not claim chat keeps its SLA under a cap.
+a 30 % cut. The fix keeps chat at full speed and asks the operator instead (DECISIONS 10:00 and after). Re-run
+(DECISIONS 14:20): with two streams back to back, time to first token stayed 0.08 s at worst under the cap and power
+stayed over it (busy chat alone is above a 30 % cut here; the operator is asked); with one person chatting, the cap
+held in 8 s and for 80 % of capped seconds (47 % below baseline) with replies starting in 0.19 s, measured while
+the Mac was also in use (counted as outside load, stated in the report).
 
 ## Responsible design
 - The solver decides, the LLM explains and negotiates, the controller executes. The LLM has no code
