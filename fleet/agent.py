@@ -59,6 +59,7 @@ class BatteryMeter:
         self.watts: float | None = None
         self.plugged: bool | None = None
         self.t: float | None = None
+        self.changed_t: float | None = None     # when the reading last changed: about once a minute on some laptops
         self.note = "no reading yet"
         self.proc = subprocess.Popen(["powershell", "-NoProfile", "-NonInteractive", "-Command", PS_READER],
                                      stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, bufsize=1)
@@ -71,6 +72,8 @@ class BatteryMeter:
             except json.JSONDecodeError:
                 continue
             self.t, self.plugged = time.time(), bool(d.get("plugged"))
+            if d.get("mw") != getattr(self, "_last_mw", None):
+                self.changed_t, self._last_mw = self.t, d.get("mw")
             if not d.get("batteries"):
                 self.watts, self.note = None, "no battery reported by WMI"
             elif self.plugged:
@@ -186,7 +189,8 @@ def run(args, meter: BatteryMeter, job: CompressJob) -> int:
     print(f"site {args.site} on {machine()} -> {args.mac}; {job.threads} threads; Ctrl-C to stop")
     last_ok, last_save = time.time(), time.time()
     while True:
-        body = {"t": time.time(), "watts": meter.watts, "meter_t": meter.t, "meter_note": meter.note,
+        body = {"t": time.time(), "watts": meter.watts, "meter_t": meter.t, "meter_changed_t": meter.changed_t,
+                "meter_note": meter.note,
                 "plugged": meter.plugged, "running": job.running.is_set(), "done_mb": job.done_mb,
                 "rate_mb_s": job.rate_mb_s(), "machine": machine()}
         try:
@@ -212,8 +216,9 @@ def main(argv=None) -> int:
     ap.add_argument("--site", required=True, help="this laptop's id in config/fleet.yaml")
     ap.add_argument("--threads", type=int, default=os.cpu_count() or 2)
     ap.add_argument("--calibrate", action="store_true")
-    ap.add_argument("--window-s", type=float, default=30.0)
-    ap.add_argument("--warmup-s", type=float, default=8.0)
+    # a laptop's battery reading can take about a minute to follow a change (config/fleet.yaml meter_lag_s)
+    ap.add_argument("--window-s", type=float, default=120.0)
+    ap.add_argument("--warmup-s", type=float, default=75.0)
     ap.add_argument("--failsafe-s", type=float, default=10.0)
     args = ap.parse_args(argv)
     args.mac = args.mac.rstrip("/")

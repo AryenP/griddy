@@ -28,6 +28,7 @@ class Fleet:
         self.cfg = cfg if cfg is not None else (config.fleet or {})
         self.sites: dict[str, dict] = {s["id"]: s for s in self.cfg.get("sites") or []}
         self.stale_s = float(self.cfg.get("stale_s", 5))
+        self.meter_lag_s = float(self.cfg.get("meter_lag_s", 0))
         self.cal_path = Path(cal_path)
         self.cal: dict[str, dict] = self._load_cal()
         self.beats: dict[str, dict] = {}
@@ -93,6 +94,7 @@ class Fleet:
                         "watts": w, "run": self.run.get(s, False), "running": b.get("running"),
                         "done_mb": b.get("done_mb"), "rate_mb_s": b.get("rate_mb_s"),
                         "machine": b.get("machine") or (self.cal.get(s) or {}).get("machine"),
+                        "reading_changed": b.get("meter_changed_t"),
                         "calibration": self.cal.get(s), "last_beat": b.get("received")})
         return out
 

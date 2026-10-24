@@ -143,3 +143,25 @@ def test_site_routes(tmp_path, monkeypatch):
     assert c.post("/api/sites/surface1/calibration", json={**LAPTOP_CAL, "rate_mb_s": 0}).status_code == 422
     assert c.post("/api/sites/surface1/calibration", json=LAPTOP_CAL).json()["status"] == "stored"
     assert Rt.fleet.online() == ["surface1"]
+
+
+async def test_the_mac_waits_for_slow_laptop_meters(rig):
+    e, f, clock = rig
+    f.meter_lag_s = 75.0
+    assert e.meter_lag_s() == 0.0                              # no laptop online: the Mac's own timing
+    f.calibrate("surface1", LAPTOP_CAL)
+    f.beat("surface1", {"watts": 5.0, "done_mb": 0.0}, now=clock["t"])
+    assert e.meter_lag_s() == 75.0
+    e.policy = e.policy.model_copy(update={"replan": {"background_window_s": 20, "settle_s": 5, "background_delta_w": 0.5}})
+    await e.on_signal(signal([5.0] * 4 + [50.0] * 92))
+    await e.add_event(CapEvent(source="ui", start=SLOTS[0], duration_s=3600, target_w=30.0))
+    for _ in range(60):                                        # 60 s of measured watts well above the plan
+        clock["t"] += 1
+        f.beat("surface1", {"watts": 5.0, "done_mb": 0.0}, now=clock["t"])
+        e.on_power(PowerReading(t=clock["t"], combined_w=e.plan.planned_w + 6))
+    assert e.background_drift() is None                        # 25 s + 75 s of lag have not passed yet
+    for _ in range(45):
+        clock["t"] += 1
+        f.beat("surface1", {"watts": 5.0, "done_mb": 0.0}, now=clock["t"])
+        e.on_power(PowerReading(t=clock["t"], combined_w=e.plan.planned_w + 6))
+    assert e.background_drift() == pytest.approx(6.0, abs=0.1)

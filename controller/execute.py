@@ -264,8 +264,9 @@ class Executor:
             return f"chat traffic {s.chat_busy_streams:.2f} -> {busy:.2f} busy streams"
         # watts: only once the current slot has run a full window, so job start-up is not drift
         window = self.baseline_window_s
-        if plan.slot_start and plan.planned_w is not None and now - plan.slot_start.timestamp() >= window + 5 \
-                and now - self._last_solve_t >= window:
+        lag = self.meter_lag_s()
+        if plan.slot_start and plan.planned_w is not None and now - plan.slot_start.timestamp() >= window + 5 + lag \
+                and now - self._last_solve_t >= window + lag:
             xs = [w for t, w in self.power if t >= now - window]
             if len(xs) >= window // 2:
                 m = sum(xs) / len(xs)
@@ -273,6 +274,10 @@ class Executor:
                 if abs(m - plan.planned_w) > tol:
                     return f"measured {m:.2f} W vs planned {plan.planned_w:.2f} W over {window}s"
         return None
+
+    def meter_lag_s(self) -> float:
+        """Extra settling time while laptops are online: their battery readings follow load slowly."""
+        return self.fleet.meter_lag_s if self.fleet and self.fleet.online() else 0.0
 
     def background_drift(self) -> float | None:
         """Under a cap, the measured load outside the plan when it has moved since the last solve.
@@ -287,7 +292,7 @@ class Executor:
             return None
         window = r.get("background_window_s", 20)
         now = time.time()
-        if now - max(self._plan_t, self._last_solve_t) < window + r.get("settle_s", 5):
+        if now - max(self._plan_t, self._last_solve_t) < window + r.get("settle_s", 5) + self.meter_lag_s():
             return None
         busy = self.chat_busy()
         if busy is not None and s.chat_busy_streams is not None and \
@@ -321,7 +326,7 @@ class Executor:
             return None
         window = r.get("background_window_s", 20)
         now = time.time()
-        if now - max(self._plan_t, self._last_solve_t) < window + r.get("settle_s", 5):
+        if now - max(self._plan_t, self._last_solve_t) < window + r.get("settle_s", 5) + self.meter_lag_s():
             return None
         xs = [w for t, w in self.power if t > now - window]
         if len(xs) < window // 2:
