@@ -1,7 +1,7 @@
 // Brownout dashboard. One WebSocket (/ws, HANDOFF.md contract), field names from core/types.py.
 // Every number on screen carries its source and its age; missing data says what is missing.
-// Layout: the live load trace and its readout (web/trace.js), the 24-hour map (web/map.js) with a slot
-// inspector, the jobs, why this plan, the event log, and the receipts (web/receipts.js).
+// Layout: the readout beside the grid feeding this machine in 3D, the live load trace (web/trace.js), the 24-hour
+// map (web/map.js) with a slot inspector, the jobs, why this plan, the event log, and the receipts (web/receipts.js).
 "use strict";
 
 const S = {
@@ -16,6 +16,13 @@ const LOG_GROUP = { plan: "plan", schedule: "plan", action: "plan", policy: "pla
   event: "people", intake: "people", approval: "people", shortfall: "people", grid: "grid" };
 const LOG_MAX = 200;
 const STALE_POWER_S = 5, STALE_STATUS_S = 10;
+
+// The live parts (web/common.js): numbers whose digits roll to each reading, and the grid feeding this machine in 3D.
+const wattsRO = readout($("watts"), { unit: "W measured", decimals: 1 });
+const costRO = readout($("cost"), { decimals: 2 });
+const carbonRO = readout($("carbon"), { decimals: 2 });
+const ttftRO = readout($("ttft"), { unit: "s", decimals: 2 });
+const gridView = gridScene($("scene"));
 
 // ---------- message handling ----------
 function handle(msg) {
@@ -33,7 +40,7 @@ function handle(msg) {
       traceSeed(d.power_history);
       renderAll();
       return;
-    case "power": S.power = d; traceAdd(d.t, d.combined_w); renderNumbers(); renderLoad(); break;
+    case "power": S.power = d; traceAdd(d.t, d.combined_w); renderNumbers(); renderLoad(); pulsePanel($("load-panel")); break;
     case "neighbourhood":
       S.hoodLast = d;
       if (d.scenario) S.hoodHist.push(d);
@@ -122,6 +129,8 @@ function renderLoad() {
   state.textContent = text;
   state.className = `d-state ${cls}`;
   detail.textContent = sub;
+  $("load-panel").dataset.state = cls === "over" ? "over" : cls === "stale" ? "stale" : st.last ? "live" : "";
+  renderScene(st);
   // The scale-free number: how far measured power sits below its own pre-cap baseline, the same at 20 W or 50 MW.
   const ratio = $("cap-ratio"), base = st.band && isFinite(st.band.start) ? preCapBaseline(st.band.start) : null;
   if (base && st.mean != null) {
@@ -208,14 +217,38 @@ async function refreshFleet() {
   if (r.ok) { S.fleet = r.data.fleet || []; renderFleet(); }
 }
 
+// The 3D column is this Mac's measured watts. Idle comes from calibration; the rest is attributed to the running jobs
+// in proportion to their calibrated watts (chat scaled by its measured traffic), since powermetrics sees only the total.
+const JOB_LABEL = { chat: "Chat", train: "Train", batch: "Batch" };
+function renderScene(st) {
+  const p = S.power, g = S.grid, cal = S.calibration;
+  const grid = g ? { label: g.iso, price: g.price_now } : null;
+  if (!p) { gridView.update({ live: false, grid }); return; }
+  const live = nowS() - p.t <= STALE_POWER_S;
+  const idle = cal ? Math.min(cal.idle_w, p.combined_w) : 0;
+  const ids = [...new Set([...Object.keys(S.jobSpecs), ...Object.keys(S.jobs)])];
+  const weight = (id) => {
+    const j = S.jobs[id] || {}, d = cal && cal.jobs[id] && j.device ? cal.jobs[id][j.device] : null;
+    if (j.state !== "running" || !d) return 0;
+    return id === "chat" && j.busy_60s != null && j.concurrency ? d.delta_w * Math.min(1, j.busy_60s / j.concurrency) : d.delta_w;
+  };
+  const total = ids.reduce((a, id) => a + weight(id), 0), rest = Math.max(0, p.combined_w - idle);
+  const jobs = ids.map((id) => ({ id, label: JOB_LABEL[id] || id, watts: total ? rest * weight(id) / total : 0, state: (S.jobs[id] || {}).state || "no status" }));
+  if (!cal || (!total && rest > 0.05)) jobs.push({ id: "other", label: cal ? "Outside the plan" : "Not split", watts: cal ? rest : p.combined_w, state: "running" });
+  gridView.update({ watts: p.combined_w, idle, jobs, cap: st.band ? st.band.w : null, live, grid, kind: cal ? "attributed" : "", sample: p.t });
+  $("scene-src").textContent = `Column: this Mac, ${fixed(p.combined_w, 1)} W measured by macOS powermetrics, ${age(p.t)}` + (live ? "" : ", STALE") +
+    (cal ? `. Idle ${fixed(cal.idle_w, 2)} W from calibration ${age(cal.measured_at)}; the rest attributed to the running jobs in proportion to their calibrated watts, chat by its measured traffic`
+      : ". No calibration yet, so the total is not split across jobs") +
+    (st.band ? `. The red plane is the cap in force, ${fixed(st.band.w, 1)} W` : "") + ". Drag or use the arrow keys to turn it.";
+}
+
 // ---------- the live numbers ----------
 function renderNumbers() {
   const p = S.power, g = S.grid, live = fleetLive();
   if (p) {
     const stale = nowS() - p.t > STALE_POWER_S;
     const total = live ? live.combined_w : p.combined_w;
-    setHTML($("watts"), html`${total.toFixed(1)}<small>${live ? `W measured, this Mac and ${plural(Object.keys(live.sites).length, "laptop")}` : "W measured"}</small>`);
-    $("watts").classList.toggle("stale", stale);
+    wattsRO.set(total, { tone: stale ? "stale" : "live", unit: live ? `W measured, this Mac and ${plural(Object.keys(live.sites).length, "laptop")}` : "W measured" });
     const parts = [["CPU", p.cpu_w], ["GPU", p.gpu_w], ["ANE", p.ane_w]]
       .filter(([, v]) => v != null).map(([k, v]) => `${k} ${v.toFixed(1)}`).join(", ");
     $("watts-src").textContent = (stale ? `STALE: no powermetrics sample for ${age(p.t).replace(" ago", "")}. ` : "") +
@@ -226,14 +259,16 @@ function renderNumbers() {
     // A laptop costs fractions of a cent per hour; show cents so the number stays readable.
     const w = live ? live.combined_w : p.combined_w;
     const usdH = w / 1e6 * g.price_now;
-    setHTML($("cost"), Math.abs(usdH) < 0.01 ? html`${sig(usdH * 100)}<small>¢/h</small>` : html`$${sig(usdH)}<small>/h</small>`);
+    const cents = Math.abs(usdH) < 0.01;
+    costRO.set(usdH, { text: cents ? sig(usdH * 100) : `$${sig(usdH)}`, unit: cents ? "¢/h" : "/h" });
     const at = g.price_interval_start ? ` for ${isoClock(g.price_interval_start)}` : "";
     $("cost-src").textContent = `measured W × ${g.iso} ${g.location} real-time $${sig(g.price_now, 4)}/MWh${at}, feed ${age(feedT())}` + (g.stale ? ", STALE" : "");
     if (g.carbon_now != null) {
-      setHTML($("carbon"), html`${sig(w / 1000 * g.carbon_now)}<small>gCO2/h</small>`);
+      const gph = w / 1000 * g.carbon_now;
+      carbonRO.set(gph, { text: sig(gph), unit: "gCO2/h" });
       $("carbon-src").textContent = `measured W × ${g.iso} live fuel mix ${sig(g.carbon_now)} gCO2/kWh, feed ${age(feedT())}` + (g.stale ? ", STALE" : "");
     } else {
-      $("carbon").textContent = "—";
+      carbonRO.set(null, { text: "—", unit: "" });
       $("carbon-src").textContent = `${g.iso} feed has no fuel mix right now: carbon unknown`;
     }
   } else if (p && !g) {
@@ -252,10 +287,10 @@ function renderChatTile() {
   if (!c || c.t == null) { $("ttft-src").textContent = "no chat proxy status yet"; return; }
   const stale = nowS() - c.t > STALE_STATUS_S;
   if (c.ttft_p95_60s != null) {
-    setHTML($("ttft"), html`${c.ttft_p95_60s.toFixed(2)}<small>s</small>`);
+    ttftRO.set(c.ttft_p95_60s);
     $("ttft").classList.toggle("bad", sla != null && c.ttft_p95_60s > sla);
   } else {
-    $("ttft").textContent = "—";
+    ttftRO.set(null);
     $("ttft").classList.remove("bad");
   }
   $("ttft").classList.toggle("stale", stale);
@@ -279,6 +314,7 @@ function renderCurve() {
   const g = S.grid, sc = S.schedule;
   if (sc && S.sel != null && S.sel >= sc.slots.length) S.sel = null;
   renderMap($("map"), sc, g, S.sel);
+  flipChanged($("map"));
   const src = [];
   if (g) {
     src.push(`price: ${g.iso} ${g.location}, ${g.price_curve_source || "source not stated"}`);
@@ -290,6 +326,14 @@ function renderCurve() {
   if (g && g.alerts && g.alerts.length) src.push(`ALERTS: ${g.alerts.join("; ")}`);
   $("curve-src").textContent = src.join(" · ");
   renderInspector();
+}
+
+// A slot whose decision changed since the last map flips, so a re-plan shows where it happened.
+let mapWas = [];
+function flipChanged(box) {
+  const cells = [...box.querySelectorAll(".map-cell")], now = cells.map((c) => c.className);
+  if (mapWas.length === now.length && !REDUCED_MOTION) cells.forEach((c, i) => { if (now[i] !== mapWas[i]) c.classList.add("flip"); });
+  mapWas = now;
 }
 
 function renderInspector() {
