@@ -97,7 +97,7 @@ p95 rose from 0.20 s to 4.56 s. On this Mac one streaming reply draws most of th
 a 30 % cut. The fix keeps chat at full speed and asks the operator instead (DECISIONS 10:00 and after). Re-run
 (DECISIONS 14:16): with two streams back to back, time to first token stayed 0.08 s at worst under the cap and power
 stayed over it (busy chat alone is above a 30 % cut here; the operator is asked); with one person chatting, the cap
-held in 8 s and for 80 % of capped seconds (47 % below baseline) with replies starting in 0.19 s, measured while
+held in 8 s and for 84 % of capped seconds (47 % below baseline) with replies starting in 0.19 s, measured while
 the Mac was also in use (counted as outside load; DECISIONS 14:16, not in the report itself).
 
 ## Responsible design

@@ -1,0 +1,113 @@
+# Every measured number a judge reads, the run it comes from, and the pages that quote it.
+# `make verify` recomputes each one from the raw timeline in docs/evidence/runs/<run>/timeline.jsonl.gz with
+# agent/reporter.py and fails if a value or a quote no longer matches (CI runs it: tests/test_verify.py).
+# A value matches at its own precision: 14.34 means 14.335 to 14.345; 93 means 92.5 to 93.5; null means "never".
+#
+# Metrics, all over the report's window (from the cap's start; a comparison cuts both runs to the shorter one):
+#   mean_w                mean measured watts (powermetrics combined CPU + GPU + ANE)
+#   under_cap_pct         share of measured seconds at or under the cap
+#   time_to_compliance_s  seconds from the cap's start until the 10-s mean first reached it (null: never)
+#   train_steps           training steps the job itself counted in the window
+#   baseline_w            mean measured watts in the 60 s before the cap
+#   reduction_pct         mean_w below baseline_w
+#   chat_ttft_before_s / chat_ttft_during_s   chat time-to-first-token p95 (trailing 60 s), last before / worst during
+
+comparisons:
+  - name: "Evidence of record: Brownout vs ignore the call (09:15 run, DECISIONS 09:46)"
+    dispatched: 20261024-093434
+    baseline: 20261024-091909-baseline
+    expect:
+      cap_w: 15.10
+      dispatched.mean_w: 14.34
+      dispatched.under_cap_pct: 93
+      dispatched.time_to_compliance_s: 12
+      dispatched.train_steps: 1625
+      baseline.mean_w: 20.85
+      baseline.under_cap_pct: 0
+      baseline.time_to_compliance_s: null
+      baseline.train_steps: 5899
+    quoted_in:
+      README.md: ["20.85 W", "14.34 W", "5899", "1625 over ignore's 327 s"]
+      docs/devpost.md: ["20.85 W", "14.34 W", "5899"]
+
+  - name: "Evidence of record: Brownout vs pause everything (09:15 run, DECISIONS 09:46)"
+    dispatched: 20261024-093434
+    baseline: 20261024-092650-pause_all
+    expect:
+      dispatched.under_cap_pct: 93
+      dispatched.time_to_compliance_s: 12
+      dispatched.train_steps: 1575
+      baseline.mean_w: 0.80
+      baseline.under_cap_pct: 99
+      baseline.time_to_compliance_s: 4
+      baseline.train_steps: 19
+    quoted_in:
+      README.md: ["0.80 W", "**1575**"]
+      docs/devpost.md: ["0.80 W", "1575"]
+
+  - name: "First two-policy run, 02:28 (DECISIONS 02:28)"
+    dispatched: 20261024-022026
+    baseline: 20261024-021247-baseline
+    expect:
+      dispatched.mean_w: 0.68
+      dispatched.under_cap_pct: 99
+      dispatched.time_to_compliance_s: 5
+      baseline.mean_w: 18.32
+      baseline.under_cap_pct: 0
+      baseline.time_to_compliance_s: null
+    quoted_in:
+      README.md: ["18.32 W", "0.68 W"]
+
+  - name: "Second two-policy run, 03:10 (DECISIONS 03:10)"
+    dispatched: 20261024-025349
+    baseline: 20261024-024609-baseline
+    expect:
+      dispatched.mean_w: 1.64
+      dispatched.under_cap_pct: 99
+      dispatched.time_to_compliance_s: 7
+      baseline.mean_w: 21.18
+      baseline.under_cap_pct: 0
+      baseline.time_to_compliance_s: null
+    quoted_in:
+      README.md: ["21.18 W", "1.64 W"]
+
+reports:
+  - name: "Chat under a cap, first run: failed (DECISIONS 10:00)"
+    run: 20261024-094941
+    expect:
+      cap_w: 19.68
+      baseline_w: 28.12
+      mean_w: 26.46
+      reduction_pct: 5.9
+      under_cap_pct: 0
+      time_to_compliance_s: null
+      chat_ttft_before_s: 0.20
+      chat_ttft_during_s: 4.56
+    quoted_in:
+      docs/devpost.md: ["19.68 W", "26.46 W", "0.20 s", "4.56 s"]
+
+  - name: "Chat under a cap after the fix, two busy streams (DECISIONS 14:16)"
+    run: 20261024-135433
+    expect:
+      cap_w: 19.36
+      baseline_w: 27.65
+      mean_w: 27.76
+      under_cap_pct: 0
+      chat_ttft_before_s: 0.06
+      chat_ttft_during_s: 0.08
+    quoted_in:
+      docs/devpost.md: ["0.08 s"]
+
+  - name: "Chat under a cap after the fix, one person chatting (DECISIONS 14:16; Mac in use, stated)"
+    run: 20261024-140239
+    expect:
+      cap_w: 18.13
+      baseline_w: 25.90
+      mean_w: 13.70
+      reduction_pct: 47.1
+      time_to_compliance_s: 8
+      under_cap_pct: 84
+      chat_ttft_before_s: 0.19
+      chat_ttft_during_s: 0.19
+    quoted_in:
+      docs/devpost.md: ["held in 8 s", "84 % of capped seconds", "47 % below baseline", "0.19 s"]
