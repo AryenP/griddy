@@ -85,3 +85,14 @@ screenshots of chat/owner/operator/proof at 1440 and 375 px; on the dashboard ev
 style is identical (only the clock-driven SVG hour labels move between runs). PR "2 Anuraag: style cleanup".
 Next: 11 evals for tonight's agent changes.
 Blockers / needs: none.
+
+## 2026-10-24 05:55 PT — task 13 accessibility pass
+Done: tests/test_web_a11y.py: WCAG AA contrast for 31 text/background and graph-mark pairs from the style.css
+:root tokens (badges composited over their panel), and every `color:` in style.css must be in that list.
+Two failures fixed: white on --action was 3.22:1 (now #2f6fe0, 4.7:1) and the map's plan-W bars were 2.56:1
+(now #5a7596, 3.38:1). aria-live="polite" (additions only) on the owner and operator approval boards, polite
+on the operator's three result boxes; aria-labels on the operator textareas and the chat box; keyboard order
+asserted on operator and owner. Stacked on PR #17. PR "2 Anuraag: accessibility".
+Next: 12 failure drills (needs a machine with Ollama and the server; this cloud session can record the grid,
+agent-offline and meter-missing rows only).
+Blockers / needs: machine 1: dashboard.css draws its plan bars in #4a6280 too (2.56:1 on the panel).
