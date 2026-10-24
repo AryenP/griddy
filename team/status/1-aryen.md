@@ -1,4 +1,4 @@
-# Brief (Sat 10:12 PT, machine 1). Newest entries are at the bottom; this block is the summary.
+# Brief (Sat 16:02 PT, machine 1). Newest entries are at the bottom; this block is the summary.
 - **Evidence of record (DECISIONS 09:46):** the 09:15 three-policy run, clean (no power gaps). Ignore the call
   20.85 W, 0 % of seconds under the cap; pause everything 0.80 W, 99 %, 19 train steps; Brownout 14.34 W, 93 %,
   compliant in 12 s, 1575 steps (about 83x pause everything). In README and Devpost, reports in docs/evidence/.
@@ -6,7 +6,12 @@
 - **Chat during a cap (DECISIONS 10:00, then 14:16):** the first run failed (time to first token 4.56 s). After the
   fix: two busy streams, 0.08 s worst under the cap, power over it (busy chat alone is above a 30 % cut; operator
   asked); one person chatting, cap held in 8 s, 84 % of capped seconds, 0.19 s (Mac in use during it, stated).
-- **Tag:** demo-stable-3 (09:48). It predates b06cd51; re-tag after the chat re-run and a live check.
+- **Organizers' asks (Sat 15:10): real, verifiable, impactful, nothing simulated.** Done: `make verify` (74 checks
+  recompute every published number from the committed raw timelines, CI runs it); a backtest on 14 real CAISO and
+  ERCOT days (modest: 1.5-3.3 % median cost saved); the simulated neighbourhood replaced by **replays of real grid
+  emergencies** (Uri 2021, CAISO Aug 2020, CAISO Sep 2022): EIA-930 data, every alert and impact cited by report
+  page, alerts reaching the real dispatcher live, the Mac's measured cut, and at scale only the cut the grid asked.
+- **Tag:** demo-stable-3 (09:48) is old; re-tag after a rehearsal on current main.
 - **Azure Foundry:** `azd provision --preview` (read-only) with it off: no new resources. Switched on: it would
   create an AI Services account, a gpt-4o-mini deployment (GlobalStandard, capacity 10) and a project in West US 2.
   Model quota not checked (no `az` CLI). Nothing provisioned; waits for Aryen's yes.
