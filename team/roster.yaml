@@ -125,13 +125,14 @@ members:
   - team/status/3-krish.md
 - number: 4
   name: Arumalla
-  role: Agent layer (LLM intake, negotiation, explanations) - PAUSED Sat 01:45 PT; files moved to machine 1
+  role: Briefing pages for the judges (picture, driver card, workshop questions, source check) since Sat 04:55 PT; agent layer moved to machine 1 at 01:45
   github: MauryaAru
   emails:
   - arumallamaurya@gmail.com
   assignment: team/4-arumalla.md
   branch_prefix: arumalla/
   owns:
+  - docs/briefing/**
   - team/status/4-arumalla.md
 
 # Everyone may append (never edit existing lines) to these.
