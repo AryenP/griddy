@@ -50,6 +50,7 @@ class Executor:
         self._last_latency_log = 0.0
         self._last_solve_t = 0.0
         self._plan_t = 0.0                       # when the plan in force last changed
+        self.fleet = None                        # fleet.hub.Fleet when laptops may join (set by the runtime)
         self.background_w = 0.0                  # measured load outside the plan, as passed to the last solve
 
     # ------------------------------------------------------------------ inputs
@@ -62,9 +63,13 @@ class Executor:
         xs = [w for t, w in self.power if t >= cut]
         return sum(xs) / len(xs) if len(xs) >= self.baseline_window_s // 2 else None
 
+    def solve_cal(self) -> Calibration:
+        """The Mac's calibration, plus each online laptop's idle draw and job (fleet/hub.py)."""
+        return self.fleet.calibration(self.cal) if self.fleet else self.cal
+
     def jobs(self) -> list[Job]:
         out = []
-        for j in load_jobs(self.cal):
+        for j in load_jobs(self.cal) + (self.fleet.jobs() if self.fleet else []):
             for k, v in self.job_changes.get(j.id, {}).items():
                 setattr(j, k, v)
             if j.id in self.finished:
@@ -146,7 +151,7 @@ class Executor:
             return None
         async with self._lock:
             sig, jobs, events = self.signal, self.jobs(), self.active_events()
-            sched = await asyncio.to_thread(solve, sig, jobs, self.policy, self.cal, events, self.baseline_w(),
+            sched = await asyncio.to_thread(solve, sig, jobs, self.policy, self.solve_cal(), events, self.baseline_w(),
                                             self.chat_busy(), frozenset(self.hard_deadlines),
                                             self.cap_key() in self.cap_overrides, self.background_w)
             self.schedule = sched
@@ -175,14 +180,17 @@ class Executor:
         jobs = self.jobs()
         if not self.dispatcher_enabled:
             if self.baseline_mode == "pause_all":
-                return pause_all_plan(jobs, self.cal, self.cap_in_force())
-            return baseline_plan(jobs, self.cal)
+                return pause_all_plan(jobs, self.solve_cal(), self.cap_in_force())
+            return baseline_plan(jobs, self.solve_cal())
         i = self.slot_index()
         if i is None:
             return None
         s = self.schedule
         actions = []
         for j in jobs:
+            if j.id not in s.assignments:            # a laptop joined after this schedule: waits for the re-solve
+                actions.append(PlanAction(job=j.id, state="pause"))
+                continue
             a = s.assignments[j.id][i]
             if j.kind == "interactive":
                 actions.append(PlanAction(job=j.id, state="run", device="gpu", concurrency=a.concurrency))
@@ -196,7 +204,13 @@ class Executor:
                         needs_approval=list(self.needs_approval))
 
     def apply(self, plan: SlotPlan) -> None:
+        sites = set(self.fleet.sites) if self.fleet else set()
+        for site in sites - {a.job for a in plan.actions}:
+            self.fleet.set_run(site, False)          # a laptop not in the plan never runs unplanned
         for a in plan.actions:
+            if a.job in sites:
+                self.fleet.set_run(a.job, a.state == "run")
+                continue
             if a.state == "done":
                 continue
             if a.job == "chat":
@@ -296,6 +310,8 @@ class Executor:
         r, s, plan = self.policy.replan, self.schedule, self.plan
         if not (self.dispatcher_enabled and s and plan and r and plan.mode == "dispatcher"):
             return None
+        if self.fleet and self.fleet.online():
+            return None                              # the measured total includes laptops: not the Mac's idle
         jobs = {j.id: j for j in self.jobs()}
         if any(a.state == "run" and jobs.get(a.job) is not None and jobs[a.job].kind != "interactive" for a in plan.actions):
             return None
@@ -320,6 +336,11 @@ class Executor:
                     await self.resolve(f"{j} finished")
                 if self.dispatcher_enabled and self.schedule and self.slot_index() is None:
                     await self.resolve("horizon exhausted")
+                if self.fleet:
+                    change = self.fleet.membership_changed()
+                    if change:
+                        self.tl.log("note", msg=f"re-solve: fleet {change}", trigger="fleet", online=self.fleet.online())
+                        await self.resolve(f"fleet: {change}")
                 idle = self.idle_drift()
                 if idle is not None:
                     old = self.cal.idle_w

@@ -51,6 +51,7 @@ isos: dict = _load("isos.yaml")
 jobs: dict = _load("jobs.yaml")
 policy: dict = _load("policy.yaml")
 site: dict = _load("site.yaml")
+fleet: dict = _load("fleet.yaml")
 
 
 def available_isos() -> list[str]:

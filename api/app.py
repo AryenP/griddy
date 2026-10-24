@@ -23,6 +23,7 @@ from core import config
 from core.config import available_isos, settings
 from core.timeline import Timeline
 from dispatcher.solve import load_calibration, load_policy
+from fleet.hub import Fleet
 from grid.watcher import GridWatcher
 from meter.powermetrics import PowerMeter
 
@@ -43,7 +44,9 @@ class Runtime:
         self.knobs = Knobs(self.tl)
         self.executor = Executor(self.tl, self.knobs, self.cal, load_policy(), dispatcher_enabled,
                                  baseline_mode=policy_name if not dispatcher_enabled else "baseline")
-        self.meter.subscribers.append(self.executor.on_power)
+        self.fleet = Fleet(self.tl)                   # laptops that join as measured sites (config/fleet.yaml)
+        self.executor.fleet = self.fleet
+        self.meter.subscribers.append(lambda r: self.executor.on_power(self.fleet.combine(r)))
         self.agent = AgentBridge(self.tl, self.executor)
         self.agent.snapshot = self.snapshot
         self.watcher: GridWatcher | None = None
@@ -107,7 +110,7 @@ class Runtime:
         return {"grid": dump(ex.signal), "schedule": dump(ex.schedule), "plan": dump(ex.plan),
                 "power": dump(self.meter.latest), "power_history": [[round(t, 2), round(w, 3)] for t, w in ex.power],
                 "jobs": {j: Knobs.status(j) for j in ("chat", "train", "batch")},
-                "calibration": dump(ex.cal), "policy": dump(ex.policy), "iso_options": available_isos(),
+                "calibration": dump(ex.cal), "fleet": self.fleet.status(), "policy": dump(ex.policy), "iso_options": available_isos(),
                 "iso": self.watcher.iso if self.watcher else settings.iso,
                 "dispatcher_enabled": ex.dispatcher_enabled, "agent": self.agent.status, "agent_model": self.agent.llm.name,
                 "approvals": [dump(x) for x in self.agent.pending(status=None)],

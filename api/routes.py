@@ -44,6 +44,32 @@ class EventIn(BaseModel):
     reason: str = ""
 
 
+class SiteBeat(BaseModel):
+    """A laptop's heartbeat (fleet/agent.py): its battery reading and its job's progress."""
+    t: float | None = None
+    watts: float | None = Field(default=None, ge=0)
+    meter_t: float | None = None
+    meter_note: str = ""
+    plugged: bool | None = None
+    running: bool | None = None
+    done_mb: float | None = Field(default=None, ge=0)
+    rate_mb_s: float | None = Field(default=None, ge=0)
+    machine: str = ""
+
+
+class SiteCalibration(BaseModel):
+    """A laptop's own calibration (fleet/agent.py --calibrate), measured by its battery."""
+    idle_w: float = Field(ge=0)
+    delta_w: float = Field(ge=0)
+    rate_mb_s: float = Field(gt=0)
+    samples: list[int] = Field(default_factory=list)
+    window_s: float = Field(gt=0)
+    threads: int = Field(ge=1)
+    measured_at: float
+    machine: str
+    meter: str
+
+
 class ChatIn(BaseModel):
     messages: list[dict]
     max_tokens: int | None = None
@@ -82,6 +108,18 @@ def make_router(rt) -> APIRouter:
             return run_series(run_path(run_id, RUNS))
         except FileNotFoundError as e:
             raise HTTPException(404, str(e))
+
+    @r.post("/api/sites/{site_id}/beat")
+    async def site_beat(site_id: str, body: SiteBeat):
+        if site_id not in rt.fleet.sites:
+            raise HTTPException(404, f"{site_id!r} is not a site in config/fleet.yaml")
+        return rt.fleet.beat(site_id, body.model_dump())
+
+    @r.post("/api/sites/{site_id}/calibration")
+    async def site_calibration(site_id: str, body: SiteCalibration):
+        if site_id not in rt.fleet.sites:
+            raise HTTPException(404, f"{site_id!r} is not a site in config/fleet.yaml")
+        return rt.fleet.calibrate(site_id, body.model_dump())
 
     @r.get("/api/state")
     async def state():
