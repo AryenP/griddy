@@ -53,6 +53,13 @@ capture. PR "2 Anuraag: design pass and dispatch map".
 Next: F5 polish (hotkeys, captions, layout jumps), then judging docs.
 Blockers / needs: none.
 
+## 2026-10-24 04:20 PT — F5 polish
+Done: PR #9 (design pass, dispatch map) merged. F5: dashboard hotkeys D (dispatcher), 1/2/3 (objective),
+R (receipts) with a key legend in the header; a one-line "what you're seeing" caption on the map, why-this-plan,
+event log and receipts panels; the map reserves its height so the page does not jump when the schedule
+arrives. Operator E/A hotkeys were already in. PR "2 Anuraag: polish".
+Next: 8 judging docs, then 10 proof page.
+
 ## 2026-10-24 05:05 PT — task 10 proof page
 Done: judging docs in review (PR #11). Task 10: web/proof.html + proof.js: the newest run of each policy
 (ignore the call, pause everything, Brownout) from GET /api/runs, their measured watts from
