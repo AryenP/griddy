@@ -174,6 +174,18 @@ async def scripted_inputs(rt: "Runtime", args) -> None:
     await rt.executor.add_event(ev)
 
 
+async def chat_load(rt: "Runtime", args) -> None:
+    """Headless: real chat requests to the real model through the chat proxy, `--chat-load` streams from
+    `--chat-at` s, so a run records chat's time to first token while a cap is in force. The prompts are the
+    calibration prompts in config/jobs.yaml; the timeline says this traffic was scripted."""
+    from controller.feasibility import chat_traffic
+    await asyncio.sleep(args.chat_at)
+    rt.tl.log("note", msg=f"scripted chat traffic: {args.chat_load} stream(s) of real requests to the real model "
+                          f"(prompts: config/jobs.yaml calibration_prompts)", trigger="scripted_chat",
+              streams=args.chat_load)
+    await chat_traffic(asyncio.Event(), args.chat_load)
+
+
 async def amain(args):
     loop = asyncio.get_running_loop()
     stop = asyncio.Event()
@@ -185,9 +197,12 @@ async def amain(args):
         print(f"run {rt.tl.run_id}: timeline {rt.tl.path}", flush=True)
         if args.headless:
             scripted = asyncio.create_task(scripted_inputs(rt, args))
+            chat = asyncio.create_task(chat_load(rt, args)) if args.chat_load else None
             with contextlib.suppress(asyncio.TimeoutError):
                 await asyncio.wait_for(stop.wait(), timeout=args.duration)
             scripted.cancel()
+            if chat:
+                chat.cancel()
         else:
             server = _Server(uvicorn.Config(make_app(rt), host=settings.host, port=settings.port, log_level="warning"))
             serving = asyncio.create_task(server.serve())
@@ -210,5 +225,7 @@ if __name__ == "__main__":
     ap.add_argument("--cap-w", type=float, help="headless: cap machine power at this many watts")
     ap.add_argument("--cap-at", type=int, default=120, help="headless: seconds after start (>= 70 for a %% cap)")
     ap.add_argument("--cap-for", type=int, default=300, help="headless: cap duration in seconds")
+    ap.add_argument("--chat-load", type=int, default=0, help="headless: scripted real chat requests, this many streams")
+    ap.add_argument("--chat-at", type=int, default=30, help="headless: seconds after start the chat traffic begins")
     logging.basicConfig(level=logging.WARNING)
     asyncio.run(amain(ap.parse_args()))
