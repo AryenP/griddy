@@ -108,9 +108,11 @@ two_day = day1 + [(t + timedelta(days=1), day1[-1 - i][1]) for i, (t, _) in enum
 sig2 = sig.model_copy(update={"load_forecast": two_day})
 one = Neighbourhood(Tl(), Ex(sig, []), cfg)
 two = Neighbourhood(Tl(), Ex(sig2, []), cfg)
+day1_now = day1[12][0].timestamp()     # "today" is the fixture's day; day 2 is tomorrow
 for h in (16.0, 18.5, 20.0):
-    print(f"C hour {h}: homes {one.homes_kw(h, sig):.0f} kW from one day of forecast; "
-          f"{two.homes_kw(h, sig2):.0f} kW when the forecast holds a second day (the lookup lands on the later day)")
+    a, b = one.homes_kw(h, sig, day1_now), two.homes_kw(h, sig2, day1_now)
+    print(f"C hour {h}: homes {a:.0f} kW from one day of forecast; {b:.0f} kW when the forecast also holds "
+          f"tomorrow ({'same: only today is used' if abs(a - b) < 1e-6 else 'DIFFERENT: another day leaks in'})")
 
 # --- D: a laptop that drops out or is plugged in during a cap ----------------------------------------
 fl = Fleet(Tl(), {"sites": [{"id": "lap1"}], "stale_s": 5, "meter_lag_s": 75}, cal_path=Path("NUL"))
