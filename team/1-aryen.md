@@ -7,16 +7,16 @@ lands in it. You own the contract (HANDOFF.md API, `core/types.py`) and merge al
 `config/policy.yaml`, `Makefile`, `pyproject.toml`, `team/`, `HANDOFF.md`, tests for those, fixtures.
 
 ## Tasks, in order
-1. **M4 execution loop** (in progress Fri 11:35 PM). `make demo` up; watts follow the schedule across a
+1. **M4 execution loop** — DONE Fri 23:45 (DECISIONS.md). `make demo` up; watts follow the schedule across a
    slot boundary with no human input. Done when: a timeline shows a `plan` change at a slot boundary and
    `power` dropping/rising within seconds of it.
 2. **Chat SLA decision.** Measured p95 9.7 s at concurrency 4 / 256 tokens vs a 2 s SLA. Measure TTFT with
    streaming in `workloads/chat_proxy.py`, sweep max_tokens and concurrency, set the SLA from data, log it.
    Done when: policy SLA equals a measured number and chat meets it at the planned concurrency.
 3. **Wire machine 4's agent** as their PRs land: `POST /request`, `POST /openadr/event`, approval flow
-   (`GET /api/owner/{owner}/pending`, `POST /api/owner/{owner}/reply`), explainer text in `schedule` events,
-   `agent` online/offline in the snapshot. Done when: DEMO.md 1:15–2:30 runs on the Mac.
-4. **Wire machine 3's receipts**: `GET /api/report`, `GET /api/compare`, `GET /api/trace`, call
+   (`GET /api/approvals`, `POST /api/approvals/{id}/reply`, `approval` WS events), `/api/explain`, `/api/ask`,
+   `agent` online/offline in the snapshot; shortfalls become ApprovalRequests via the negotiator. Done when: DEMO.md 1:15–2:30 runs on the Mac.
+4. **Wire machine 3's receipts**: `GET /api/report`, `GET /api/compare`, `GET /api/runs`, `GET /api/trace`, call
    `telemetry.configure()` at startup. Run `make baseline` and a dispatched run over the same window.
    Done when: the comparison renders from two logged runs on this Mac.
 5. **Merge machine 2's pages**; full DEMO.md rehearsal from cold (`make demo` < 2 min), failure drills.
@@ -29,3 +29,11 @@ before wiring, so machines 2–4 can code against them). Types: bottom of `core/
 ## Merging
 Check out each PR, run `uv run python scripts/team.py check --member <their number>`, `make test`,
 then merge. A PR that touches someone else's file goes back.
+
+## Phase 2: when phase 1 is merged
+7. **Second grid end to end.** ERCOT (`POST /api/iso`) live for a full slot: schedule repaints, watts follow;
+   ERCOT frequency alert path exercised from real `system_conditions`. Done when: a timeline shows both ISOs.
+8. **Traffic-aware chat watts** (unblocks the deferred drift re-solve trigger): plan chat power from measured
+   per-request energy × observed request rate instead of full-traffic watts; then turn on the > 20% drift trigger.
+9. **5:30 PM gate (PLAN.md):** core solid? Decide Fetch/Foundry Hosted Agent vs straight to submission; log it.
+10. **Two cold-start rehearsals** with a teammate as the judge; fix whatever breaks; freeze Sunday 7:00.

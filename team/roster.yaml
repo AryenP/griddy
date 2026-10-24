@@ -78,6 +78,7 @@ members:
       - tests/test_report*.py
       - tests/test_compare*.py
       - tests/test_telemetry*.py
+      - evals/**
 
   - number: 4
     name: Arumalla

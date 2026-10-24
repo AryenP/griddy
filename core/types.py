@@ -345,3 +345,14 @@ class Report(BaseModel):
     chat_p95_during_s: float | None = None
     shortfalls: list[str] = Field(default_factory=list)
     narrative: str | None = None         # optional LLM prose over these numbers; numbers come first
+
+
+class Comparison(BaseModel):
+    """Dispatched vs dispatcher-off over the same window (scripts/compare.py, machine 3)."""
+
+    dispatched: Report
+    baseline: Report
+    window_s: float
+    delta: dict[str, float] = Field(default_factory=dict,
+                                    description="dispatched minus baseline: cost_usd, co2_g, energy_wh, chat_p95_s, ...")
+    notes: list[str] = Field(default_factory=list)

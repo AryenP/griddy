@@ -61,6 +61,24 @@ chat has `concurrency`, `inflight`, `p95_60s`, `n_60s`, `max_tokens`, `model`. A
 | POST | `/api/event` | `{"start": iso8601, "duration_s": int, "target_w"?: W, "target_pct"?: % of measured baseline, "reason"}` | new Schedule with the cap |
 | POST | `/api/chat` | `{"messages": [{"role","content"}], "max_tokens"?: int}` | `{"reply", "latency_s", "tokens", "max_tokens"}` |
 
+**Agent and receipts routes** (machine 1 wires them as machines 3 and 4 deliver; code against them now):
+| Method | Path | Body | Returns |
+|---|---|---|---|
+| POST | `/request` | `{"text": str, "who"?: str}` free text or a voice transcript | `{"intake": IntakeResult, "schedule": Schedule \| null}` |
+| POST | `/openadr/event` | an OpenADR 3.1 EVENT object | `{"intake": IntakeResult, "schedule": Schedule \| null}` |
+| GET | `/api/approvals?owner=&status=pending` | | `[ApprovalRequest]` |
+| POST | `/api/approvals/{id}/reply` | `{"text": str, "who": str}` | `{"decision": OwnerDecision, "schedule": Schedule \| null}` |
+| GET | `/api/explain` | | `Explanation` for the current schedule |
+| POST | `/api/ask` | `{"question": str}` operator asks "why is training paused?" | `Explanation` answered from live state only |
+| GET | `/api/report?run=<id>\|latest` | | `Report` |
+| GET | `/api/compare?dispatched=<id>&baseline=<id>` | | `Comparison` |
+| GET | `/api/runs` | | `[{"run_id", "started", "dispatcher_enabled"}]` |
+| GET | `/api/trace?n=50` | | recent OpenTelemetry spans `[{"name","start","end","attributes",...}]` |
+
+WebSocket adds `{"kind": "approval", "data": ApprovalRequest}` whenever a request is created or changes
+status, and the snapshot gains `"approvals": [ApprovalRequest]` and `"explanation": Explanation | null`.
+Pages: `/` dashboard, `/chat` (or `/chat.html`), `/owner.html`, `/operator.html`.
+
 Real captured timelines for building against before the API is up: `tests/fixtures/real_timeline_*.jsonl`
 (see `tests/fixtures/README.md`). Feed them in from the browser console; no replay mode in the code.
 
