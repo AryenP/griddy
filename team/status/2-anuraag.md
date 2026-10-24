@@ -28,3 +28,9 @@ differences and notes, and the /api/trace spans as the audit trail. Missing rout
 "not available yet: <route>"; an unpriced window says "not priced" instead of 0. PR "2 Anuraag: receipts".
 Next: F3 scripts/qr.py, then F4 design pass.
 Blockers / needs: a live look on the demo Mac with real runs (this machine only has the fixtures).
+## 2026-10-24 03:30 PT — F3 scripts/qr.py (make qr)
+Done: F2 receipts in review (PR #6). F3: make qr prints terminal QR codes and saves reports/qr/{chat,owner,
+operator}.png for PUBLIC_URL + /chat, /owner.html, /operator.html; refuses a loopback or non-URL PUBLIC_URL
+with the fix. Ran it on this machine's LAN IP. PR "2 Anuraag: qr".
+Next: F4 design pass across all pages (after #6 merges: it touches style.css).
+Blockers / needs: none.
