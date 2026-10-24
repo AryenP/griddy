@@ -105,8 +105,9 @@ class Runtime:
         ex = self.executor
         dump = lambda m: m.model_dump(mode="json") if m is not None else None
         return {"grid": dump(ex.signal), "schedule": dump(ex.schedule), "plan": dump(ex.plan),
-                "power": dump(self.meter.latest), "jobs": {j: Knobs.status(j) for j in ("chat", "train", "batch")},
-                "calibration": dump(self.cal), "policy": dump(ex.policy), "iso_options": available_isos(),
+                "power": dump(self.meter.latest), "power_history": [[round(t, 2), round(w, 3)] for t, w in ex.power],
+                "jobs": {j: Knobs.status(j) for j in ("chat", "train", "batch")},
+                "calibration": dump(ex.cal), "policy": dump(ex.policy), "iso_options": available_isos(),
                 "iso": self.watcher.iso if self.watcher else settings.iso,
                 "dispatcher_enabled": ex.dispatcher_enabled, "agent": self.agent.status, "agent_model": self.agent.llm.name,
                 "approvals": [dump(x) for x in self.agent.pending(status=None)],

@@ -85,7 +85,7 @@ chat has `concurrency`, `inflight`, `p95_60s` (total latency), `ttft_p95_60s` (t
 WebSocket adds `{"kind": "approval", "data": ApprovalRequest}` whenever a request is created or changes
 status (and `{"kind": "approval", "data": {"request_id", "who", "decision": OwnerDecision}}` for each reply),
 and the snapshot gains `"approvals": [ApprovalRequest]` (all statuses), `"explanation": Explanation | null`
-`"agent_model"`, and `"cap_events": [CapEvent]` (the caps in force or upcoming, `target_w` resolved). Parsed
+`"agent_model"`, and `"cap_events": [CapEvent]` (the caps in force or upcoming, `target_w` resolved). Since Sat 04:10 the snapshot also carries `"power_history": [[t, W]]`, the executor's measured combined watts for the last hour (1 Hz), so a page drawing a live trace starts full. Parsed
 requests are logged as `{"kind": "intake", "data": {"intake": IntakeResult, "who"}}` (since Sat 03:15; before
 that they shared the `event` kind); `event` now only ever carries a CapEvent. Each new schedule's explanation arrives as `{"kind": "note", "data": {"schedule_id",
 "explanation": Explanation}}`. Shortfall events carry `shortfall_kind` (`deadline` | `cap`), not `kind`. `Schedule.background_w` (since Sat 03:55) is measured load outside the plan that the solver counted against the cap, and `planned_w` includes it; a re-solve for it logs `{"kind": "note", "data": {"msg": "re-solve: load outside the plan ...", "trigger": "background", "background_w"}}`.

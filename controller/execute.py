@@ -285,6 +285,34 @@ class Executor:
         bg = max(0.0, sum(xs) / len(xs) - (plan.planned_w - s.background_w))
         return bg if abs(bg - s.background_w) > r.get("background_delta_w", 0.5) else None
 
+    def idle_drift(self) -> float | None:
+        """A lower idle floor, measured in place, when the plan leaves only idle drawing power.
+
+        Calibration measures idle once; if anything else was busy then, every plan is priced too high and
+        jobs that fit the cap get paused (evidence3 re-run, Sat 04:09: calibrated idle 2.22 W, measured
+        0.35-0.45 W). When every deferrable job is paused or done and chat is planned and measured at no
+        traffic, the settled measured mean is idle plus outside load, so it bounds idle from above. It only
+        ever lowers the floor: load above the plan is the background estimate's job."""
+        r, s, plan = self.policy.replan, self.schedule, self.plan
+        if not (self.dispatcher_enabled and s and plan and r and plan.mode == "dispatcher"):
+            return None
+        jobs = {j.id: j for j in self.jobs()}
+        if any(a.state == "run" and jobs.get(a.job) is not None and jobs[a.job].kind != "interactive" for a in plan.actions):
+            return None
+        quiet = r.get("idle_busy_max", 0.05)
+        busy = self.chat_busy()
+        if s.chat_busy_streams is None or s.chat_busy_streams > quiet or busy is None or busy > quiet:
+            return None
+        window = r.get("background_window_s", 20)
+        now = time.time()
+        if now - max(self._plan_t, self._last_solve_t) < window + r.get("settle_s", 5):
+            return None
+        xs = [w for t, w in self.power if t > now - window]
+        if len(xs) < window // 2:
+            return None
+        m = sum(xs) / len(xs)
+        return m if m < self.cal.idle_w - r.get("background_delta_w", 0.5) else None
+
     async def run(self, period_s: float = 1.0) -> None:
         while True:
             try:
@@ -292,6 +320,13 @@ class Executor:
                     await self.resolve(f"{j} finished")
                 if self.dispatcher_enabled and self.schedule and self.slot_index() is None:
                     await self.resolve("horizon exhausted")
+                idle = self.idle_drift()
+                if idle is not None:
+                    old = self.cal.idle_w
+                    self.cal = self.cal.model_copy(update={"idle_w": idle})
+                    why = f"idle floor {old:.2f} -> {idle:.2f} W, measured with only idle planned"
+                    self.tl.log("note", msg=f"re-solve: {why}", trigger="idle", idle_w=idle, calibrated_idle_w=old)
+                    await self.resolve(f"drift: {why}")
                 bg = self.background_drift()
                 if bg is not None:
                     old, self.background_w = self.background_w, bg
