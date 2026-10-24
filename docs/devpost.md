@@ -48,10 +48,17 @@ Same jobs, same live grid, same request (a cap 30 % below the measured baseline 
 | Carbon at the live CAISO mix | 0.017 / 0.043 g | 0.493 / 0.573 g | fuel mix × IPCC AR5 factors |
 | Training deadline | planned met | met | solver plan / projected from measured progress |
 
-Against "pause everything" (the blunt demand-response answer) as well as "ignore the call": the three-policy
-run of record is still to be measured. The 06:40 run was void because the Mac's lid was closed and it slept
-(DECISIONS 08:00); the 03:47 re-run (DECISIONS 04:25) held the cap 99 % of seconds for both Brownout and pause
-everything, 0 % for ignore the call, on a calibration later found polluted, so it is not the evidence of record.
+Against "pause everything" (the blunt demand-response answer) as well as "ignore the call", one run each with
+the same call (run of record 09:15, DECISIONS 09:46; 315-327 s from each cap start, cap 15.10 W):
+
+| Policy | Mean power | Seconds at or under the cap | Time to compliance | Training steps in the window |
+|---|---|---|---|---|
+| Ignore the call | 20.85 W | 0 % | never | 5899 |
+| Pause everything | 0.80 W | 99 % | 4 s | 19 |
+| Brownout | 14.34 W | 93 % | 12 s | 1575 |
+
+Brownout keeps training on the CPU under the cap, about 83 times the work of pausing everything, and asks the
+owner about the ~19-minute slip. Two earlier attempts are void and say why (DECISIONS 04:25, 08:00).
 
 Calibration on qwen3:4b-instruct (03:10, Mac otherwise idle): idle 0.51 W; chat +25.6 W at concurrency 4;
 training +22.9 W on GPU (18.3 steps/s), +13.3 W on CPU (4.8 steps/s); batch embeddings +24.1 W on GPU.
