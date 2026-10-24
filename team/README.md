@@ -37,7 +37,7 @@ night loop can run them), allow **exactly** the two powermetrics command lines B
 Arguments are pinned on purpose: an open `powermetrics` rule would allow `-o <file>`, which writes any file as
 root. The file is validated with `visudo` before it is installed, so a typo cannot break sudo.
 ```
-u=$(whoami); printf '%s ALL=(root) NOPASSWD: /usr/bin/powermetrics --samplers cpu_power\,gpu_power -i 1000, /usr/bin/powermetrics --samplers cpu_power\,gpu_power -i 1000 -n 1\n' "$u" > /tmp/brownout-pm && sudo install -m 0440 -o root -g wheel /tmp/brownout-pm /tmp/brownout-pm.root && sudo visudo -cf /tmp/brownout-pm.root && sudo mv /tmp/brownout-pm.root /etc/sudoers.d/brownout-powermetrics && rm -f /tmp/brownout-pm && sudo -k && sudo -n /usr/bin/powermetrics --samplers cpu_power,gpu_power -i 1000 -n 1 >/dev/null && echo "OK: powermetrics runs without a password"
+printf '%s\n' "$(whoami) ALL=(root) NOPASSWD: /usr/bin/powermetrics --samplers cpu_power\,gpu_power -i 1000, /usr/bin/powermetrics --samplers cpu_power\,gpu_power -i 1000 -n 1" > /tmp/brownout-pm && sudo install -m 0440 -o root -g wheel /tmp/brownout-pm /tmp/brownout-pm.root && sudo visudo -cf /tmp/brownout-pm.root && sudo mv /tmp/brownout-pm.root /etc/sudoers.d/brownout-powermetrics && rm -f /tmp/brownout-pm && sudo -k && sudo -n /usr/bin/powermetrics --samplers cpu_power,gpu_power -i 1000 -n 1 >/dev/null && echo "OK: powermetrics runs without a password"
 ```
 Remove it after the hackathon: `sudo rm /etc/sudoers.d/brownout-powermetrics`. Without the rule everything still
 works; `make demo` / `calibrate` / `evidence` just ask for the password once. Only one power-measuring run can
