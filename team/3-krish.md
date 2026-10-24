@@ -29,6 +29,21 @@ Every number in `README.md`, `docs/devpost.md`, `docs/judging/*.md` and `docs/ev
 `team/review/0545-number-audit.md` (number, where, source, matches yes/no) and open an issue per mismatch.
 Done when: merged. Re-run it after the final evidence run (~07:20) lands, when README and Devpost numbers change.
 
+### K0 (now). Open PRs for K1, K2 and K3
+Your branches `krish/k1-fleet-neighbourhood`, `krish/k2-judge-questions` and `krish/k3-number-audit` have no PR
+yet: `gh pr create --fill` on each. Machine 1 merges green ones every 10 minutes. (Issues 13 and 14 from
+machine 4 were fixed in 37e9948; if your K1 review found the same, link them.)
+
+### K5. Review what merged at 06:10 (about 30 min)
+Machine 1 merged eight PRs from machine 2 at 06:10: #15 preflight, #17 style cleanup, #18 evals, #19
+accessibility, #20 operator neighbourhood replay, #21 architecture picture, #22 driver card. Check them after the
+fact: does every simulated number say "simulated" on the operator page? Does the architecture picture show the
+LLM with no arrow to a knob? Does the driver card promise anything the demo does not do? Findings to
+`team/review/0615-merged-prs.md`, real bugs as issues.
+
+### K6. After the final evidence run (about 07:20)
+Re-run K3 on the README, Devpost and DECISIONS lines machine 1 writes from the 06:40 run.
+
 ### K4. If one of the Windows laptops is yours
 Tell Aryen in your status file. After 07:20 you may be asked to join it to the demo: `fleet/README.md`.
 
