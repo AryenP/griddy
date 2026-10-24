@@ -30,6 +30,8 @@ How the pieces meet:
 6. **Every claim shows its source and age. No dead code, no stubs, no secrets** (`.env` only).
 7. Only machine 1's measurements are demo numbers. Anything measured elsewhere is development data.
 8. Append to `DECISIONS.md` (never edit old lines) when you decide something SPEC.md does not say.
+9. **Plans grow.** Machine 1 adds phases to your assignment file as work lands. Pull main before every
+   task; when your current phase is merged, continue with the next phase in the same file.
 
 ## The prompt (same for every machine; paste as-is into Claude Code in the repo folder)
 ```
@@ -46,7 +48,8 @@ Setup if not done: `make setup` then `make test` (must be green). Work only on f
 entry owns; run `uv run python scripts/team.py check` before every push (must print ok). One branch
 per task with your prefix, small commits with plain messages and no co-author lines, then push and
 open a PR into main titled "<your number> <name>: <task>" with sections: What, How tested, Needs
-from others. Pull main (`git pull --rebase origin main`) before starting each task.
+from others. Pull main (`git pull --rebase origin main`) before starting each task, and re-read your
+assignment file after pulling: machine 1 adds new phases there. When a phase is done, start the next.
 
 Never break: nothing simulated or hardcoded reaches the judge; the solver decides, the LLM explains
 and negotiates, the controller executes; every claim has its source and age on screen; every run

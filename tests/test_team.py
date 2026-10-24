@@ -34,7 +34,8 @@ def test_tracked_files_have_one_owner():
 def test_assigned_future_paths_do_not_overlap():
     probes = ["web/index.html", "web/owner.html", "scripts/qr.py", "agent/reporter.py", "agent/llm.py",
               "agent/intake.py", "telemetry/__init__.py", "docs/devpost.md", "api/routes.py",
-              "tests/fixtures/openadr/event.json", "config/isos.yaml", "config/jobs.yaml"]
+              "tests/fixtures/openadr/event.json", "config/isos.yaml", "config/jobs.yaml",
+              "web/operator.html", "evals/cases.yaml", "agent/channels/slack.py"]
     for p in probes:
         assert len(_owners(p)) == 1, (p, _owners(p))
 
