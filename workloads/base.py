@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import os
+import signal
 import time
 from pathlib import Path
 
@@ -82,9 +83,15 @@ class Worker:
                                               "threads": self.threads, "t": time.time(), "pid": os.getpid(), **extra})
 
     def run(self):
+        # Ctrl-C reaches the whole process group; the runtime stops us through the control file so we
+        # checkpoint first. If the runtime dies without doing that, we notice the new parent and stop.
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
+        parent = os.getppid()
         last: dict = {}
         while True:
             self._apply()
+            if os.getppid() != parent:
+                self.ctrl["state"] = "stop"
             st = self.ctrl["state"]
             if st == "stop" or self.done():
                 if self.device is not None:

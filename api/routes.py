@@ -1,6 +1,7 @@
 """HTTP routes (HANDOFF.md API contract). Thin: validate, hand to the runtime, return its result."""
 from __future__ import annotations
 
+import json
 from datetime import datetime
 from pathlib import Path
 from typing import Literal
@@ -15,6 +16,25 @@ from core.types import CapEvent
 from workloads.base import WL
 
 WEB = Path("web")
+RUNS = Path("runs")
+
+
+def list_runs(root: Path = RUNS) -> list[dict]:
+    """Runtime runs (make demo / make baseline) with their mode, from each timeline's first event."""
+    out = []
+    for tl in sorted(root.glob("*/timeline.jsonl")):
+        if tl.parent.is_symlink():
+            continue
+        try:
+            with open(tl) as fh:
+                first = json.loads(fh.readline())
+        except (OSError, json.JSONDecodeError):
+            continue
+        d = first.get("data", {})
+        if first.get("kind") == "note" and d.get("msg") == "runtime start":
+            out.append({"run_id": tl.parent.name, "started": first["t"],
+                        "dispatcher_enabled": d.get("dispatcher_enabled"), "machine": d.get("machine")})
+    return out
 
 
 class PolicyIn(BaseModel):
@@ -53,6 +73,10 @@ def make_router(rt) -> APIRouter:
     @r.websocket("/ws")
     async def ws(sock: WebSocket):
         await rt.broadcaster.serve(sock, rt.snapshot())
+
+    @r.get("/api/runs")
+    async def runs():
+        return list_runs()
 
     @r.get("/api/state")
     async def state():

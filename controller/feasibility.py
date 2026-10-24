@@ -1,6 +1,7 @@
 """Measured feasibility inputs (SPEC §6): idle floor and per-job watt deltas, from powermetrics.
 
     sudo -v && make calibrate     # writes runs/calibration.json and a timeline
+    make chat-sweep               # chat latency (TTFT and total) by concurrency x max_tokens, no sudo
 
 Each phase: start the job (or chat traffic at max concurrency), wait warmup_s, average
 `Combined Power` over window_s, subtract the idle floor. Rates (steps/s, items/s) come from
@@ -10,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import json
 import platform
 import statistics
 import subprocess
@@ -151,10 +153,73 @@ async def calibrate(out: Path, only: list[str]) -> Calibration:
     return cal
 
 
+async def chat_sweep(out: Path, concurrencies: list[int], max_tokens: list[int], requests: int,
+                     with_train: bool) -> dict:
+    """Closed-loop load: `c` clients each send requests back to back through the proxy at limit `c`.
+    Records per-request TTFT and total latency from the proxy's own measurements."""
+    from workloads.chat_proxy import p95
+    tl = Timeline(run_id=time.strftime("%Y%m%d-%H%M%S") + "-chat-sweep")
+    knobs = Knobs(tl)
+    url = f"http://127.0.0.1:{CHAT['proxy_port']}/chat"
+    rows = []
+    try:
+        knobs.start("chat")
+        if with_train:
+            knobs.start("train", paused=True)
+            knobs.set_device("train", "gpu"); knobs.run("train")
+            await asyncio.to_thread(knobs.wait_for, "train", lambda s: s.get("state") == "running", 180)
+        async with httpx.AsyncClient(timeout=300) as c:
+            for _ in range(60):
+                try:
+                    (await c.get(url.replace("/chat", "/status"))).raise_for_status(); break
+                except httpx.HTTPError:
+                    await asyncio.sleep(0.5)
+            await c.post(url, json={"messages": [{"role": "user", "content": "hi"}], "max_tokens": 8})
+            prompts = CHAT["calibration_prompts"]
+            for conc in concurrencies:
+                knobs.set_concurrency("chat", conc)
+                await asyncio.sleep(0.5)
+                for mt in max_tokens:
+                    res: list[dict] = []
+
+                    async def client(k):
+                        for i in range(requests // conc):
+                            r = await c.post(url, json={"messages": [{"role": "user", "content": prompts[(k + i) % len(prompts)]}],
+                                                        "max_tokens": mt})
+                            res.append(r.json())
+                    t0 = time.time()
+                    await asyncio.gather(*(client(k) for k in range(conc)))
+                    wall = time.time() - t0
+                    row = {"concurrency": conc, "max_tokens": mt, "n": len(res), "with_train": with_train,
+                           "ttft_p95_s": p95([r["ttft_s"] for r in res]), "total_p95_s": p95([r["latency_s"] for r in res]),
+                           "tokens_per_s": round(sum(r["tokens"] or 0 for r in res) / wall, 1)}
+                    rows.append(row)
+                    tl.log("latency", phase="chat-sweep", **row)
+                    print(f"conc {conc}  max_tokens {mt:>3}  n {row['n']:>2}  TTFT p95 {row['ttft_p95_s']:6.2f} s  "
+                          f"total p95 {row['total_p95_s']:6.2f} s  {row['tokens_per_s']:6.1f} tok/s"
+                          + ("  (train on GPU)" if with_train else ""), flush=True)
+    finally:
+        await asyncio.to_thread(knobs.stop_all)
+        tl.close()
+    result = {"measured_at": time.time(), "machine": machine(), "model": config.settings.ollama_model, "rows": rows}
+    prev = json.loads(out.read_text()) if out.exists() else {"runs": []}
+    prev["runs"].append(result)
+    out.write_text(json.dumps(prev, indent=2))
+    print(f"\nchat sweep: {out}\ntimeline:   {tl.path}")
+    return result
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("--calibrate", action="store_true", required=True)
+    mode = ap.add_mutually_exclusive_group(required=True)
+    mode.add_argument("--calibrate", action="store_true")
+    mode.add_argument("--chat-sweep", action="store_true")
+    ap.add_argument("--with-train", action="store_true", help="chat sweep with training on the GPU")
+    ap.add_argument("--requests", type=int, default=8, help="chat sweep: requests per setting")
     ap.add_argument("--out", default=config.settings.calibration_path)
     ap.add_argument("--only", default="chat,train,batch", help="comma list of jobs to measure")
     a = ap.parse_args()
-    asyncio.run(calibrate(Path(a.out), [j.strip() for j in a.only.split(",") if j.strip()]))
+    if a.chat_sweep:
+        asyncio.run(chat_sweep(Path("runs/chat_sweep.json"), [1, 2, 4], [64, 128, 256], a.requests, a.with_train))
+    else:
+        asyncio.run(calibrate(Path(a.out), [j.strip() for j in a.only.split(",") if j.strip()]))

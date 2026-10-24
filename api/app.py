@@ -7,7 +7,9 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import contextlib
 import logging
+import signal
 import time
 from pathlib import Path
 
@@ -90,7 +92,8 @@ class Runtime:
         for t in self._tasks + ([self.watcher_task] if self.watcher_task else []):
             t.cancel()
         await asyncio.to_thread(self.knobs.stop_all)
-        await self.meter.stop()
+        if self.meter._proc is not None:
+            await self.meter.stop()
         self.tl.log("note", msg="runtime stop")
         self.tl.close()
 
@@ -112,20 +115,38 @@ def make_app(rt: Runtime) -> FastAPI:
     return app
 
 
+class _Server(uvicorn.Server):
+    """uvicorn without its own signal capture: the runtime owns SIGINT/SIGTERM so shutdown always
+    runs (checkpoint training, stop workloads, stop the meter, close the timeline)."""
+
+    @contextlib.contextmanager
+    def capture_signals(self):
+        yield
+
+
 async def amain(args):
+    loop = asyncio.get_running_loop()
+    stop = asyncio.Event()
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        loop.add_signal_handler(sig, stop.set)
     rt = Runtime(dispatcher_enabled=settings.policy_name != "baseline")
-    await rt.start()
-    print(f"run {rt.tl.run_id}: timeline {rt.tl.path}", flush=True)
     try:
+        await rt.start()
+        print(f"run {rt.tl.run_id}: timeline {rt.tl.path}", flush=True)
         if args.headless:
-            await asyncio.sleep(args.duration)
+            with contextlib.suppress(asyncio.TimeoutError):
+                await asyncio.wait_for(stop.wait(), timeout=args.duration)
         else:
-            server = uvicorn.Server(uvicorn.Config(make_app(rt), host=settings.host, port=settings.port,
-                                                   log_level="warning"))
+            server = _Server(uvicorn.Config(make_app(rt), host=settings.host, port=settings.port, log_level="warning"))
+            serving = asyncio.create_task(server.serve())
             print(f"dashboard http://localhost:{settings.port}  phone {settings.public_url}", flush=True)
-            await server.serve()
+            await asyncio.wait([serving, asyncio.create_task(stop.wait())], return_when=asyncio.FIRST_COMPLETED)
+            server.should_exit = True
+            await serving
     finally:
+        print("stopping: checkpointing workloads, stopping meter", flush=True)
         await rt.stop()
+        print(f"stopped; timeline {rt.tl.path}", flush=True)
 
 
 if __name__ == "__main__":
