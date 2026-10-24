@@ -18,3 +18,11 @@ Chat watts planned from measured traffic; drift re-solve live. ERCOT solve verif
 Next: wire machine 4's agent and machine 3's receipts as their PRs land; re-run `make calibrate` on the
 instruct model; ERCOT live slot with the meter.
 Blockers / needs: PRs from machines 3 and 4.
+
+## 2026-10-24 00:50 PT — multi-laptop guardrails
+Done: per-person status files, lane-guard hook, CI (tests + fabricated-data scan + ownership by branch;
+first run green), CLAUDE.md lessons, README setup/account/model/worktree rules, branch protection on main
+(PR + green `check` for everyone but admin), demo-stable-1 tagged on the live-verified M4 commit (20a41f7).
+Next: review/merge PRs from 3 and 4 as they open; wire agent + receipts routes; `make calibrate` on
+qwen3:4b-instruct; live `make demo` on current main, then `make tag-stable`.
+Blockers / needs: PRs from machines 3 and 4.
