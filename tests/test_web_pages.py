@@ -8,7 +8,7 @@ import pytest
 
 WEB = Path(__file__).resolve().parents[1] / "web"
 PAGES = sorted(p.name for p in WEB.glob("*.html"))
-EXPECTED_PAGES = {"index.html", "chat.html", "owner.html", "operator.html"}
+EXPECTED_PAGES = {"index.html", "chat.html", "owner.html", "operator.html", "proof.html"}
 CHART_JS = "https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"
 
 # HANDOFF.md "API contract" + "Agent and receipts routes"; path parameters normalised to {}.
@@ -16,7 +16,7 @@ CONTRACT_ROUTES = {
     "/ws", "/api/state", "/api/policy", "/api/iso", "/api/dispatcher", "/api/jobs/{}", "/api/event",
     "/api/chat", "/api/chat/stream", "/request", "/openadr/event", "/api/approvals",
     "/api/approvals/{}/reply", "/api/explain", "/api/ask", "/api/report", "/api/compare", "/api/runs",
-    "/api/trace",
+    "/api/trace", "/api/runs/{}/series",
 }
 
 

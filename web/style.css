@@ -231,3 +231,12 @@ textarea.mono { font-family: ui-monospace, "Cascadia Mono", Menlo, monospace; fo
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+/* ---------- proof page ---------- */
+.proof-trace svg { width: 100%; height: auto; display: block; }
+.proof-trace .grid { stroke: var(--line); stroke-width: 1; }
+.proof-trace .zero { stroke: var(--muted); stroke-dasharray: 4 4; }
+.proof-trace .tick { fill: var(--muted); font: 13px var(--font); }
+.proof-trace .trace { fill: none; stroke-width: 2.5; stroke-linejoin: round; }
+.proof-trace .cap { stroke: var(--bad); stroke-width: 2.5; }
+.proof-trace .cap-label { fill: #ffd0d0; font: 600 14px var(--font); }
