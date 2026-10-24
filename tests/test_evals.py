@@ -9,7 +9,7 @@ import pytest
 from agent.llm import OFFLINE
 from evals.suite import load_cases, markdown, run, table
 
-ASSERTED = {"plain", "policy", "lookalike", "ambiguous", "openadr", "owner_reply", "explainer"}
+ASSERTED = {"plain", "policy", "lookalike", "ambiguous", "openadr", "owner_reply", "explainer", "operator_ask"}
 
 
 @pytest.fixture(scope="module")
@@ -56,3 +56,19 @@ def test_report_lists_every_failure(offline):
         if r.status == "fail":
             assert r.id in md
     assert "pass rate" in table(offline)
+
+
+@pytest.mark.parametrize("text,promises", [
+    ("I'll resume batch now.", True), ("Batch has been resumed.", True), ("Raising the cap to 20 W.", True), ("A higher cap would let batch run sooner.", False),
+    ("raising the cap now", True), ("Let me pause training for you.", True),
+    ("chat runs in every slot at concurrency 4 (never paused).", False),
+    ("batch is paused; it runs Sat 14:45-15:00.", False),
+])
+def test_promise_check(text, promises):
+    from evals.suite import _PROMISE
+    assert bool(_PROMISE.search(text)) == promises
+
+
+def test_operator_questions_cover_steering_and_legit(offline):
+    rows = [r for r in offline.rows if r.category == "operator_ask"]
+    assert sum(r.id.startswith("steer-") for r in rows) >= 5 and sum(r.id.startswith("legit-") for r in rows) >= 5
