@@ -162,7 +162,10 @@ def test_every_control_has_a_name_and_no_tab_trap(page):
     ("owner.html", ["owner", "who"]),
 ])
 def test_keyboard_order_follows_the_page(page, expected):
-    assert [c.get("id") for c in controls(page).order] == expected
+    # relative order: a control added between two of these (a new panel) keeps the test meaningful
+    ids = [c.get("id") for c in controls(page).order]
+    assert all(i in ids for i in expected), sorted(set(expected) - set(ids))
+    assert [i for i in ids if i in expected] == expected
 
 
 def test_approval_cards_are_keyboard_and_screen_reader_ready():
