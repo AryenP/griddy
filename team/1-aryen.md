@@ -30,7 +30,7 @@ before wiring, so machines 2–4 can code against them). Types: bottom of `core/
 Check out each PR, run `uv run python scripts/team.py check --member <their number>`, `make test`,
 then merge. A PR that touches someone else's file goes back.
 
-## Next (Sat): the non-strawman comparison
+## Done Sat 03:35: the non-strawman comparison (`POLICY=pause_all`, `make evidence3`)
 - **"Pause everything" baseline** (`POLICY=pause_all`): when a cap is active, pause every deferrable job and
   keep chat, no rescheduling; otherwise run everything. Add it to `controller/baseline.py` as a second
   dispatcher-off mode and to `make evidence` as a third run with the same scripted inputs, then show all three
@@ -45,3 +45,19 @@ then merge. A PR that touches someone else's file goes back.
    per-request energy × observed request rate instead of full-traffic watts; then turn on the > 20% drift trigger.
 9. **5:30 PM gate (PLAN.md):** core solid? Decide Fetch/Foundry Hosted Agent vs straight to submission; log it.
 10. **Two cold-start rehearsals** with a teammate as the judge; fix whatever breaks; freeze Sunday 7:00.
+
+## Overnight (Sat 04:05 to ~07:30, Aryen asleep), in order
+Evidence is no longer re-run after every change: the only evidence run tonight is the scheduled final one at
+06:40, on whatever main is then. From 06:30 until it finishes, light work only, and no runtime left running.
+- **A. Record the 03:47 evidence3 re-run** (evidence at aa8154e) in DECISIONS.md, the status file and vault 132.
+  Done when: its two comparison tables and run ids are in DECISIONS.md.
+- **B. Three-way proof table** in README.md and docs/devpost.md from the newest evidence3, with the 03:13 first
+  pass and its fix told honestly in one line. Done when: both show ignore / pause everything / Brownout.
+- **C. Second grid end to end** (task 7): `make demo`, switch to ERCOT with `POST /api/iso` for one full slot,
+  schedule repaints, watts follow; back to CAISO. Done when: one timeline shows both ISOs; DECISIONS line.
+- **D. Cold-start rehearsal by script**: from nothing running, time `make demo` to first schedule, curl every
+  page and route in HANDOFF.md, run `make preflight`; fix what breaks. Done when: docs/rehearsal.md has a dated
+  timing and every route answered.
+- **E. Final evidence run** at 06:40 (scheduled), then record it like A and B, then `make tag-stable`.
+- **F. Morning brief** at the top of team/status/1-aryen.md and in vault 132's summary: what changed overnight,
+  the final numbers, what needs Aryen today. Done when: written after E.
