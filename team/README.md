@@ -1,5 +1,7 @@
 # Brownout team: four machines, one repo
 
+New session on any machine? Start at `KICKOFF.md` in the repo root.
+
 | # | Who | Role | GitHub | Branches | Assignment |
 |---|---|---|---|---|---|
 | 1 | Aryen | Runtime and integration, **the demo Mac** | AryenP | `main` | [1-aryen.md](1-aryen.md) |
@@ -71,8 +73,8 @@ It prints your number, name, role and assignment file. If it cannot tell, ask me
 
 Then run `uv run python scripts/team.py whoami --save` so the lane-guard hook knows you. Read,
 fully and in this order: CLAUDE.md, team/README.md, your assignment file, your team/status file,
-HANDOFF.md, SPEC.md, DECISIONS.md (PLAN.md and DEMO.md for context). Your assignment file is your plan; follow
-its task order and stop at each task's "done when" to show me the evidence before the next task.
+HANDOFF.md, SPEC.md, DECISIONS.md (PLAN.md and DEMO.md for context). Your assignment file is your plan: do its
+"Start now" section first if it has one, then follow its task order and stop at each task's "done when" to show me the evidence before the next task.
 
 Setup if not done: `make setup` then `make test` (must be green). Work only on files your roster
 entry owns; run `uv run python scripts/team.py check` before every push (must print ok). One branch
