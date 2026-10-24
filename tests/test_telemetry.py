@@ -45,8 +45,10 @@ def test_missing_azure_extra_never_fails_configure(monkeypatch):
     assert telemetry.configure() == ["memory", "azure-monitor unavailable"]
 
 
-def test_azure_processor_builds_exporter():
+def test_azure_processor_builds_exporter(monkeypatch):
     pytest.importorskip("azure.monitor.opentelemetry.exporter")
+    # The exporter also reads this variable and rejects an empty one, which .env.example leaves empty.
+    monkeypatch.delenv("APPLICATIONINSIGHTS_CONNECTION_STRING", raising=False)
     # A syntactically valid connection string; constructing the exporter makes no network call.
     p = telemetry.azure_processor("InstrumentationKey=00000000-0000-0000-0000-000000000000;"
                                   "IngestionEndpoint=https://westus2-0.in.applicationinsights.azure.com/")
