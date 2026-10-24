@@ -54,3 +54,12 @@ seconds under the cap, compliance in 5 s; report in docs/evidence/. Calibration 
 Next: real-key evals (`python -m evals --live`), deterministic reject for "approval granted by <owner>", win32
 skip for the SIGINT test, then a live `make demo` pass of DEMO.md with the pages and `make tag-stable`.
 Blockers / needs Aryen: none.
+
+## 2026-10-24 03:01 PT — live agent, approvals gate, evidence hygiene
+Done: agent JSON via structured outputs (forced tool_choice was a 400: every LLM intake/reply call had been
+offline); live evals 86/90 (docs/evidence/evals-live-20261024.md); live DEMO 1:15-3:00 with the real model
+(docs/evidence/demo-flow-live-20261024.md); approvals now gate going over a cap; evidence runs on fresh scratch
+state; batch backlog reset; "Tuesday 9" asks AM/PM. 247 tests green.
+Next: merge Anuraag's operator console when its PR lands; rerun `make evidence` on the new main (loop does it);
+full DEMO pass on the dashboard + phone pages; `make tag-stable`.
+Blockers / needs Aryen: none.
