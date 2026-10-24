@@ -472,7 +472,7 @@ function gridScene(host) {
     const segs = res.tagList.map((s) => {
       const a = P(COL[0] + FOOT, COL[1] - FOOT, s.z), t = tag(`seg-${s.id}`);
       t.style.setProperty("--c", rgba(s.c, 1));
-      fill(t, s.text, s.w == null ? ` ${s.note}` : ` ${watts(s.w)}${state.kind && s.id !== "_idle" ? ` ${state.kind}` : ""}`);
+      fill(t, s.text, s.w == null ? ` ${s.note}` : ` ${watts(s.w)}${state.kind && s.id !== "_idle" && W >= 520 ? ` ${state.kind}` : ""}`);
       t.style.opacity = s.w == null ? "0.75" : "";
       return { t, ax: a[0], ay: a[1], y: a[1], c: rgba(s.c, 0.8) };
     }).sort((p, q) => p.ay - q.ay);
@@ -511,7 +511,8 @@ function gridScene(host) {
     last = now;
     if ((now - lastTouch) / 1000 > 6 && !drag) yawUser *= Math.exp(-dt * 0.6);
     yaw = yawBase + yawUser + (REDUCED_MOTION ? 0 : 0.22 * Math.sin(time * 0.09));
-    k = Math.min(W / 13, H / 9.4); cx = W * 0.48; cy = H * 0.6; cs = Math.cos(yaw); sn = Math.sin(yaw);
+    const narrow = W < 520;   // a phone: frame the column larger, keep the tags short
+    k = Math.min(W / (narrow ? 11.6 : 13), H / 9.4); cx = W * (narrow ? 0.53 : 0.48); cy = H * (narrow ? 0.63 : 0.6); cs = Math.cos(yaw); sn = Math.sin(yaw);
     const res = build(dt, time);
     draw();
     label(res);
