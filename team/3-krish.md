@@ -5,6 +5,17 @@ remaining phase-2 work moved to machine 2. Your Claude is now the team's **super
 (Aryen, the demo Mac) and machine 2 (Anuraag) and tells them what is wrong. **It never edits code, never
 pushes to main and never merges.** Owns only `team/review/**` and `team/status/3-krish.md`.
 
+## First, once (Sat 02:00): your branch is superseded, do not open a PR from it
+`krish/submission` (incl. bb58fc4 "fit reporter, compare and telemetry to main's event shapes") duplicates work
+machine 1 already merged at 01:55 (`734ad2c` "Merge receipts", plus `2d7991e` wiring /api/report, /api/compare,
+/api/trace). Do not merge or PR it. Instead, as your first supervisor job:
+1. `git diff origin/main origin/krish/submission -- agent/reporter.py scripts/compare.py telemetry/ tests/test_report.py tests/test_compare.py tests/test_telemetry.py`
+2. For every place where your fit is more correct than main's (an event field read wrongly, a number computed
+   differently, a test main lacks), open an issue "[supervisor] receipts: <what>" quoting both versions. Machine 1
+   fixes it on main.
+3. Your status file is yours: open one small PR `krish/review-status` with only `team/status/3-krish.md`.
+4. Then delete the old branches: `git push origin --delete krish/submission krish/telemetry krish/compare krish/reporter krish/emission-factors`.
+
 ## The loop (every ~15 minutes)
 1. `git fetch origin && git checkout -q origin/main` (detached is fine), `make setup` once, then
    `uv run pytest -q`, `uv run python scripts/check_runtime.py`. Check the latest CI runs:

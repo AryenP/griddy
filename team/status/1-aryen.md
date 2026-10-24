@@ -26,3 +26,13 @@ first run green), CLAUDE.md lessons, README setup/account/model/worktree rules, 
 Next: review/merge PRs from 3 and 4 as they open; wire agent + receipts routes; `make calibrate` on
 qwen3:4b-instruct; live `make demo` on current main, then `make tag-stable`.
 Blockers / needs: PRs from machines 3 and 4.
+
+## 2026-10-24 02:05 PT — integration night shift (coordinator loop every 15 min)
+Done: merged receipts (Krish's phase 1, fixed to the live contract), dashboard follow-ups + chat + owner pages,
+agent phase 2 (injection-proof intake, operator ask, Q&A); wired /api/report, /api/compare, /api/trace,
+/api/ask; telemetry at startup; frontend back to Anuraag with the frontend-design + brownout-ui skills.
+201 tests green. krish/submission superseded (see team/3-krish.md).
+Next: clean `make calibrate` on qwen3:4b-instruct with the Mac idle, then `make baseline` and a dispatched run
+for the comparison, then a full DEMO.md pass and `make tag-stable`.
+Blockers / needs Aryen: (1) sudo password once in a new terminal for calibrate + baseline + demo;
+(2) a Console API key (sk-ant-api03-...) in .env via the command given in chat, for the first real-key agent test.
