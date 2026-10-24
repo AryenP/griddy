@@ -77,9 +77,14 @@ running and the page says "agent offline"; plain-form requests still work, becau
 `DEMO.md` failure drills).
 
 **13. Does chat stay fast while you cut power?**
-The promise is time to first token, p95 at most 1.0 s. Measured worst cases are 0.29 s idle and 0.24 s with
-training on the GPU (D 00:22). Full replies take 5-9 s for 256 tokens; that is reply length, not a promise. A
-run with chat traffic during a cap has not been recorded yet, so we do not claim it.
+Yes for speed, with one honest limit on power. The promise is time to first token, p95 at most 1.0 s. Our first
+run with real chat during a cap failed: 4.56 s at worst, because the plan cut chat to one stream on its own
+(run 20261024-094941, D 10:00). After the fix (chat keeps full speed unless the operator agrees; D 10:09) two
+re-runs held it: 0.08 s at worst with two streams back to back, 0.19 s with one person chatting
+(runs 20261024-135433 and 20261024-140239, D 14:16). The limit: on this Mac one streaming reply runs the GPU flat
+out, so busy chat alone is above a 30 % cut; Brownout then asks the operator rather than slowing chat (power stayed
+over that cap). With one person chatting the cap held in 8 s, 47 % below the baseline, though the Mac was also in
+use during that run and its power includes that load (D 14:16).
 
 ## Scale and the customer
 
