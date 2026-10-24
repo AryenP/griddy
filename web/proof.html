@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Brownout proof</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="proof">
+  <header class="top">
+    <div class="claim">
+      <h1>Proof: one utility call, three answers</h1>
+      <p>The same scripted cap on the same Mac, answered three ways: ignore the call, pause everything, or Brownout.
+        Every number is measured by macOS powermetrics and recorded, not live.</p>
+    </div>
+    <div class="controls">
+      <span class="badge warn">recorded, not live</span>
+      <a href="./">back to the live dashboard</a>
+    </div>
+  </header>
+
+  <main>
+    <section class="panel">
+      <div class="receipt-pick">
+        <label>Ignore the call <select id="pick-baseline"></select></label>
+        <label>Pause everything <select id="pick-pause_all"></select></label>
+        <label>Brownout <select id="pick-dispatcher"></select></label>
+        <button id="proof-load" type="button" class="primary">Show these runs</button>
+      </div>
+      <div class="src" id="runs-src">runs not loaded yet</div>
+    </section>
+
+    <section class="panel">
+      <h2>Measured power, aligned at each run's cap start</h2>
+      <p class="cap">Each line is one run's measured watts at 1 Hz; 0 s is the moment its cap began. The red line is
+        Brownout's cap; the other runs' caps are in the legend.</p>
+      <div id="trace" class="proof-trace"><p class="empty">loading the runs…</p></div>
+      <div class="legend" id="trace-legend"></div>
+      <div class="src" id="trace-src"></div>
+    </section>
+
+    <section class="row bottom">
+      <div class="panel">
+        <h2>Brownout vs ignoring the call</h2>
+        <div id="vs-baseline"><p class="empty">loading…</p></div>
+      </div>
+      <div class="panel">
+        <h2>Brownout vs pausing everything</h2>
+        <div id="vs-pause_all"><p class="empty">loading…</p></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>What each run did during the call</h2>
+      <p class="cap">The control actions and shortfall messages each run logged, as recorded.</p>
+      <div id="actions" class="receipt-grid"></div>
+    </section>
+  </main>
+
+  <script src="common.js"></script>
+  <script src="proof.js"></script>
+</body>
+</html>
