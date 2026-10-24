@@ -1,0 +1,156 @@
+/* The dashboard page only (web/index.html), on top of the shared tokens in style.css.
+   One bold thing: the live load trace, measured watts against the utility's cap, the way a control room
+   shows load against a limit. Everything around it stays quiet. Red is the limit and nothing else. */
+
+.d { --plan-line: #8ea3ba; --mark: #6d829b; --trace-h: 340px; }
+
+/* ---------- header ---------- */
+.d-top { display: flex; flex-wrap: wrap; gap: 14px 32px; justify-content: space-between; align-items: flex-end; margin-bottom: 18px; }
+.d-claim h1 { font-size: 2.3rem; font-weight: 700; letter-spacing: 0.01em; }
+.d-claim p { margin: 4px 0 0; font-size: 1.2rem; max-width: 60ch; color: var(--muted); }
+.d-controls { display: grid; gap: 10px; justify-items: end; }
+.d-badges, .d-knobs { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: flex-end; }
+.d-iso { color: var(--muted); display: flex; gap: 8px; align-items: center; }
+.d .keys { width: auto; }
+
+/* segmented control: one choice of a few, the pressed one lit */
+.d-seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--bg); }
+.d-seg button { border: 0; border-radius: 0; background: transparent; color: var(--muted); font-weight: 600; padding: 8px 14px; }
+.d-seg button + button { border-left: 1px solid var(--line); }
+.d-seg button[aria-pressed="true"] { background: var(--panel2); color: var(--text); box-shadow: inset 0 -3px 0 var(--text); }
+.d-seg.d-small button { padding: 4px 10px; font-size: 0.85rem; }
+
+/* the dispatcher is a switch: on is the live colour, off says what runs instead */
+.d-switch { display: inline-flex; align-items: center; gap: 10px; padding: 6px 16px 6px 6px; border-radius: 999px; font-weight: 700; }
+.d-knob { width: 46px; height: 26px; border-radius: 999px; background: var(--off); position: relative; flex: none; transition: background .15s; }
+.d-knob::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: var(--muted); transition: transform .15s, background .15s; }
+.d-switch[aria-checked="true"] .d-knob { background: var(--ok); }
+.d-switch[aria-checked="true"] .d-knob::after { transform: translateX(20px); background: #04110f; }
+.d-switch.off { border-color: var(--warn); color: var(--warn); }
+
+/* ---------- the load panel ---------- */
+.d-main { display: grid; gap: 16px; }
+.d-load { display: grid; grid-template-columns: minmax(300px, 370px) minmax(0, 1fr); gap: 28px; padding: 20px 22px; }
+.d-readout { display: flex; flex-direction: column; min-width: 0; }
+.d-state { margin: 2px 0 0; font-size: 1.55rem; font-weight: 650; line-height: 1.2; display: flex; gap: 10px; align-items: baseline; transition: color .3s; }
+.d-state::before { content: ""; width: 12px; height: 12px; border-radius: 50%; background: currentColor; flex: none; transform: translateY(-1px); }
+.d-state.ok { color: var(--ok); }
+.d-state.over { color: var(--bad); }
+.d-state.stale { color: var(--warn); }
+.d-state.idle { color: var(--text); }
+.d-state.idle::before { background: var(--muted); }
+.d-state-sub { margin: 6px 0 0; color: var(--muted); font-size: 0.95rem; min-height: 1.4em; }
+.d-watts { font-size: clamp(3.4rem, 5.6vw, 5.4rem); font-weight: 600; line-height: 1; letter-spacing: -0.015em; margin: 18px 0 6px; color: #fff; }
+.d-watts small { font-size: 0.26em; font-weight: 500; color: var(--muted); margin-left: 0.4em; letter-spacing: 0; }
+.d-dl { margin: 20px 0 0; padding-top: 14px; border-top: 1px solid var(--line); display: grid; gap: 14px; }
+.d-dl dt { color: var(--muted); font-size: 0.9rem; }
+.d-dl dd { margin: 0; }
+.d-num { font-size: 1.6rem; font-weight: 650; line-height: 1.2; }
+.d-num small { font-size: 0.55em; color: var(--muted); font-weight: 500; margin-left: 0.25em; }
+.d-num.bad { color: var(--bad); }
+
+.d-chart { min-width: 0; display: flex; flex-direction: column; }
+.d-chart-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+.d-chart-head h2 { margin: 0; }
+.d-trace { position: relative; height: var(--trace-h); }
+.d-plot, .d-plot svg { display: block; width: 100%; height: 100%; }
+.d-plot svg { overflow: visible; touch-action: pan-y; }
+.t-grid { stroke: var(--line); stroke-width: 1; }
+.t-grid.t-v { stroke-dasharray: 2 4; }
+.t-axis { fill: var(--muted); font-size: 12px; }
+.t-area { fill: rgba(238, 243, 248, 0.07); }
+.t-over { fill: rgba(255, 91, 91, 0.5); }
+.t-meas { fill: none; stroke: var(--text); stroke-width: 2.2; stroke-linejoin: round; }
+.t-dot { fill: var(--text); stroke: var(--bg); stroke-width: 2; }
+.t-plan { fill: none; stroke: var(--plan-line); stroke-width: 2; stroke-dasharray: 7 5; }
+.t-cap { stroke: var(--bad); stroke-width: 2.5; }
+.t-cap-edge { stroke: var(--bad); stroke-width: 1; stroke-dasharray: 3 3; opacity: 0.7; }
+.t-cap-label { fill: #ffd0d0; font-size: 13px; font-weight: 700; }
+.t-mark line { stroke: var(--mark); stroke-width: 1; stroke-dasharray: 2 3; }
+.t-mark text { fill: var(--muted); font-size: 12px; }
+.t-mark.bad line { stroke: var(--bad); }
+.t-mark.bad text { fill: #ffd0d0; }
+.t-mark.warn text { fill: var(--warn); }
+.t-empty { fill: var(--muted); font-size: 15px; font-style: italic; }
+.d-hover { position: absolute; top: 22px; bottom: 26px; width: 0; border-left: 1px solid rgba(238, 243, 248, 0.55); pointer-events: none; }
+.d-hover-text { position: absolute; top: 8px; left: 8px; white-space: nowrap; background: var(--panel2); border: 1px solid var(--line); border-radius: 6px; padding: 4px 9px; font-size: 0.85rem; }
+.d-hover.flip .d-hover-text { left: auto; right: 8px; }
+
+.legend .d-sw-meas { height: 3px; background: var(--text); }
+.legend .d-sw-plan { height: 0; border-top: 2px dashed var(--plan-line); border-radius: 0; }
+.legend .d-sw-cap { height: 3px; background: var(--bad); }
+.legend .d-sw-over { background: rgba(255, 91, 91, 0.5); }
+.legend .d-sw-mark { width: 0; height: 12px; border-left: 1px dashed var(--muted); border-radius: 0; }
+.legend .d-sw-pin { background: transparent; outline: 2px dashed var(--text); outline-offset: -2px; }
+
+/* ---------- the day: map and inspector ---------- */
+.d-day { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start; }
+.d-map-panel { min-width: 0; }
+.d #map { border-radius: 6px; }
+.d #map:focus-visible { outline-offset: 6px; }
+.d .map-cell, .d .map-bar, .d .map-cap { cursor: pointer; }
+.d .map-cell:hover { filter: brightness(1.25); }
+.d .map-pin { outline: 2px dashed var(--text); outline-offset: 1px; border-radius: 2px; pointer-events: none; z-index: 2; }
+.d .map-bar i.has-bg { background:
+  linear-gradient(to top, transparent var(--bgp), #4a6280 var(--bgp)),
+  repeating-linear-gradient(45deg, #8ea3ba 0 2px, #2c3d52 2px 5px); }
+.d .map-bar.over i.has-bg { background:
+  linear-gradient(to top, transparent var(--bgp), var(--bad) var(--bgp)),
+  repeating-linear-gradient(45deg, #8ea3ba 0 2px, #2c3d52 2px 5px); }
+
+.d-inspect { position: sticky; top: 12px; }
+.d-insp-head { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 1.2rem; margin-bottom: 10px; }
+.d-insp { margin: 0 0 12px; display: grid; gap: 6px; }
+.d-insp div { display: grid; grid-template-columns: 64px 1fr; gap: 8px; }
+.d-insp dt { color: var(--muted); }
+.d-insp dd { margin: 0; }
+.d-insp dd.d-cap { color: #ffd0d0; font-weight: 650; }
+.d-insp-jobs { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 6px; }
+.d-insp-jobs li { border-left: 4px solid var(--c); padding-left: 10px; }
+.d-insp-jobs b { color: var(--c); }
+.d-insp-h { font-size: 0.95rem; color: var(--muted); font-weight: 650; margin: 4px 0 6px; }
+.d-insp-facts { margin: 0 0 8px; padding-left: 18px; font-size: 0.92rem; }
+.d-insp-facts li { margin: 3px 0; }
+.d-insp-nav button { padding: 6px 10px; font-size: 0.9rem; }
+
+/* ---------- the jobs ---------- */
+.d-jobs { display: grid; }
+.d-job { display: grid; grid-template-columns: 150px minmax(0, 1.5fr) minmax(0, 1fr); gap: 4px 20px; padding: 12px 0 12px 14px; border-left: 4px solid var(--c); }
+.d-job + .d-job { border-top: 1px solid var(--line); }
+.d-job-id { display: grid; gap: 6px; align-content: start; justify-items: start; }
+.d-job-id h3 { color: var(--c); font-size: 1.35rem; }
+.d-job-facts { display: flex; flex-wrap: wrap; gap: 2px 18px; align-content: start; }
+.d-job-facts .bar { flex-basis: 100%; margin-top: 6px; }
+.d-job-plan { font-size: 1rem; }
+.d-job-src { grid-column: 2 / -1; }
+
+/* ---------- why this plan, event log ---------- */
+.d-why { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); }
+.d-log .kind { text-transform: none; font-size: 0.8rem; }
+.d-log[data-filter="plan"] li:not([data-group="plan"]):not(.empty),
+.d-log[data-filter="people"] li:not([data-group="people"]):not(.empty),
+.d-log[data-filter="grid"] li:not([data-group="grid"]):not(.empty) { display: none; }
+
+/* ---------- narrower screens ---------- */
+@media (max-width: 1100px) {
+  .d-day { grid-template-columns: 1fr; }
+  .d-inspect { position: static; }
+}
+@media (max-width: 900px) {
+  .d { --trace-h: 260px; }
+  .d-load { grid-template-columns: 1fr; gap: 18px; }
+  .d-controls { justify-items: start; }
+  .d-badges, .d-knobs { justify-content: flex-start; }
+  .d-job { grid-template-columns: 1fr; }
+  .d-job-src { grid-column: auto; }
+}
+@media (max-width: 640px) {
+  .d { --trace-h: 220px; }
+  .d-load { padding: 14px; }
+  .d-claim h1 { font-size: 1.6rem; }
+  .d-claim p { font-size: 1rem; }
+  .d-state { font-size: 1.25rem; }
+  .d-watts { font-size: 3rem; }
+  .d-why { grid-template-columns: 1fr; }
+  .d-seg button { padding: 8px 10px; }
+}
