@@ -99,6 +99,10 @@ the Mac was also in use (counted as outside load, stated in the report).
 - Every price, watt and dollar about the real sites is live or measured, with source and age. The
   neighbourhood power line around them is simulated and labelled "simulated" on every page (DECISIONS 05:45).
 - A human owner approves any deadline slip; refusals are respected and logged with name and time.
+- Reviewed with Microsoft's HVE Core reviewers (Responsible AI, System Architecture) at the Saturday workshop.
+  They found that any phone on the venue network could approve going over the cap; now only this machine or a
+  device that joined through the QR link can act, only a request's owner can answer it, going over the cap takes
+  a plain "yes" (never a model's reading), and every switch records who flipped it and from where (DECISIONS 15:10).
 - Approvals gate the risky action: the running plan holds the utility's cap until the operator approves
   exceeding exactly the caps in force; a refusal keeps the cap and is not asked again.
 - Slowing chat is the operator's call too: chat keeps full concurrency under a cap, and the operator's ask says
