@@ -111,3 +111,21 @@ def test_idle_chat_keeps_full_concurrency_under_cap_busy_chat_does_not():
     # with 4 busy streams chat alone is 8 W: train (12 W GPU / 6 W CPU) can only fit by squeezing chat
     on = [i for i, a in enumerate(busy.assignments["train"]) if a.run]
     assert all(busy.assignments["chat"][i].concurrency < 4 or busy.assignments["train"][i].device == "cpu" for i in on)
+
+
+async def test_solve_in_a_thread_keeps_the_runtimes_sigint_handler():
+    """Regression (Sat 01:35): CP-SAT's own Ctrl-C catching, from a worker thread, left SIGINT at the
+    default action, so Ctrl-C killed the runtime without its shutdown. If this regresses, pytest itself
+    dies with exit code 130, which is loud on purpose."""
+    import asyncio
+    import os
+    import signal as sg
+    loop = asyncio.get_running_loop()
+    got = asyncio.Event()
+    loop.add_signal_handler(sg.SIGINT, got.set)
+    try:
+        await asyncio.to_thread(solve, signal([50.0] * 96), jobs(), POLICY, CAL)
+        os.kill(os.getpid(), sg.SIGINT)
+        await asyncio.wait_for(got.wait(), 2)
+    finally:
+        loop.remove_signal_handler(sg.SIGINT)

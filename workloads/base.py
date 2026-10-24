@@ -19,7 +19,9 @@ from core.config import jobs as JOBS_CFG
 
 WL = JOBS_CFG.get("workloads", {})
 CONTROL_DIR = Path(WL.get("control_dir", "runs/control"))
-CHECKPOINT_DIR = Path(WL.get("checkpoint_dir", "checkpoints"))
+# BROWNOUT_CHECKPOINT_DIR lets calibration run the same workloads on their own state, so measuring
+# does not consume the demo's real backlog (train steps, batch items).
+CHECKPOINT_DIR = Path(os.getenv("BROWNOUT_CHECKPOINT_DIR") or WL.get("checkpoint_dir", "checkpoints"))
 
 
 def write_json(path: Path, data: dict) -> None:

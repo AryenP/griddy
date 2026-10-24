@@ -75,7 +75,8 @@ async def calibrate(out: Path, only: list[str]) -> Calibration:
     meter = PowerMeter(tl)
     await meter.start()
     win = Window(meter)
-    knobs = Knobs(tl)
+    # measure on scratch state: the demo's backlog (train steps, batch items) is not consumed
+    knobs = Knobs(tl, env={"BROWNOUT_CHECKPOINT_DIR": str(tl.dir / "checkpoints")})
     w, warm, cool = CAL["window_s"], CAL["warmup_s"], CAL["cooldown_s"]
     jobs_cfg = {j["id"]: j for j in config.jobs["jobs"]}
     result: dict[str, dict[str, DevicePower]] = {}
@@ -129,7 +130,11 @@ async def calibrate(out: Path, only: list[str]) -> Calibration:
                 await asyncio.to_thread(knobs.wait_for, j, lambda s, d=d: s.get("state") == "running" and s.get("device") == d, 180)
                 await asyncio.sleep(warm)
                 mean, n = await win.measure(w)
-                rate = Knobs.status(j).get("rate")
+                st = Knobs.status(j)
+                if st.get("state") == "done":
+                    raise RuntimeError(f"{j} finished its work inside the {w}s window on {d}; the measurement "
+                                       "would include idle time. Use a larger corpus or a shorter window.")
+                rate = st.get("rate")
                 knobs.pause(j)
                 result[j][d] = DevicePower(delta_w=max(0.0, mean - idle), rate=rate, samples=n)
                 say(f"{j:<5} {d}             {mean:6.2f} W  delta {mean - idle:+6.2f} W  rate {rate} {Knobs.status(j).get('rate_unit')}",
@@ -159,7 +164,7 @@ async def chat_sweep(out: Path, concurrencies: list[int], max_tokens: list[int],
     Records per-request TTFT and total latency from the proxy's own measurements."""
     from workloads.chat_proxy import p95
     tl = Timeline(run_id=time.strftime("%Y%m%d-%H%M%S") + "-chat-sweep")
-    knobs = Knobs(tl)
+    knobs = Knobs(tl, env={"BROWNOUT_CHECKPOINT_DIR": str(tl.dir / "checkpoints")})
     url = f"http://127.0.0.1:{CHAT['proxy_port']}/chat"
     rows = []
     try:
