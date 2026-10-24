@@ -56,9 +56,6 @@ members:
   - SPEC.md
   - DEMO.md
   - KICKOFF.md
-  - web/**
-  - scripts/qr.py
-  - tests/test_web*.py
   - agent/reporter.py
   - scripts/compare.py
   - telemetry/**
@@ -80,13 +77,16 @@ members:
   - tests/fixtures/openadr/**
 - number: 2
   name: Anuraag
-  role: Evals, judging docs, pre-demo preflight (frontend now built by machine 1)
+  role: Frontend (all pages) first, then evals, judging docs, preflight
   github: ARP-source
   emails:
   - anuraagpunnam6@gmail.com
   assignment: team/2-anuraag.md
   branch_prefix: anurag/
   owns:
+  - web/**
+  - scripts/qr.py
+  - tests/test_web*.py
   - evals/**
   - tests/test_evals*.py
   - docs/judging/**
