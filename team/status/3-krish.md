@@ -30,3 +30,8 @@ Blockers / needs: Krish — gh auth login (no PRs or issues opened yet; branches
 ## 2026-10-24 06:42 PT — K5 done, K6 waiting
 Done: K5 on krish/k5-merged-prs; K2 counts updated; hourly summary on krish/review-0642. Next: K6 after the 06:40
 evidence run lands (~07:20). Blockers / needs: Krish — gh auth login (K0: PRs for K1, K2, K3, K5).
+
+## 2026-10-24 08:14 PT — K7 done
+Done: K7 in team/review/2026-10-24.md: K1 #2 #3 #5 #6 #7 #8 #9 fixed, #1 partly (flagged, still counted), #4 open by
+choice; K3 #1 #3 #5 fixed in README/Devpost. New: an idle Mac still receives the simulated line's cut (target below
+its idle floor). Next: K8, K6 on the evidence re-run. Blockers / needs: none from machine 1; gh still not logged in.
