@@ -2,6 +2,8 @@
 
 Every number is computed from the events one run logged (HANDOFF.md):
   power     data.combined_w at data.t (powermetrics, 1 Hz)
+  fleet_power  when laptops joined (fleet/hub.py): the same second's total, the Mac plus each laptop's own
+            battery reading; it replaces that second's power sample, so the cap is judged on the fleet
   grid      data.feed == "signal": price_now ($/MWh) and carbon_now (gCO2/kWh) in effect from then on
   event     a CapEvent (start, duration_s, target_w; % targets already resolved by the executor).
             The agent bridge also logs `event` with data.intake (the parsed request): not a cap.
@@ -81,6 +83,7 @@ class Run:
     shortfalls: list[TimelineEvent] = field(default_factory=list)
     policies: list[TimelineEvent] = field(default_factory=list)
     actions: list[TimelineEvent] = field(default_factory=list)
+    fleet: dict[float, dict] = field(default_factory=dict)              # t -> {mac_w, sites, combined_w}
     start_note: dict | None = None
     first_t: float | None = None
     last_t: float | None = None
@@ -95,7 +98,9 @@ class Run:
             r.first_t, r.last_t = events[0].t, events[-1].t
         for ev in events:
             d = ev.data
-            if ev.kind == "power" and d.get("combined_w") is not None:
+            if ev.kind == "fleet_power" and d.get("combined_w") is not None:
+                r.fleet[float(d["t"])] = d
+            elif ev.kind == "power" and d.get("combined_w") is not None:
                 r.power.append((float(d.get("t", ev.t)), float(d["combined_w"])))
             elif ev.kind == "grid" and d.get("feed") == "signal":
                 r.grid.append(ev)
@@ -115,6 +120,8 @@ class Run:
                 r.actions.append(ev)
             elif ev.kind == "note" and d.get("msg") == "runtime start" and r.start_note is None:
                 r.start_note = {"t": ev.t, **d}
+        if r.fleet:
+            r.power = [(t, float(r.fleet[t]["combined_w"]) if t in r.fleet else w) for t, w in r.power]
         r.power.sort()
         r._grid_t = [g.t for g in r.grid]
         return r
