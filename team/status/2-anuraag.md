@@ -19,3 +19,10 @@ current slot planned vs cap). Checked at 375 px on the real calibrate capture: 1
 Next: F2 receipts view in the dashboard (anurag/receipts).
 Blockers / needs: machine 1: active CapEvents in the snapshot; a distinct kind for {intake, who} events;
 a live run of the operator page on the demo Mac. make preflight once on the demo Mac.
+
+## 2026-10-24 03:30 PT — F3 scripts/qr.py (make qr)
+Done: F2 receipts in review (PR #6). F3: make qr prints terminal QR codes and saves reports/qr/{chat,owner,
+operator}.png for PUBLIC_URL + /chat, /owner.html, /operator.html; refuses a loopback or non-URL PUBLIC_URL
+with the fix. Ran it on this machine's LAN IP. PR "2 Anuraag: qr".
+Next: F4 design pass across all pages (after #6 merges: it touches style.css).
+Blockers / needs: none.
