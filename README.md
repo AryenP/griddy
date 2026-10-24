@@ -7,7 +7,8 @@ curve, load forecast, fuel mix, alerts), schedules every AI job over the next 24
 solver, executes the current slot on real hardware, asks job owners before breaking their deadlines,
 and proves the result with measured power. Built at Cal Hacks 13.0 for the Microsoft Challenge.
 
-Nothing is simulated: every price, watt and dollar on screen is live or measured, with its source and age.
+Every price, watt and dollar about the real sites is live or measured, with its source and age. The
+neighbourhood power line drawn around them is SIMULATED, and every simulated part says so on screen (DECISIONS 05:45).
 
 ### Diesel and "pause everything" are the naive answers. Brownout is the intelligent one.
 
@@ -109,7 +110,7 @@ API contract: [HANDOFF.md](HANDOFF.md). Every decision taken during the build: [
 - Emission factors: IPCC AR5 lifecycle medians (CARB default for imports), cited per fuel in `config/isos.yaml`.
 
 ## Honest scope
-One MacBook (Apple M2 Pro), SoC power (CPU + GPU + ANE) of roughly 1–30 W as `powermetrics` reports
+One MacBook (Apple M2 Pro), SoC power (CPU + GPU + ANE) of about 0.5 W idle to about 26 W for the busiest job (DECISIONS 02:28, 03:10) as `powermetrics` reports
 it, not a wall meter. The feeds, solver, approvals and audit trail are the same loop at 50 MW; the
 knobs there are cluster schedulers and power caps.
 

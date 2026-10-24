@@ -71,7 +71,7 @@ def test_the_evening_peak_calls_for_a_cut_and_counts_diesel(tmp_path):
             n.pending_cap = None
     assert len(caps) == 1                                                  # one call per replay
     ev = caps[0]
-    assert ev.source == "ui" and 10 <= ev.target_pct <= 95 and "simulated" in ev.reason
+    assert ev.source == "simulated" and 10 <= ev.target_pct <= 95 and "simulated" in ev.reason
     peak = max(states, key=lambda x: x["demand_kw"])
     assert peak["simulated"] is True and peak["loading_pct"] > 100 and peak["diesel_kw"] > 0
     assert states[-1]["diesel_kwh"] == pytest.approx(states[-1]["diesel_off_kwh"])   # nobody shed: same diesel
@@ -109,3 +109,46 @@ def test_a_multi_day_forecast_uses_today_only(tmp_path):
     now = (DAY + timedelta(hours=12)).timestamp()
     assert n.homes_kw(19.0, n.ex.signal, now) == pytest.approx(720.0)
     assert n.homes_kw(3.0, n.ex.signal, now) == pytest.approx(380.0)
+
+
+def test_the_cut_is_sized_for_the_worst_point_ahead(tmp_path):
+    # Krish K1 #2: if our sites comply exactly with the call, the line never needs the diesel
+    n = hood(tmp_path)
+    t0 = 4_000_000.0
+    n.start(now=t0)
+    pct = None
+    for s in range(91):
+        w = 20.0 if pct is None else 20.0 * (1 - pct / 100)
+        n.ex.power.append((t0 + s, w))
+        n.tick(now=t0 + s)
+        if n.pending_cap is not None:
+            pct, n.pending_cap = n.pending_cap.target_pct, None
+    assert pct is not None and n.last["diesel_kwh"] == 0.0 and n.last["diesel_off_kwh"] > 0
+
+
+def test_idle_sites_do_not_drive_the_data_centers(tmp_path):
+    # Krish K1 #3: an idle Mac's baseline is meter noise; the simulated data centers hold and the page says so
+    from types import SimpleNamespace
+    n = hood(tmp_path)
+    n.ex.cal = SimpleNamespace(idle_w=0.5)
+    n.cap_baseline_w = 1.2
+    for t in range(10):
+        n.ex.power.append((100.0 + t, 0.4))
+    r, _ = n.response(110.0)
+    assert r == 1.0 and n.nothing_to_shed
+
+
+def test_stopping_the_replay_takes_back_its_call(tmp_path):
+    # Krish K1 #6: the real cap the replay issued is withdrawn when it stops
+    n = hood(tmp_path)
+    t0 = 5_000_000.0
+    n.start(now=t0)
+    for s in range(91):
+        n.ex.power.append((t0 + s, 20.0))
+        n.tick(now=t0 + s)
+        if n.cap_id:
+            break
+    call = n.cap_id
+    assert call and n.pending_cap.source == "simulated"
+    n.stop(now=t0 + 60)
+    assert n.pending_withdraw == call

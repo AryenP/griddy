@@ -10,7 +10,8 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-RUNTIME = ["api", "controller", "dispatcher", "grid", "meter", "workloads", "core", "agent", "telemetry", "web"]
+RUNTIME = ["api", "controller", "dispatcher", "grid", "meter", "workloads", "core", "agent", "telemetry", "web",
+           "fleet", "neighbourhood"]
 PATTERN = re.compile(r"\b(mock|fake|dummy)\w*\b|\brandom\.(random|uniform|randint|choice|gauss|sample)\b|np\.random\.",
                      re.IGNORECASE)
 SUFFIXES = {".py", ".js", ".html", ".yaml", ".yml", ".json"}

@@ -248,3 +248,20 @@ def test_fleet_seconds_are_judged_on_the_fleet_total(tmp_path):
     p = tmp_path / "timeline.jsonl"
     p.write_text("".join(_json.dumps(e) + "\n" for e in ev))
     assert [w for _, w in Run.load(p).power] == [10.0, 10.0, 16.0, 16.0, 16.0]
+
+
+def test_withdrawn_cap_and_fleet_changes_are_in_the_report(tmp_path):
+    import json as _json
+
+    from agent.reporter import Run, build_report
+    ev = [{"t": 0.0, "kind": "note", "data": {"msg": "runtime start", "dispatcher_enabled": True}},
+          {"t": 1.0, "kind": "event", "data": {"id": "cap-x", "source": "simulated", "start": 10.0, "duration_s": 600,
+                                               "target_w": 5.0}},
+          {"t": 30.0, "kind": "note", "data": {"msg": "re-solve: fleet lap1 left during a cap", "trigger": "fleet"}},
+          {"t": 40.5, "kind": "note", "data": {"msg": "cap cap-x withdrawn: test", "cap_withdrawn": "cap-x"}}]
+    ev += [{"t": float(t), "kind": "power", "data": {"t": float(t), "combined_w": 4.0}} for t in range(0, 60)]
+    p = tmp_path / "timeline.jsonl"
+    p.write_text("".join(_json.dumps(e) + "\n" for e in sorted(ev, key=lambda e: e["t"])))
+    assert Run.load(p).event_window() == (10.0, 40.5)
+    r = build_report(p)
+    assert any("fleet changed" in m for m in r.shortfalls)

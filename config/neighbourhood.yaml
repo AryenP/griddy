@@ -14,7 +14,9 @@ data_centers:
   flexible_share: 0.6          # the part of each data center's load Brownout can move, like our own jobs
 diesel_kw: 600                 # backup generator: covers whatever the line cannot carry
 cap_trigger_pct: 95            # the utility calls for a cut when the line reaches this share of its limit
-cap_margin_pct: 8              # and asks for enough to land this far below the limit
+cap_margin_pct: 8              # and asks for enough to land this far below the limit at the worst point ahead
+min_flexible_w: 3              # our sites must have this much load above idle at the call for the simulated
+                               # data centers to follow them; below it they hold (an idle Mac's watts are noise)
 scenario:
   name: evening peak
   hours: [16, 21]              # the stretch of today's load forecast that is replayed

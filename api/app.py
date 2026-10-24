@@ -102,6 +102,9 @@ class Runtime:
         while True:
             try:
                 self.neighbourhood.tick()
+                gone, self.neighbourhood.pending_withdraw = self.neighbourhood.pending_withdraw, None
+                if gone is not None:
+                    await self.executor.remove_event(gone, "the simulated neighbourhood's replay ended")
                 ev, self.neighbourhood.pending_cap = self.neighbourhood.pending_cap, None
                 if ev is not None:
                     await self.executor.add_event(ev)

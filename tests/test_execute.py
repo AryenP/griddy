@@ -187,3 +187,13 @@ async def test_idle_floor_never_rises_and_needs_quiet_chat(rig, monkeypatch):
         clock["t"] += 1
         e.on_power(PowerReading(t=clock["t"], combined_w=0.2))
     assert e.idle_drift() is None                             # chat has traffic: not an idle reading
+
+
+async def test_a_cap_can_be_withdrawn(rig):
+    e, clock, tmp = rig
+    await e.on_signal(signal([50.0] * 96))
+    ev = CapEvent(source="simulated", start=SLOTS[0], duration_s=3600, target_w=9.5)
+    s = await e.add_event(ev)
+    assert s.caps_w[0] == pytest.approx(9.5)
+    s = await e.remove_event(ev.id, "test")
+    assert s.caps_w[0] is None and await e.remove_event(ev.id, "again") is None

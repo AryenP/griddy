@@ -245,3 +245,16 @@ neighbourhood work and machine 1's dashboard redesign (`web/dashboard.css`, `d-`
 looking the same: check it at 1440 px against `make demo` or the fixtures. If you want the dashboard itself to
 change (the 3D grid view), put screenshots and a short description in `team/status/2-anuraag.md` and machine 1
 will build it in its lane. Done when: the PR is green and merged, and the dashboard is unchanged.
+
+### 21. Fix the judging docs from Krish's number audit (team/review/0545-number-audit.md), do first, small
+- `docs/judging/criteria.md:23` and `compliance.md:14` quote the 03:13 first pass (69 %); `criteria.md:28` says the
+  re-run is "to be measured". Replace with: the three-policy run of record is still to be measured (the 06:40 run
+  was void, the lid was closed: DECISIONS 08:00); the 03:47 re-run held the cap 99 % for Brownout and pause
+  everything and 0 % for ignore the call, but on a polluted calibration (DECISIONS 04:25), so it is not the record.
+- `criteria.md:24` "chat stays usable during a cap": the sources (D 00:22, D 01:50) had no cap. Say what they
+  measured (time to first token with and without training, no cap) until a run with chat under a cap exists.
+- Power range: use "about 0.5 W idle to about 26 W for the busiest job (DECISIONS 02:28, 03:10)" in
+  `criteria.md:29` and `production.md:3`, as README and Devpost now do.
+- Say plainly in `responsible.md` and `criteria.md` that the neighbourhood line is simulated and labelled
+  (DECISIONS 05:45), and that the measured numbers never include it.
+Done when: merged, and Krish's next audit (K6) finds no mismatch in docs/judging.
