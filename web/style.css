@@ -73,21 +73,17 @@ button.primary { background: var(--current); border-color: var(--current); color
 button.danger { background: transparent; border-color: var(--limit); color: var(--limit); }
 button.danger:hover { background: var(--limit); color: var(--on-limit); }
 .keys { color: var(--ink-muted); font-size: 13px; width: 100%; text-align: right; }
-kbd { border: 1px solid var(--edge); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; font: 600 0.85em var(--font); color: var(--ink); background: var(--glass-raised); }
+kbd { border: 1px solid var(--hairline); border-radius: var(--radius-cell); padding: 0 5px; font: 600 0.85em var(--font); color: var(--ink-muted); }
 
-/* ---------- status pills: a dot and a word, never colour alone ---------- */
-.badge {
-  display: inline-flex; align-items: center; gap: 7px; min-height: 28px; padding: 3px 12px 3px 10px; border-radius: var(--radius-pill);
-  font-size: 13px; font-weight: 500; line-height: 1.35; white-space: nowrap; color: var(--ink-muted);
-  background: var(--glass-raised); border: 1px solid var(--hairline);
-}
-.badge::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex: none; }
-.badge.ok, .state-running { color: var(--within); }
-.badge.ok::before, .state-running::before { animation: beat 2s ease-out infinite; }
-.badge.warn, .state-paused, .state-stopped { color: var(--price); border-color: var(--price); }
-.badge.bad { color: var(--on-limit); background: var(--limit); border-color: var(--limit); box-shadow: var(--glow-limit); font-weight: 600; }
+/* ---------- status: a word and a small dot, coloured only when it matters. No pills, no fills, no glow ---------- */
+.badge { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; font-size: 13px; font-weight: 500; line-height: 1.35; color: var(--ink-muted); }
+.badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--ink-quiet); flex: none; }
+.badge.ok::before, .state-running::before { background: var(--within); }
+.badge.warn, .state-paused, .state-stopped { color: var(--price); }
+.badge.warn::before, .state-paused::before, .state-stopped::before { background: var(--price); }
+.badge.bad { color: var(--limit); font-weight: 600; }
+.badge.bad::before { background: var(--limit); }
 .state-done { color: var(--ink-muted); }
-@keyframes beat { 0% { box-shadow: 0 0 0 0 currentColor; } 70%, 100% { box-shadow: 0 0 0 7px transparent; } }
 
 /* ---------- panels: glass over the black; corner ticks are the status lamp ---------- */
 main { display: grid; gap: var(--space-5); }
@@ -166,7 +162,7 @@ body.phone { max-width: 760px; padding: var(--space-4) var(--space-4) var(--spac
 .phone-top { margin-bottom: var(--space-4); }
 .phone-top h1 { font-size: 26px; }
 .phone-top .cap { margin: var(--space-2) 0; }
-.badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: var(--space-2); }
+.badges { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: var(--space-3); }
 .phone main { gap: var(--space-4); }
 .phone .panel { padding: var(--space-4); }
 .phone textarea, .phone input, .phone select { width: 100%; font-size: 17px; min-height: 46px; }
@@ -194,9 +190,9 @@ body.phone { max-width: 760px; padding: var(--space-4) var(--space-4) var(--spac
 .board { display: grid; gap: var(--space-3); }
 .ask {
   position: relative; border: 1px solid var(--price); border-radius: var(--radius-panel); padding: var(--space-4); background: var(--glass-raised);
-  box-shadow: 0 0 0 1px rgba(255, 181, 71, 0.15), 0 0 32px -8px rgba(255, 181, 71, 0.35); animation: arrive .6s cubic-bezier(.2, .8, .2, 1);
+  animation: arrive .6s cubic-bezier(.2, .8, .2, 1);
 }
-.ask.closed { border-color: var(--hairline); box-shadow: none; background: var(--glass); }
+.ask.closed { border-color: var(--hairline); background: var(--glass); }
 .ask.expired { opacity: 0.6; }
 .ask-head { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-2); align-items: center; }
 .ask-head b { font-size: 19px; font-weight: 600; }
@@ -239,7 +235,7 @@ textarea.mono { font-family: ui-monospace, "Cascadia Mono", Menlo, monospace; fo
 .nb-grid .bar.over span { background: var(--limit); }
 #events { display: grid; gap: var(--space-3); }
 .ev { border: 1px solid var(--hairline); border-radius: var(--radius-panel); padding: var(--space-3) var(--space-4); background: var(--glass-raised); }
-.ev-active { border-color: var(--price); box-shadow: 0 0 32px -10px rgba(255, 181, 71, 0.4); }
+.ev-active { border-color: var(--price); }
 .ev-ended { opacity: 0.75; }
 .ev-head { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-2); align-items: center; font-size: 17px; }
 .ev-clock { margin-left: auto; }
