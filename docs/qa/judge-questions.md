@@ -77,15 +77,14 @@ running and the page says "agent offline"; plain-form requests still work, becau
 `DEMO.md` failure drills).
 
 **13. Does chat stay fast while you cut power?**
-Not yet proven, and our one recorded try failed. The promise is time to first token, p95 at most 1.0 s; without
-a cap the worst measured is 0.29 s idle and 0.24 s with training on the GPU (D 00:22). In run 20261024-094941 two
-people chatted while a cap of 19.68 W held: the machine averaged 26.46 W and never got under it, and time to first
-token went from 0.20 s before the cap to 4.56 s at worst (D 10:00, `docs/evidence/20261024-094941.md`). Why: the
-plan priced chat per stream from a 4-stream calibration, but one busy stream already draws ~20 W on the GPU, so it
-cut chat to one stream on its own and the two users queued. That cut belongs to the operator, not the solver.
-The fix (b06cd51, D 10:09): chat keeps full speed unless the operator approves degrading it, and chat watts follow
-a measured curve by busy streams. It is not measured yet: the re-run needs the demo Mac's sudo. Until it passes,
-we do not claim chat keeps its SLA under a cap.
+Yes for speed, with one honest limit on power. The promise is time to first token, p95 at most 1.0 s. Our first
+run with real chat during a cap failed: 4.56 s at worst, because the plan cut chat to one stream on its own
+(run 20261024-094941, D 10:00). After the fix (chat keeps full speed unless the operator agrees; D 10:09) two
+re-runs held it: 0.08 s at worst with two streams back to back, 0.19 s with one person chatting
+(runs 20261024-135433 and 20261024-140239, D 14:16). The limit: on this Mac one streaming reply runs the GPU flat
+out, so busy chat alone is above a 30 % cut; Brownout then asks the operator rather than slowing chat (power stayed
+over that cap). With one person chatting the cap held in 8 s, 47 % below the baseline, though the Mac was also in
+use during that run and its power includes that load (D 14:16).
 
 ## Scale and the customer
 
