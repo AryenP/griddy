@@ -112,6 +112,16 @@ function renderLoad() {
   state.textContent = text;
   state.className = `d-state ${cls}`;
   detail.textContent = sub;
+  // The scale-free number: how far measured power sits below its own pre-cap baseline, the same at 20 W or 50 MW.
+  const ratio = $("cap-ratio"), base = st.band && isFinite(st.band.start) ? preCapBaseline(st.band.start) : null;
+  if (base && st.mean != null) {
+    ratio.hidden = false;
+    const pct = 100 * (1 - st.mean / base);
+    setHTML(ratio, html`<b>${fixed(Math.abs(pct), 0)}%</b> ${pct >= 0 ? "below" : "above"} the 60 s before the cap
+      <span class="src">(${fixed(base, 1)} W then, ${fixed(st.mean, 1)} W now; measured)</span>`);
+  } else {
+    ratio.hidden = true;
+  }
   drawLoadTrace($("load-trace"), bands, S.dispatcherEnabled === false ? null : S.schedule);
   $("load-src").textContent = "measured by macOS powermetrics (combined CPU + GPU + ANE, 1 Hz)" +
     (S.schedule && S.dispatcherEnabled !== false ? " · plan line: the current schedule's calibrated watts" : "") +
