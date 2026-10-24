@@ -31,6 +31,7 @@ class AgentBridge:
         self.llm = get_llm()
         self.approvals: dict[str, ApprovalRequest] = {}
         self.refused: dict[str, str] = {}        # job id -> the owner's reason for refusing a slip
+        self.cap_refused: set[frozenset[str]] = set()   # caps the operator refused to go over: don't re-ask
         self.explanation: Explanation | None = None
         self.snapshot = None                     # set by the Runtime: () -> the /api/state dict
         executor.schedule_listeners.append(self.on_schedule)
@@ -71,7 +72,8 @@ class AgentBridge:
                 self.approvals[req.id] = req
                 self._log(req, schedule_id=sched.id)
         cap = next((sf for sf in sched.shortfalls if sf.kind == "cap"), None)
-        if cap and not slips:
+        key = self.ex.cap_key()
+        if cap and not slips and key not in self.ex.cap_overrides and key not in self.cap_refused:
             live_jobs.add(CAP_JOB)
             if not self._open_for(CAP_JOB):
                 req = await negotiator.draft_operator_ask(sched.shortfalls, sched, self.llm, self.ex.policy.operator,
@@ -99,7 +101,12 @@ class AgentBridge:
         if decision.decision == "unclear":
             return decision, None
         if req.job_id == CAP_JOB:
-            req.status = "approved" if decision.decision == "approve" else "refused"
+            if decision.decision == "approve":
+                req.status = "approved"
+                sched = await self.ex.approve_over_cap(who)          # only now may the plan exceed the cap
+            else:
+                req.status = "refused"                               # the cap keeps holding; deadlines slip
+                self.cap_refused.add(self.ex.cap_key())
         elif decision.decision == "approve":
             req.status = "approved"
             miss = next((m for m in (self.ex.schedule.deadline_misses if self.ex.schedule else [])

@@ -39,7 +39,9 @@ async def test_offline_refused_slip_offers_exactly_the_proved_options(refused_sl
     assert m.startswith("ops: the power cap cannot be held.")
     assert f"{cap.amount:.2f} W" in m and "Approve going over the cap" in m and "reply no" in m
     assert "refused by its owner" in m and "9 AM Monday" in m and "train" in m
-    assert "cap is 10.0 W" in m
+    # the running plan holds the cap while the operator decides, so no slot is described as over it
+    assert all(w <= c + 1e-6 for w, c in zip(s.planned_w, s.caps_w) if c is not None)
+    assert "plan needs" not in m
     # every number is copied from the solver's facts or the owner's words
     floor = min(w for w, c in zip(s.planned_w, s.caps_w) if c is not None)
     facts = [cap.message, REFUSED["train"], f"{cap.amount:.2f}", f"{max(s.planned_w):.1f}", f"{floor:.1f}",

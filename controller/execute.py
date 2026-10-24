@@ -38,6 +38,7 @@ class Executor:
         self.events: list[CapEvent] = []
         self.job_changes: dict[str, dict] = {}
         self.hard_deadlines: set[str] = set()    # owner refused a slip: the deadline may not bend
+        self.cap_overrides: set[frozenset[str]] = set()   # operator approved going over these caps
         self.needs_approval: list[str] = []      # approval request ids the current plan is waiting on
         self.schedule_listeners: list = []       # async callbacks(schedule), e.g. the agent bridge
         self.finished: set[str] = set()
@@ -114,6 +115,20 @@ class Executor:
         v = Knobs.status("chat").get("busy_60s")
         return float(v) if v is not None else None
 
+    def cap_key(self) -> frozenset[str]:
+        """Identifies the caps in force now: the active CapEvents plus a policy cap, if any. An operator's
+        approval to go over the cap applies to exactly this set and lapses when it changes."""
+        ids = {e.id for e in self.active_events()}
+        if self.policy.power_cap_w is not None:
+            ids.add(f"policy:{self.policy.power_cap_w}")
+        return frozenset(ids)
+
+    async def approve_over_cap(self, who: str) -> Schedule | None:
+        key = self.cap_key()
+        self.cap_overrides.add(key)
+        self.tl.log("policy", reason="operator approved going over the cap", who=who, caps=sorted(key))
+        return await self.resolve("over-cap approved")
+
     def active_events(self) -> list[CapEvent]:
         now = time.time()
         return [e for e in self.events if e.start.timestamp() + e.duration_s > now]
@@ -124,7 +139,8 @@ class Executor:
         async with self._lock:
             sig, jobs, events = self.signal, self.jobs(), self.active_events()
             sched = await asyncio.to_thread(solve, sig, jobs, self.policy, self.cal, events, self.baseline_w(),
-                                            self.chat_busy(), frozenset(self.hard_deadlines))
+                                            self.chat_busy(), frozenset(self.hard_deadlines),
+                                            self.cap_key() in self.cap_overrides)
             self.schedule = sched
             self._last_solve_t = time.time()
             self.tl.log("schedule", reason=reason, **sched.model_dump(mode="json"))
