@@ -224,3 +224,17 @@ async def test_a_cap_can_be_withdrawn(rig):
     assert s.caps_w[0] == pytest.approx(9.5)
     s = await e.remove_event(ev.id, "test")
     assert s.caps_w[0] is None and await e.remove_event(ev.id, "again") is None
+
+
+async def test_an_operators_answer_does_not_carry_to_a_later_cap_of_the_same_watts(rig):
+    """Krish K10 #3: a policy cap is keyed by its watts; cleared and set again, it is a new call and is asked again."""
+    e, clock, _ = rig
+    await e.on_signal(signal([50.0] * 96))
+    await e.set_policy(power_cap_w=6.0)
+    await e.approve_over_cap("ops")
+    await e.hold_cap("ops", "no")
+    key = e.cap_key()
+    assert key in e.cap_overrides and key in e.cap_held
+    await e.set_policy(power_cap_w=None)
+    await e.set_policy(power_cap_w=6.0)
+    assert e.cap_key() == key and key not in e.cap_overrides and key not in e.cap_held

@@ -265,7 +265,7 @@ print WARN "laptops listed but FLEET_TOKEN is empty: anyone on the Wi-Fi could p
 "set FLEET_TOKEN in .env and give it to each laptop (fleet/README.md)". Never print the token. Test with a
 monkeypatched config. Done when: merged.
 
-### 23. Phones join before they act (Sat 15:10, from Microsoft's HVE Core review), do first, small
+### 23. Phones join before they act (Sat 14:45, from Microsoft's HVE Core review), do first, small
 The workshop's review found that any phone on the venue Wi-Fi could approve going over the cap or flip the dispatcher.
 Machine 1 gated those routes (HANDOFF "Who may act"): this Mac is trusted; any other device must join once through
 `/join?t=<token>&next=<page>`, which sets a cookie. Your side:
@@ -278,4 +278,12 @@ Machine 1 gated those routes (HANDOFF "Who may act"): this Mac is trusted; any o
    403 "this request is for <owner>", 429 "too many requests from this device; wait a minute".
 Done when: `make qr`, scan the owner QR on a phone, refuse a slip, and the reply lands (200); a phone that opened
 `/owner.html` directly gets the 401 sentence; tests cover the QR URLs.
+
+### 24. Preflight fails a calibration without chat's curve (Krish K10 #1, Sat 14:57), small
+`scripts/preflight.py` check_calibration passes any calibration under 12 h old. Since b06cd51 the solver prices chat
+from `calibration.jobs.chat.gpu.streams_w`; a calibration without it falls back to the per-stream line that failed
+at 09:49 (DECISIONS 10:00). FAIL when `streams_w` is missing or has fewer than two points, with the fix in the
+message ("run `make calibrate`: chat is measured at 1, 2 and 4 streams"). Also in `web/approvals.js` `shortfallFacts`:
+an "sla" shortfall's amount is watts ("slowing chat saves about N W"), not seconds (K10 #4).
+Done when: a test feeds preflight the old calibration shape and gets FAIL, and the current one gets PASS.
 

@@ -73,6 +73,7 @@ class AgentBridge:
                 self._log(req, schedule_id=sched.id)
         cap = next((sf for sf in sched.shortfalls if sf.kind == "cap"), None)
         key = self.ex.cap_key()
+        self.cap_refused &= {key}                # a refusal covers the caps in force then, not a later same-valued one
         if cap and not slips and key not in self.ex.cap_overrides and key not in self.cap_refused:
             live_jobs.add(CAP_JOB)
             if not self._open_for(CAP_JOB):

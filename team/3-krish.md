@@ -98,6 +98,27 @@ the answer: what we measured (run 20261024-094941: cap 19.68 W, mean 26.46 W, ne
 4.56 s worst during), why (chat priced per stream; the plan degraded chat without the operator), what changed
 (b06cd51), and that the re-run waits for Aryen's sudo. No claim that chat keeps its SLA under a cap until that run.
 
+### Note from machine 1 (14:57): K6, K10, K11 merged; your findings fixed
+README deadline row, the steps windows, DEMO 1:30 and the video's promise, the Devpost citations (14:16, "not in the
+report"), the reporter's repeated shortfalls (worst once) and its missing outside-load caveat, and answers scoped to
+the caps they were given for (K10 #3). K10 #1 (preflight) and #4 (approvals.js unit) went to Anuraag as task 24.
+
+### K12 (14:57). Review the Microsoft HVE Core fixes (about 40 min)
+At the workshop Microsoft's HVE Core reviewers found any phone on the venue Wi-Fi could approve going over the cap.
+Fixed in 8739b90 (DECISIONS 14:45, HANDOFF "Who may act"): `api/access.py` (this Mac trusted; others join via
+`/join?t=`; token in runs/.operator_token), `api/routes.py` (every action route), `api/agent_bridge.py` (only the
+request's owner answers; `parse_cap_reply` plain yes). Look for: a route that changes state without
+`access.require`; a way to get the cookie without the token; the open redirect in `/join`'s `next`; a header or IP
+spoof that passes `is_this_machine` (X-Forwarded-For? `request.client` behind uvicorn); the rate limit keyed so one
+device can starve another; a reply path that still reaches the LLM for `power_cap`. One numbered line each in
+`team/review/2026-10-24.md`.
+
+### K13 (14:57). Check the grid-scale estimate's sources (about 20 min)
+`config/site.yaml` `scale` and the dashboard's "At grid scale" block (DECISIONS 14:53) cite ERCOT's September 2026
+operational overview (p. 8: 4,132 MW observed of 9,456 MW approved to energize) and Utility Dive (5 Aug 2026: 474
+GW queue, about 90 % data centers). Open both links, check every number and date against the page, and check the
+arithmetic (4,132 x 31.2 % against ERCOT's live demand). Write mismatches in the review file; machine 1 fixes them.
+
 ### K4. If one of the Windows laptops is yours
 Tell Aryen in your status file. After 07:20 you may be asked to join it to the demo: `fleet/README.md`.
 

@@ -3,7 +3,7 @@
   20.85 W, 0 % of seconds under the cap; pause everything 0.80 W, 99 %, 19 train steps; Brownout 14.34 W, 93 %,
   compliant in 12 s, 1575 steps (about 83x pause everything). In README and Devpost, reports in docs/evidence/.
   Caveat stated: that calibration read idle at 3.81 W (0.80 W measured with everything paused).
-- **Chat during a cap (DECISIONS 10:00, then 14:20):** the first run failed (time to first token 4.56 s). After the
+- **Chat during a cap (DECISIONS 10:00, then 14:16):** the first run failed (time to first token 4.56 s). After the
   fix: two busy streams, 0.08 s worst under the cap, power over it (busy chat alone is above a 30 % cut; operator
   asked); one person chatting, cap held in 8 s, 80 % of capped seconds, 0.19 s (Mac in use during it, stated).
 - **Tag:** demo-stable-3 (09:48). It predates b06cd51; re-tag after the chat re-run and a live check.

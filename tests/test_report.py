@@ -265,3 +265,24 @@ def test_withdrawn_cap_and_fleet_changes_are_in_the_report(tmp_path):
     assert Run.load(p).event_window() == (10.0, 40.5)
     r = build_report(p)
     assert any("fleet changed" in m for m in r.shortfalls)
+
+
+def test_repeated_shortfalls_show_the_worst_once_and_outside_load_is_a_caveat(tmp_path):
+    """Krish 14:22 (run 20261024-140239): 12 re-solves logged the same cap shortfall with different amounts, and the
+    report never said the dispatcher had counted 6-12 W of load outside the plan. TEST FIXTURE timeline."""
+    ev = [(T0 - 5, "note", {"msg": "runtime start", "dispatcher_enabled": True}),
+          (T0 + 59, "event", {"id": "cap-1", "source": "ui", "start": _iso(T0 + 60), "duration_s": 30,
+                              "target_w": 10.0, "reason": "test", "raw": ""})]
+    ev += [_power(T0 + i, 20.0 if i < 60 else 9.0) for i in range(90)]
+    for i, amount in enumerate([10.13, 16.44, 12.0]):
+        ev.append((T0 + 61 + i, "shortfall", {"shortfall_kind": "cap", "amount": amount,
+                                              "message": f"keeping every deadline, power exceeds the cap by up to {amount:.2f} W"}))
+    ev += [(T0 + 70, "note", {"msg": "re-solve: load outside the plan 0.00 -> 8.20 W under the cap", "trigger": "background",
+                              "background_w": 8.2}),
+           (T0 + 80, "note", {"msg": "re-solve: load outside the plan 8.20 -> 11.55 W under the cap", "trigger": "background",
+                              "background_w": 11.55})]
+    rep = build_report(_write(tmp_path, ev))
+    caps = [s for s in rep.shortfalls if "exceeds the cap" in s]
+    assert caps == ["keeping every deadline, power exceeds the cap by up to 16.44 W"]
+    assert any("load outside the plan up to 11.55 W was measured and counted against the cap (2 re-solve(s)" in s
+               for s in rep.shortfalls)
