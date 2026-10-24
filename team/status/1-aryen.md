@@ -229,3 +229,6 @@ X-Brownout-Fleet-Token (fleet/agent.py --token); without it nothing changes. Tes
 activity since 08:14. Lid still closed (08:35).
 Next: evidence re-run when the lid opens; then live-check the K1 fixes and re-tag.
 Blockers / needs Aryen: open the lid; before laptops join, put a FLEET_TOKEN in .env and give it to whoever runs a laptop.
+
+## 2026-10-24 09:15 PT — evidence started at 2ed6064
+Re-run of the final evidence (make evidence3): lid open, on battery at 100% (macOS reports battery power), nothing else running; the loop is silent until it finishes.
