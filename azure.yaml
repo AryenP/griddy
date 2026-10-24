@@ -1,0 +1,8 @@
+# Azure Developer CLI: `azd auth login`, then `azd provision` creates Application Insights for the
+# OpenTelemetry trace (telemetry/). No app is deployed: the demo runs on the Mac. After provisioning,
+# copy APPLICATIONINSIGHTS_CONNECTION_STRING from `azd env get-values` into .env.
+name: brownout
+infra:
+  provider: bicep
+  path: infra
+  module: main
