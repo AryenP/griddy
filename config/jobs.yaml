@@ -17,7 +17,7 @@ jobs:
     checkpoint_interval_s: 60
     device: either
     deadline: "2026-10-26T09:00:00-07:00"
-    required_runtime_min: 90        # at full GPU speed; the solver spreads it into cheap slots
+    target_steps: 95000             # the owner's ask; runtime = remaining steps / measured GPU steps/s
   - id: batch
     kind: droppable
     owner: data-eng
