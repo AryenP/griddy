@@ -217,3 +217,19 @@ def test_pause_all_deadline_is_projected_from_its_own_policy(tmp_path, monkeypat
     met, why = deadlines(paused, 30)["train"]
     # paused until the cap ends at 110 s, then 600 steps at 10/s -> 170 s > due 150 s
     assert met is False and "projected" in why
+
+
+def test_job_finished_before_the_window_is_called_out(tmp_path):
+    import json as _json
+
+    from agent.reporter import build_report
+    ev = [{"t": 0.0, "kind": "note", "data": {"msg": "runtime start", "dispatcher_enabled": False}},
+          {"t": 1.0, "kind": "state", "data": {"job": "batch", "state": "running", "items_done": 10}},
+          {"t": 5.0, "kind": "state", "data": {"job": "batch", "state": "done", "items_done": 100}}]
+    ev += [{"t": float(t), "kind": "power", "data": {"t": float(t), "combined_w": 3.0}} for t in range(0, 30)]
+    p = tmp_path / "timeline.jsonl"
+    p.write_text("".join(_json.dumps(e) + "\n" for e in sorted(ev, key=lambda e: e["t"])))
+    r = build_report(p, window=(10.0, 29.0))
+    assert r.work_done.get("batch") == 0
+    assert any("batch had already finished" in m and "0 by construction" in m for m in r.shortfalls)
+    assert not any("already finished" in m for m in build_report(p, window=(0.0, 29.0)).shortfalls)
