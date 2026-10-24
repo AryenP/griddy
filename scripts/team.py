@@ -11,7 +11,8 @@ Identity order: --member N, $BROWNOUT_MEMBER, .claude/member.local (written by -
 from __future__ import annotations
 
 import argparse
-import fnmatch
+import functools
+import re
 import os
 import subprocess
 import sys
@@ -22,6 +23,33 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 ROSTER = ROOT / "team" / "roster.yaml"
 LOCAL = ROOT / ".claude" / "member.local"
+
+
+@functools.lru_cache(maxsize=None)
+def _glob_re(glob: str) -> re.Pattern:
+    """Path globs: `*` and `?` stay inside one folder, `**` crosses folders, `[..]` is a class."""
+    out, i = "", 0
+    while i < len(glob):
+        c = glob[i]
+        if glob.startswith("**/", i):
+            out += "(?:.*/)?"; i += 3; continue
+        if glob.startswith("**", i):
+            out += ".*"; i += 2; continue
+        if c == "*":
+            out += "[^/]*"
+        elif c == "?":
+            out += "[^/]"
+        elif c == "[":
+            j = glob.index("]", i)
+            out += glob[i:j + 1]; i = j + 1; continue
+        else:
+            out += re.escape(c)
+        i += 1
+    return re.compile(out + r"\Z")
+
+
+def match(path: str, glob: str) -> bool:
+    return bool(_glob_re(glob).match(path))
 
 
 def roster() -> dict:
@@ -70,11 +98,11 @@ def by_branch(branch: str) -> dict | None:
 
 
 def owners(path: str) -> list[dict]:
-    return [m for m in roster()["members"] if any(fnmatch.fnmatch(path, g) for g in m["owns"])]
+    return [m for m in roster()["members"] if any(match(path, g) for g in m["owns"])]
 
 
 def allowed(me: dict, path: str) -> bool:
-    return path in roster().get("shared_append_only", []) or any(fnmatch.fnmatch(path, g) for g in me["owns"])
+    return path in roster().get("shared_append_only", []) or any(match(path, g) for g in me["owns"])
 
 
 def changed_files(base: str) -> list[str]:

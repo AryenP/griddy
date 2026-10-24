@@ -4,10 +4,10 @@ New session on any machine? Start at `KICKOFF.md` in the repo root.
 
 | # | Who | Role | GitHub | Branches | Assignment |
 |---|---|---|---|---|---|
-| 1 | Aryen | Runtime and integration, **the demo Mac** | AryenP | `main` | [1-aryen.md](1-aryen.md) |
-| 2 | Anuraag | Frontend: dashboard, phone pages, receipts screen | ARP-source | `anurag/<task>` | [2-anuraag.md](2-anuraag.md) |
-| 3 | Krish | Proof and production: report, comparison, telemetry, Azure, submission | krishteli | `krish/<task>` | [3-krish.md](3-krish.md) |
-| 4 | Arumalla | Agent layer: LLM, intake, negotiator, explainer | MauryaAru | `arumalla/<task>` | [4-arumalla.md](4-arumalla.md) |
+| 1 | Aryen | **The demo Mac**: runtime, integration, frontend, agent (with subagents) | AryenP | `main` | [1-aryen.md](1-aryen.md) |
+| 2 | Anuraag | Evals, judging docs, pre-demo preflight | ARP-source | `anurag/<task>` | [2-anuraag.md](2-anuraag.md) |
+| 3 | Krish | Supervisor: reviews PRs, CI, contract drift and claims; never edits code | krishteli | `krish/review-<HHMM>` | [3-krish.md](3-krish.md) |
+| 4 | Arumalla | Paused Sat 01:45 (agent layer phase 1 merged; machine 1 continues it) | MauryaAru | — | [4-arumalla.md](4-arumalla.md) |
 
 How the pieces meet:
 ```
