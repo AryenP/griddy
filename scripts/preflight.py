@@ -287,12 +287,16 @@ def check_oasis(ctx: Ctx) -> list[Check]:
     return [Check("CAISO OASIS", "PASS", f"{node} interval answered in {took:.1f} s")]
 
 
+SUDO_PM = ["sudo", "-n", "/usr/bin/powermetrics", "--samplers", "cpu_power,gpu_power", "-i", "1000", "-n", "1"]
+
+
 def check_sudo(ctx: Ctx) -> list[Check]:
     if not ctx.is_mac:
         return [Check("sudo", "SKIP", "not macOS: powermetrics runs on the demo Mac")]
-    code, _ = run(["sudo", "-n", "true"])
-    return [Check("sudo", "PASS", "cached for this terminal")] if code == 0 else \
-        [Check("sudo", "FAIL", "no cached sudo in this terminal",
+    # The same probe as the Makefile's SUDO_PM: the demo Mac's sudoers rule allows only this exact command line.
+    code, _ = run(SUDO_PM)
+    return [Check("sudo", "PASS", "powermetrics runs without a prompt")] if code == 0 else \
+        [Check("sudo", "FAIL", "powermetrics needs a password in this terminal",
                "run sudo -v in this terminal, then make demo from the same terminal")]
 
 
@@ -324,9 +328,10 @@ def check_git(ctx: Ctx) -> list[Check]:
     else:
         _, tags = run(["git", "tag", "-l", "demo-stable-*"], cwd=ctx.root)
         newest = max(tags.split(), key=_tag_number, default="")
-        out.append(Check("demo tag", "FAIL", "HEAD is not at a demo-stable-* tag",
-                         f"git checkout {newest}" if newest else
-                         "no demo-stable tag yet: make tag-stable after a full live make demo"))
+        out.append(Check("demo tag", "FAIL",
+                         f"HEAD is not at a demo-stable-* tag (newest: {newest})" if newest else
+                         "no demo-stable-* tag yet",
+                         "tag this commit once the rehearsal passes: make tag-stable"))
     return out
 
 

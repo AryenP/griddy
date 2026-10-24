@@ -144,8 +144,12 @@ def test_oasis(tmp_path, monkeypatch, outcome, expected):
 
 
 def test_sudo_on_mac(tmp_path, monkeypatch):
-    monkeypatch.setattr(pf, "run", lambda cmd, cwd=None: (0, ""))
+    seen = []
+    monkeypatch.setattr(pf, "run", lambda cmd, cwd=None: (seen.append(cmd), (0, ""))[1])
     assert pf.check_sudo(ctx(tmp_path, mac=True))[0].status == "PASS"
+    # the sudoers rule on the demo Mac allows only this exact powermetrics line, so `sudo -n true` would fail
+    assert seen == [["sudo", "-n", "/usr/bin/powermetrics", "--samplers", "cpu_power,gpu_power",
+                     "-i", "1000", "-n", "1"]]
     monkeypatch.setattr(pf, "run", lambda cmd, cwd=None: (1, "a password is required"))
     assert "sudo -v" in pf.check_sudo(ctx(tmp_path, mac=True))[0].fix
 
@@ -177,7 +181,9 @@ def test_git_dirty_and_off_tag_points_at_newest(tmp_path, monkeypatch):
     monkeypatch.setattr(pf, "run", git_runner(status=" M web/app.js", tags="demo-stable-2\ndemo-stable-10\n"))
     checks = pf.check_git(ctx(tmp_path))
     assert statuses(checks) == {"git clean": "FAIL", "demo tag": "FAIL"}
-    assert checks[1].fix == "git checkout demo-stable-10"
+    assert "demo-stable-10" in checks[1].detail
+    # never roll the demo back to an old tag: tag the rehearsed commit instead
+    assert checks[1].fix == "tag this commit once the rehearsal passes: make tag-stable"
 
 
 def test_git_no_tags_yet(tmp_path, monkeypatch):
