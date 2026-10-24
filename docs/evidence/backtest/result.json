@@ -1,0 +1,740 @@
+{
+ "setup": {
+  "arrive_hour": 9,
+  "horizon_h": 24,
+  "train_gpu_h": 6.0,
+  "batch_gpu_h": 3.0,
+  "chat_busy": 0.25,
+  "objectives": [
+   "cost",
+   "carbon",
+   "balanced"
+  ]
+ },
+ "calibration": {
+  "measured_at": 1792875271.747514,
+  "machine": "Apple M2 Pro macOS 15.4.1"
+ },
+ "days": [
+  {
+   "iso": "CAISO",
+   "date": "2026-10-09",
+   "run_now": {
+    "usd": 0.014371135473070487,
+    "g": 75.85545749640906,
+    "wh": 394.9723500000002
+   },
+   "deferrable_mwh": 0.00018657735000000004,
+   "cost": {
+    "usd": 0.014371056810829985,
+    "g": 75.85503034490475,
+    "wh": 394.97099999999995,
+    "deadlines_met": true,
+    "status": "OPTIMAL"
+   },
+   "carbon": {
+    "usd": 0.014423344405789983,
+    "g": 75.47073877466283,
+    "wh": 394.9709999999999,
+    "deadlines_met": true,
+    "status": "OPTIMAL"
+   },
+   "balanced": {
+    "usd": 0.014423344405789983,
+    "g": 75.47073877466283,
+    "wh": 394.9709999999999,
+    "deadlines_met": true,
+    "status": "OPTIMAL"
+   }
+  },
+  {
+   "iso": "CAISO",
+   "date": "2026-10-10",
+   "run_now": {
+    "usd": 0.014931313756529493,
+    "g": 85.33274443976556,
+    "wh": 394.9723500000002
+   },
+   "deferrable_mwh": 0.00018657735000000004,
+   "cost": {
+    "usd": 0.011352891225140008,
+    "g": 94.87296219132415,
+    "wh": 394.97099999999983,
+    "deadlines_met": true,
+    "status": "OPTIMAL"
+   },
+   "carbon": {
+    "usd": 0.015220227889860003,
+    "g": 83.86527686492514,
+    "wh": 394.97099999999983,
+    "deadlines_met": true,
+    "status": "OPTIMAL"
+   },
+   "balanced": {
+    "usd": 0.011826552215780004,
+    "g": 86.8891018250252,
+    "wh": 394.9709999999999,
+    "deadlines_met": true,
+    "status": "OPTIMAL"
+   }
+  },
+  {
+   "iso": "CAISO",
+   "date": "2026-10-11",
+   "run_now": {
+    "usd": 0.014482416139733004,
+    "g": 62.34087483299372,
+    "wh": 394.9723500000002
+   },
+   "deferrable_mwh": 0.00018657735000000004,
+   "cost": {
+    "usd": 0.014106033530589998,
+    "g": 60.271903701123975,
+    "wh": 394.97099999999983,
+    "deadlines_met": true,
+    "status": "OPTIMAL"
+   },
+   "carbon": {
+    "usd": 0.014170747129439996,
+    "g": 60.102770382199616,
+    "wh": 394.9709999999998,
+    "deadlines_met": true,
+    "status": "OPTIMAL"
+   },
+   "balanced": {
+    "usd": 0.014114484160189998,
+    "g": 60.118549850686534,
+    "wh": 394.97099999999983,
+    "deadlines_met": true,
+    "status": "OPTIMAL"
+   }
+  },
+  {
+   "iso": "CAISO",
+   "date": "2026-10-12",
+   "run_now": {
+    "usd": 0.01399231638648175,
+    "g": 70.7149870604633,
+    "wh": 394.9723500000002
+   },
+   "deferrable_mwh": 0.00018657735000000004,
+   "cost": {
+    "usd": 0.012826277990400006,
+    "g": 70.1423168365641,
+    "wh": 394.9709999999998,
+    "deadlines_met": true,
+    "status": "OPTIMAL"
+   },
+   "carbon": {
+    "usd": 0.013436656035170013,
+    "g": 69.23709707977132,
+    "wh": 394.9709999999999,
+    "deadlines_met": true,
+    "status": "OPTIMAL"
+   },
+   "balanced": {
+    "usd": 0.012842372475740006,
+    "g": 69.63183103989442,
+    "wh": 394.9709999999998,
+    "deadlines_met": true,
+    "status": "OPTIMAL"
+   }
+  },
+  {
+   "iso": "CAISO",
+   "date": "2026-10-13",
+   "run_now": {
+    "usd": 0.008543621808444752,
+    "g": 60.579933607317805,
+    "wh": 394.9723500000002
+   },
+   "deferrable_mwh": 0.00018657735000000004,
+   "cost": {
+    "usd": 0.008297722263570005,
+    "g": 60.64685647941374,
+    "wh": 394.97099999999983,
+    "deadlines_met": true,
+    "status": "OPTIMAL"
+   },
+   "carbon": {
+    "usd": 0.008390454327550003,
+    "g": 60.03530887771281,
+    "wh": 394.97099999999983,
+    "deadlines_met": true,
+    "status": "OPTIMAL"
+   },
+   "balanced": {
+    "usd": 0.008327178436580004,
+    "g": 60.12809869188639,
+    "wh": 394.97099999999983,
+    "deadlines_met": true,
+    "status": "OPTIMAL"
+   }
+  },
+  {
+   "iso": "CAISO",
+   "date": "2026-10-14",
+   "run_now": {
+    "usd": 0.008729122478448996,
+    "g": 65.98313502981797,
+    "wh": 394.9723500000002
+   },
+   "deferrable_mwh": 0.00018657735000000004,
+   "cost": {
+    "usd": 0.008705346539399998,
+    "g": 66.4501867600015,
+    "wh": 394.97099999999983,
+    "deadlines_met": true,
+    "status": "OPTIMAL"
+   },
+   "carbon": {
+    "usd": 0.008728493809819996,
+    "g": 65.83293792545868,
+    "wh": 394.9709999999999,
+    "deadlines_met": true,
+    "status": "OPTIMAL"
+   },
+   "balanced": {
+    "usd": 0.008728493809819996,
+    "g": 65.83293792545868,
+    "wh": 394.9709999999999,
+    "deadlines_met": true,
+    "status": "OPTIMAL"
+   }
+  },
+  {
+   "iso": "CAISO",
+   "date": "2026-10-15",
+   "run_now": {
+    "usd": 0.00930583020605475,
+    "g": 68.08718364958997,
+    "wh": 394.9723500000002
+   },
+   "deferrable_mwh": 0.00018657735000000004,
+   "cost": {
+    "usd": 0.009305738716150015,
+    "g": 68.08671500490016,
+    "wh": 394.97099999999995,
+    "deadlines_met": true,
+    "status": "OPTIMAL"
+   },
+   "carbon": {
+    "usd": 0.009337478803440016,
+    "g": 67.6593112488429,
+    "wh": 394.97099999999983,
+    "deadlines_met": true,
+    "status": "OPTIMAL"
+   },
+   "balanced": {
+    "usd": 0.009308692832830015,
+    "g": 67.68641091105998,
+    "wh": 394.9709999999999,
+    "deadlines_met": true,
+    "status": "OPTIMAL"
+   }
+  },
+  {
+   "iso": "CAISO",
+   "date": "2026-10-16",
+   "run_now": {
+    "usd": 0.0130092724484565,
+    "g": 77.08568689016013,
+    "wh": 394.9723500000002
+   },
+   "deferrable_mwh": 0.00018657735000000004,
+   "cost": {
+    "usd": 0.012982812985880006,
+    "g": 76.84518357832553,
+    "wh": 394.9709999999999,
+    "deadlines_met": true,
+    "status": "OPTIMAL"
+   },
+   "carbon": {
+    "usd": 0.012982812985880006,
+    "g": 76.84518357832553,
+    "wh": 394.9709999999999,
+    "deadlines_met": true,
+    "status": "OPTIMAL"
+   },
+   "balanced": {
+    "usd": 0.012982812985880006,
+    "g": 76.84518357832553,
+    "wh": 394.9709999999999,
+    "deadlines_met": true,
+    "status": "OPTIMAL"
+   }
+  },
+  {
+   "iso": "CAISO",
+   "date": "2026-10-17",
+   "run_now": {
+    "usd": 0.01595067685279975,
+    "g": 98.51903766907188,
+    "wh": 394.9723500000002
+   },
+   "deferrable_mwh": 0.00018657735000000004,
+   "cost": {
+    "usd": 0.015734333572200002,
+    "g": 96.44194680131982,
+    "wh": 394.9709999999999,
+    "deadlines_met": true,
+    "status": "OPTIMAL"
+   },
+   "carbon": {
+    "usd": 0.015955883517220004,
+    "g": 95.17399257523228,
+    "wh": 394.9709999999999,
+    "deadlines_met": true,
+    "status": "OPTIMAL"
+   },
+   "balanced": {
+    "usd": 0.01577327270391,
+    "g": 95.44800572025018,
+    "wh": 394.9709999999999,
+    "deadlines_met": true,
+    "status": "OPTIMAL"
+   }
+  },
+  {
+   "iso": "CAISO",
+   "date": "2026-10-18",
+   "run_now": {
+    "usd": 0.013001732953490256,
+    "g": 69.98434775546158,
+    "wh": 394.9723500000002
+   },
+   "deferrable_mwh": 0.00018657735000000004,
+   "cost": {
+    "usd": 0.012976074586960004,
+    "g": 69.66835838175787,
+    "wh": 394.9709999999999,
+    "deadlines_met": true,
+    "status": "OPTIMAL"
+   },
+   "carbon": {
+    "usd": 0.013047121250330005,
+    "g": 69.36437366093533,
+    "wh": 394.9709999999998,
+    "deadlines_met": true,
+    "status": "OPTIMAL"
+   },
+   "balanced": {
+    "usd": 0.012994305604080006,
+    "g": 69.44338068395417,
+    "wh": 394.9709999999998,
+    "deadlines_met": true,
+    "status": "OPTIMAL"
+   }
+  },
+  {
+   "iso": "CAISO",
+   "date": "2026-10-19",
+   "run_now": {
+    "usd": 0.015605820689109495,
+    "g": 85.83492698869335,
+    "wh": 394.9723500000002
+   },
+   "deferrable_mwh": 0.00018657735000000004,
+   "cost": {
+    "usd": 0.014934810575849989,
+    "g": 89.30590304276086,
+    "wh": 394.9709999999999,
+    "deadlines_met": true,
+    "status": "OPTIMAL"
+   },
+   "carbon": {
+    "usd": 0.015678237848979988,
+    "g": 85.80425562933308,
+    "wh": 394.9709999999999,
+    "deadlines_met": true,
+    "status": "OPTIMAL"
+   },
+   "balanced": {
+    "usd": 0.015262572929669982,
+    "g": 87.39626467146242,
+    "wh": 394.97099999999995,
+    "deadlines_met": true,
+    "status": "OPTIMAL"
+   }
+  },
+  {
+   "iso": "CAISO",
+   "date": "2026-10-20",
+   "run_now": {
+    "usd": 0.0105063793316875,
+    "g": 94.10811955560716,
+    "wh": 394.9723500000002
+   },
+   "deferrable_mwh": 0.00018657735000000004,
+   "cost": {
+    "usd": 0.01033241265387001,
+    "g": 95.98620751044955,
+    "wh": 394.97099999999983,
+    "deadlines_met": true,
+    "status": "OPTIMAL"
+   },
+   "carbon": {
+    "usd": 0.010554018107940008,
+    "g": 93.70503433838256,
+    "wh": 394.9709999999999,
+    "deadlines_met": true,
+    "status": "OPTIMAL"
+   },
+   "balanced": {
+    "usd": 0.010495007847940009,
+    "g": 94.02649902761041,
+    "wh": 394.9709999999999,
+    "deadlines_met": true,
+    "status": "OPTIMAL"
+   }
+  },
+  {
+   "iso": "CAISO",
+   "date": "2026-10-21",
+   "run_now": {
+    "usd": 0.018297102917887255,
+    "g": 116.2438840725051,
+    "wh": 394.9723500000002
+   },
+   "deferrable_mwh": 0.00018657735000000004,
+   "cost": {
+    "usd": 0.01823684850653999,
+    "g": 116.2666711211995,
+    "wh": 394.9709999999999,
+    "deadlines_met": true,
+    "status": "OPTIMAL"
+   },
+   "carbon": {
+    "usd": 0.01842184175531,
+    "g": 115.76952143254337,
+    "wh": 394.9709999999999,
+    "deadlines_met": true,
+    "status": "OPTIMAL"
+   },
+   "balanced": {
+    "usd": 0.018263220236779988,
+    "g": 115.95724692774793,
+    "wh": 394.9709999999999,
+    "deadlines_met": true,
+    "status": "OPTIMAL"
+   }
+  },
+  {
+   "iso": "CAISO",
+   "date": "2026-10-22",
+   "run_now": {
+    "usd": 0.014538426744755752,
+    "g": 95.08708326487627,
+    "wh": 394.9723500000002
+   },
+   "deferrable_mwh": 0.00018657735000000004,
+   "cost": {
+    "usd": 0.014240931342129995,
+    "g": 92.69760807146375,
+    "wh": 394.9709999999998,
+    "deadlines_met": true,
+    "status": "OPTIMAL"
+   },
+   "carbon": {
+    "usd": 0.014240931342129995,
+    "g": 92.69760807146375,
+    "wh": 394.9709999999998,
+    "deadlines_met": true,
+    "status": "OPTIMAL"
+   },
+   "balanced": {
+    "usd": 0.014240931342129995,
+    "g": 92.69760807146375,
+    "wh": 394.9709999999998,
+    "deadlines_met": true,
+    "status": "OPTIMAL"
+   }
+  },
+  {
+   "iso": "ERCOT",
+   "date": "2026-10-10",
+   "run_now": {
+    "usd": 0.009153791241750003,
+    "g": null,
+    "wh": 394.9723500000002
+   },
+   "deferrable_mwh": 0.00018657735000000004,
+   "cost": {
+    "usd": 0.008305806919999997,
+    "g": null,
+    "wh": 394.9709999999999,
+    "deadlines_met": true,
+    "status": "OPTIMAL"
+   }
+  },
+  {
+   "iso": "ERCOT",
+   "date": "2026-10-11",
+   "run_now": {
+    "usd": 0.008744224597249991,
+    "g": null,
+    "wh": 394.9723500000002
+   },
+   "deferrable_mwh": 0.00018657735000000004,
+   "cost": {
+    "usd": 0.008560888610000003,
+    "g": null,
+    "wh": 394.97099999999995,
+    "deadlines_met": true,
+    "status": "OPTIMAL"
+   }
+  },
+  {
+   "iso": "ERCOT",
+   "date": "2026-10-12",
+   "run_now": {
+    "usd": 0.015655714338999985,
+    "g": null,
+    "wh": 394.9723500000002
+   },
+   "deferrable_mwh": 0.00018657735000000004,
+   "cost": {
+    "usd": 0.014567307480000001,
+    "g": null,
+    "wh": 394.9709999999998,
+    "deadlines_met": true,
+    "status": "OPTIMAL"
+   }
+  },
+  {
+   "iso": "ERCOT",
+   "date": "2026-10-13",
+   "run_now": {
+    "usd": 0.018223291696249987,
+    "g": null,
+    "wh": 394.9723500000002
+   },
+   "deferrable_mwh": 0.00018657735000000004,
+   "cost": {
+    "usd": 0.017733509809999996,
+    "g": null,
+    "wh": 394.9709999999999,
+    "deadlines_met": true,
+    "status": "OPTIMAL"
+   }
+  },
+  {
+   "iso": "ERCOT",
+   "date": "2026-10-14",
+   "run_now": {
+    "usd": 0.020254878319000007,
+    "g": null,
+    "wh": 394.9723500000002
+   },
+   "deferrable_mwh": 0.00018657735000000004,
+   "cost": {
+    "usd": 0.018322200289999997,
+    "g": null,
+    "wh": 394.97099999999983,
+    "deadlines_met": true,
+    "status": "OPTIMAL"
+   }
+  },
+  {
+   "iso": "ERCOT",
+   "date": "2026-10-15",
+   "run_now": {
+    "usd": 0.016308239239250014,
+    "g": null,
+    "wh": 394.9723500000002
+   },
+   "deferrable_mwh": 0.00018657735000000004,
+   "cost": {
+    "usd": 0.01404079715,
+    "g": null,
+    "wh": 394.97099999999983,
+    "deadlines_met": true,
+    "status": "OPTIMAL"
+   }
+  },
+  {
+   "iso": "ERCOT",
+   "date": "2026-10-16",
+   "run_now": {
+    "usd": 0.010827525569749995,
+    "g": null,
+    "wh": 394.9723500000002
+   },
+   "deferrable_mwh": 0.00018657735000000004,
+   "cost": {
+    "usd": 0.01012473059999999,
+    "g": null,
+    "wh": 394.9709999999998,
+    "deadlines_met": true,
+    "status": "OPTIMAL"
+   }
+  },
+  {
+   "iso": "ERCOT",
+   "date": "2026-10-17",
+   "run_now": {
+    "usd": 0.008698520125499999,
+    "g": null,
+    "wh": 394.9723500000002
+   },
+   "deferrable_mwh": 0.00018657735000000004,
+   "cost": {
+    "usd": 0.008530583310000006,
+    "g": null,
+    "wh": 394.9709999999998,
+    "deadlines_met": true,
+    "status": "OPTIMAL"
+   }
+  },
+  {
+   "iso": "ERCOT",
+   "date": "2026-10-18",
+   "run_now": {
+    "usd": 0.005718644947,
+    "g": null,
+    "wh": 394.9723500000002
+   },
+   "deferrable_mwh": 0.00018657735000000004,
+   "cost": {
+    "usd": 0.005702825219999997,
+    "g": null,
+    "wh": 394.9709999999999,
+    "deadlines_met": true,
+    "status": "OPTIMAL"
+   }
+  },
+  {
+   "iso": "ERCOT",
+   "date": "2026-10-19",
+   "run_now": {
+    "usd": 0.008718368662749991,
+    "g": null,
+    "wh": 394.9723500000002
+   },
+   "deferrable_mwh": 0.00018657735000000004,
+   "cost": {
+    "usd": 0.008697140809999995,
+    "g": null,
+    "wh": 394.9709999999999,
+    "deadlines_met": true,
+    "status": "OPTIMAL"
+   }
+  },
+  {
+   "iso": "ERCOT",
+   "date": "2026-10-20",
+   "run_now": {
+    "usd": 0.009582307067750002,
+    "g": null,
+    "wh": 394.9723500000002
+   },
+   "deferrable_mwh": 0.00018657735000000004,
+   "cost": {
+    "usd": 0.009581108669999993,
+    "g": null,
+    "wh": 394.9709999999999,
+    "deadlines_met": true,
+    "status": "OPTIMAL"
+   }
+  },
+  {
+   "iso": "ERCOT",
+   "date": "2026-10-21",
+   "run_now": {
+    "usd": 0.012375803142249996,
+    "g": null,
+    "wh": 394.9723500000002
+   },
+   "deferrable_mwh": 0.00018657735000000004,
+   "cost": {
+    "usd": 0.012375714999999995,
+    "g": null,
+    "wh": 394.97099999999995,
+    "deadlines_met": true,
+    "status": "OPTIMAL"
+   }
+  },
+  {
+   "iso": "ERCOT",
+   "date": "2026-10-22",
+   "run_now": {
+    "usd": 0.01042351145075,
+    "g": null,
+    "wh": 394.9723500000002
+   },
+   "deferrable_mwh": 0.00018657735000000004,
+   "cost": {
+    "usd": 0.009701845040000004,
+    "g": null,
+    "wh": 394.97099999999983,
+    "deadlines_met": true,
+    "status": "OPTIMAL"
+   }
+  },
+  {
+   "iso": "ERCOT",
+   "date": "2026-10-23",
+   "run_now": {
+    "usd": 0.009379195858750005,
+    "g": null,
+    "wh": 394.9723500000002
+   },
+   "deferrable_mwh": 0.00018657735000000004,
+   "cost": {
+    "usd": 0.009007686970000001,
+    "g": null,
+    "wh": 394.9709999999999,
+    "deadlines_met": true,
+    "status": "OPTIMAL"
+   }
+  }
+ ],
+ "summary": {
+  "CAISO": {
+   "days": 14,
+   "first": "2026-10-09",
+   "last": "2026-10-22",
+   "cost": {
+    "days": 14,
+    "cost_saved_pct_median": 1.506073074187536,
+    "cost_saved_pct_mean": 3.4384628665092665,
+    "co2_saved_pct_median": 0.0006257066553549961,
+    "co2_saved_pct_mean": -0.6101956127441506,
+    "usd_saved_per_mwh_shifted": 2.6269751574269455,
+    "deadlines_met": 14
+   },
+   "carbon": {
+    "days": 14,
+    "cost_saved_pct_median": -0.18636828560393282,
+    "cost_saved_pct_mean": 0.39668434771430533,
+    "co2_saved_pct_median": 0.7571468891820199,
+    "co2_saved_pct_mean": 1.2600167445510377,
+    "usd_saved_per_mwh_shifted": 0.2591491173919975,
+    "deadlines_met": 14
+   },
+   "balanced": {
+    "days": 14,
+    "cost_saved_pct_median": 0.6577968883913821,
+    "cost_saved_pct_mean": 2.829356792190596,
+    "co2_saved_pct_median": 0.5478952129909453,
+    "co2_saved_pct_mean": 0.7550955126855005,
+    "usd_saved_per_mwh_shifted": 2.175247270991954,
+    "deadlines_met": 14
+   }
+  },
+  "ERCOT": {
+   "days": 14,
+   "first": "2026-10-10",
+   "last": "2026-10-23",
+   "cost": {
+    "days": 14,
+    "cost_saved_pct_median": 3.3243291951139065,
+    "cost_saved_pct_mean": 4.591777733797318,
+    "co2_saved_pct_median": null,
+    "co2_saved_pct_mean": null,
+    "usd_saved_per_mwh_shifted": 3.3735033359775826,
+    "deadlines_met": 14
+   }
+  }
+ }
+}
