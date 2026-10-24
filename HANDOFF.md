@@ -19,42 +19,11 @@ Open problems (owner's call, not silently fixed): chat p95 is **9.7 s** at concu
 passages), not 45 min; no operator/FDE quote yet (Sat 10 AM workshop).
 
 ## The split
-**Rule: never edit the same file on both machines.** Anurag works on branches `anurag/<task>` and opens
-PRs into `main`; the demo Mac reviews and merges. Plain commit messages, no co-author lines.
-
-| Owner | Files | Why there |
-|---|---|---|
-| **Demo Mac (Aryen)** | `api/*`, `controller/*`, `workloads/*`, `dispatcher/*`, `grid/*`, `meter/*`, `core/*`, `Makefile`, `pyproject.toml`, `config/jobs.yaml`, `config/policy.yaml` | M4 execution loop, anything that needs this Mac's meter, calibration or evidence |
-| **Anurag** | `web/*`, `scripts/qr.py`, `agent/*`, `tests/test_agent*.py`, `tests/test_web*.py`, emission-factor block of `config/isos.yaml` | Pure frontend, agent layer and research; big downloads (Agent Framework/Azure SDKs) on fast internet |
-| Shared, append-only | `DECISIONS.md` | Append your own lines in your PR; merges are trivial |
-
-Need a dependency, a new type, or a config field from the demo Mac's files? Say so in the PR description;
-don't edit those files.
-
-### Anurag's tasks, in order
-1. **Dashboard** `web/index.html` (+ `web/app.js`, `web/style.css`), SPEC §10, vanilla JS + Chart.js (pin an
-   exact CDN version). Header claim + quote slot; row 1: measured watts (big), $/h at live price, gCO2/h at live
-   mix, chat p95; row 2: 24-h price + carbon curves with the schedule painted on, current slot highlighted, feed
-   age + "stale" badge; row 3: job cards; row 4: event log + solver explanations. "DISPATCHER OFF" toggle wired
-   to `POST /api/dispatcher`. Every number shows its source and age. Phone-width safe.
-2. **Phone pages** `web/chat.html` (talks to `POST /api/chat`) and `scripts/qr.py` (`make qr`: QR codes for
-   `PUBLIC_URL/chat` and `PUBLIC_URL/owner`).
-3. **Emission factors**: replace the numbers in `config/isos.yaml` `emission_factors_gco2_per_kwh` with a
-   citable table (e.g. IPCC AR5 lifecycle medians or EPA eGRID), source in a comment, one DECISIONS line.
-4. **Agent layer start (M5)** `agent/llm.py`: one interface; Claude via the `anthropic` SDK
-   (`ANTHROPIC_MODEL` in `.env`), Microsoft Agent Framework + Foundry when `AZURE_AI_PROJECT_ENDPOINT` is set
-   (`uv pip install -e ".[azure]"`); OpenTelemetry span per call; returns a clear "agent offline" result when
-   no key/endpoint. Then `agent/explainer.py`: rewords `Schedule.explanations` + `GridSignal` into two
-   sentences; it may not add facts (test that every number in the output appears in the input).
-5. **OpenADR intake, deterministic path** `agent/intake.py`: parse an OpenADR 3.1 EVENT JSON
-   (`IMPORT_CAPACITY_LIMIT`, `intervalPeriod`) into `core.types.CapEvent` with no LLM (a parser can do it).
-   Free-text intake via the LLM comes after. Test against the example in RESEARCH.md.
-
-### Demo Mac's tasks (tonight / Sat AM)
-M4: `api/app.py` + `api/ws.py` + `api/routes.py` per the contract below; `controller/execute.py` (apply the
-current slot via knobs, stop finished jobs, re-solve on new grid interval / policy change / CapEvent / job
-finished / watts drift > 20%); verify watts follow the schedule across a slot boundary with no human input.
-Then the chat SLA decision, `make baseline`, M6.
+Four machines. **`team/README.md` is the source of truth**: who is who (`team/roster.yaml`), each
+machine's assignment (`team/<n>-<name>.md`), the rules, and the one prompt every machine pastes.
+`uv run python scripts/team.py whoami` tells a machine who it is; `... check` refuses edits to files it
+does not own. Machine 1 (this Mac, Aryen) is runtime and integration; 2 Anuraag frontend; 3 Krish
+receipts, telemetry, Azure and submission; 4 Arumalla the agent layer.
 
 ## API contract (built on the demo Mac; code the dashboard against this)
 Server: `make demo` → `python -m api.app` on `HOST:PORT` from `.env` (default `0.0.0.0:8080`). Static
@@ -88,6 +57,8 @@ chat has `concurrency`, `inflight`, `p95_60s`, `n_60s`, `max_tokens`, `model`. A
 | POST | `/api/policy` | `{"objective"?: "cost"\|"carbon"\|"balanced", "power_cap_w"?: number\|null}` | new Schedule (re-solved) |
 | POST | `/api/iso` | `{"iso": "CAISO"\|"ERCOT"}` | new GridSignal + Schedule |
 | POST | `/api/dispatcher` | `{"enabled": bool}` | `{"enabled": bool}`; off = baseline (run everything) |
+| POST | `/api/jobs/{id}` | `{"deadline": iso8601 \| null}` | new Schedule (owner/negotiator changed a deadline) |
+| POST | `/api/event` | `{"start": iso8601, "duration_s": int, "target_w"?: W, "target_pct"?: % of measured baseline, "reason"}` | new Schedule with the cap |
 | POST | `/api/chat` | `{"messages": [{"role","content"}], "max_tokens"?: int}` | `{"reply", "latency_s", "tokens", "max_tokens"}` |
 
 Real captured timelines for building against before the API is up: `tests/fixtures/real_timeline_*.jsonl`
@@ -115,27 +86,7 @@ Not a Mac: skip the meter; work on `web/` against the contract and `agent/` with
 - PJM needs `PJM_API_KEY`; without it PJM is hidden. CAISO and ERCOT are keyless.
 - Slots are in the ISO's local time; CAISO day-ahead covers the whole horizon at night.
 
-## Prompt for Anurag's Claude Code (paste as-is)
-```
-Read CLAUDE.md, PLAN.md, SPEC.md, DECISIONS.md and HANDOFF.md fully before writing code. You are the
-second machine on Brownout. The judge demo runs on Aryen's Mac, not this one; nothing measured here is
-ever a demo number.
-
-1. Setup per HANDOFF.md "Setting up Anurag's machine": make setup, make test (must be green). Report
-   whether this machine is Apple silicon; if it is, also bring up Ollama + qwen3:4b and run
-   `sudo -v && make probe` (ask me to type the sudo password in the terminal).
-2. Work only on the files HANDOFF.md assigns to Anurag, in the order listed (dashboard, phone pages +
-   qr, emission factors, agent/llm.py + explainer, OpenADR intake). Never edit a file owned by the demo
-   Mac; if you need a change there, write it in the PR description.
-3. One branch per task: anurag/<task>. Commit small, plain messages, no co-author lines. Push the
-   branch and open a PR into main with: what it does, how you tested it, what you need from the demo Mac.
-4. Code the dashboard against the API contract in HANDOFF.md exactly (field names from core/types.py).
-   Before the demo Mac's API exists, test the dashboard with the REAL captured timelines in
-   tests/fixtures/real_timeline_*.jsonl, fed in from the browser console only; do not add a replay or
-   mock mode to the code.
-
-Rules you must not break: nothing simulated or hardcoded reaches the judge; the solver decides, the LLM
-explains/negotiates, the controller executes (the agent gets no code path to any knob); every claim shows
-its source and age; no dead code or stubs; no secrets in the repo. For any LLM call ask "could the solver
-or a regex do this?" and if yes, move it. Stop after each task's PR and show me the evidence.
-```
+## Prompt for each machine's Claude Code
+Superseded: every machine pastes the single prompt in `team/README.md`; it identifies the machine and
+opens the right assignment. (Anuraag: your earlier tasks moved; agent work is now machine 4's,
+emission factors machine 3's. Your scope is `web/**` and `scripts/qr.py`.)
