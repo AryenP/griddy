@@ -39,10 +39,12 @@ evidence: ollama ## unattended (~25 min, Mac otherwise idle): calibrate, then di
 	$(PY) python scripts/compare.py; s=$$?; kill $$K 2>/dev/null; exit $$s
 
 EVIDENCE3_ARGS ?= --cap-pct 30 --cap-at 120 --cap-for 1800 --deadline train=1.87
-evidence-chat: ollama ## unattended (~9 min): one dispatched run under the evidence cap with 2 streams of real chat traffic, then its report
-	($(SUDO_PM)) || exit 1; E=runs/evidence-state-$$(date +%Y%m%d-%H%M%S); \
+evidence-chat: ollama ## unattended (~12 min): calibrate (chat at 1, 2, 4 streams), then one dispatched run under the evidence cap with 2 streams of real chat traffic, then its report
+	($(SUDO_PM)) || exit 1; ( while sudo -n -v 2>/dev/null; do sleep 50; done ) & K=$$!; \
+	E=runs/evidence-state-$$(date +%Y%m%d-%H%M%S); \
+	$(PY) python -m controller.feasibility --calibrate && \
 	BROWNOUT_CHECKPOINT_DIR=$$E/dispatched $(PY) python -m api.app --headless --duration 450 $(EVIDENCE3_ARGS) --chat-load 2 --chat-at 30 && \
-	$(PY) python -m agent.reporter --run latest
+	$(PY) python -m agent.reporter --run latest; s=$$?; kill $$K 2>/dev/null; exit $$s
 
 evidence3: ollama ## unattended (~30 min): calibrate, then ignore-the-call, pause-everything and dispatched runs, same tight scenario, two comparisons
 	($(SUDO_PM)) || exit 1; ( while sudo -n -v 2>/dev/null; do sleep 50; done ) & K=$$!; \
