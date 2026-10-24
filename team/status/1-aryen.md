@@ -141,3 +141,11 @@ grounded. Preflight: two bugs queued for Anuraag (task 18). No PRs or [superviso
 Next: verify spans reach Application Insights once .env has the string; C (ERCOT end to end) before 06:30;
 final evidence run 06:40, then B and the morning brief.
 Blockers / needs Aryen: run the one-line command that writes APPLICATIONINSIGHTS_CONNECTION_STRING into .env.
+
+## 2026-10-24 04:51 PT — machine 4 back, loop every 10 min
+Done: Aryen brought machine 4 (Arumalla) back. His lane is docs/briefing/** with four plain-language tasks:
+architecture picture and driver card (moved from Anuraag's unstarted 14 and 15), Microsoft workshop question
+sheet, RESEARCH.md source check. The coordinator loop now runs every 10 minutes and reads new commits on
+anurag/* and arumalla/* branches each tick, not only their PRs.
+Next: Application Insights check once .env has the string; ERCOT end to end before 06:30; final run 06:40.
+Blockers / needs Aryen: paste the start message into Arumalla's Claude; the .env command for Azure.
