@@ -1,0 +1,5 @@
+{"objectType":"EVENT","programID":"dc-curtailment-prog-1","eventName":"heat-wave curtailment",
+ "priority":0,"targets":[{"type":"RESOURCE_NAME","values":["campus-A"]}],
+ "payloadDescriptors":[{"objectType":"EVENT_PAYLOAD_DESCRIPTOR","payloadType":"IMPORT_CAPACITY_LIMIT","units":"KW"}],
+ "intervalPeriod":{"start":"2026-10-25T18:00:00Z","duration":"PT10M","randomizeStart":"PT0S"},
+ "intervals":[{"id":0,"payloads":[{"type":"IMPORT_CAPACITY_LIMIT","values":[0.07]}]}]}
