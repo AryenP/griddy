@@ -141,7 +141,7 @@ def greedy(inp: Inputs) -> tuple[dict[str, list[SlotAssignment]], list[float]]:
     pmean = (sum(max(p, 0) for p in inp.prices) / S) or 1
     cmean = (sum(inp.carbons) / S) or 1
     unit = [wc * max(p, 0) / pmean + wg * c / cmean for p, c in zip(inp.prices, inp.carbons)]
-    watts = [inp.cal.idle_w] * S
+    watts = [inp.cal.idle_w + max(0.0, inp.background_w)] * S
     out: dict[str, list[SlotAssignment]] = {}
     for job in sorted(inp.jobs, key=lambda j: j.priority):
         if job.kind == "interactive":
@@ -197,11 +197,13 @@ def _relaxation(inp: Inputs, relax: Relax, limit_s: float, slots: list[datetime]
 def solve(sig: GridSignal, jobs: list[Job], policy: Policy, cal: Calibration,
           events: list[CapEvent] | None = None, baseline_w: float | None = None,
           chat_busy: float | None = None, hard_deadlines: frozenset[str] = frozenset(),
-          exceed_cap_approved: bool = False) -> Schedule:
+          exceed_cap_approved: bool = False, background_w: float = 0.0) -> Schedule:
     """If the model is infeasible, two honest options go to the negotiator (shortfalls): slip deadlines
     under the cap, or exceed the cap (`hard_deadlines` = owners refused a slip). What RUNS meanwhile holds
     the utility's cap and lets deadlines slip, unless the operator approved going over the cap for these
-    events (`exceed_cap_approved`); the cap bends without approval only if nothing at all fits under it."""
+    events (`exceed_cap_approved`); the cap bends without approval only if nothing at all fits under it.
+    `background_w`: measured load outside the plan, which counts against the cap in every slot."""
+    background_w = max(0.0, background_w)
     t0 = time.time()
     slots = [s for s, _ in sig.price_curve]
     prices = [p for _, p in sig.price_curve]
@@ -209,7 +211,11 @@ def solve(sig: GridSignal, jobs: list[Job], policy: Policy, cal: Calibration,
     dl, notes = deadline_slots(jobs, slots, policy.slot_minutes)
     inp = Inputs(jobs=jobs, cal=cal, policy=policy, prices=prices, carbons=carbons,
                  cap_w=cap_per_slot(slots, policy.slot_minutes, policy, events or [], baseline_w),
-                 deadline_slot=dl, remaining_work=remaining(jobs, policy.slot_minutes), chat_busy=chat_busy)
+                 deadline_slot=dl, remaining_work=remaining(jobs, policy.slot_minutes), chat_busy=chat_busy,
+                 background_w=background_w)
+    if background_w and any(c is not None for c in inp.cap_w):
+        notes = notes + [f"measured load outside the plan: {background_w:.2f} W (meter minus the calibrated plan), "
+                         f"counted against the cap"]
 
     b = build(inp)
     solver, st = _run(b, policy.solver_time_limit_s)
@@ -260,7 +266,7 @@ def solve(sig: GridSignal, jobs: list[Job], policy: Policy, cal: Calibration,
                      objective_value=obj, cost_usd=cost, co2_g=co2, deadline_misses=misses,
                      shortfalls=shortfalls, solver_status=status, solve_wall_s=time.time() - t0,
                      relaxed=relaxed, on_stale_data=sig.stale, planned_w=watts, caps_w=inp.cap_w,
-                     chat_busy_streams=chat_busy)
+                     chat_busy_streams=chat_busy, background_w=background_w)
     sched.explanations = notes + explain(sched, sig, jobs, dl)
     return sched
 

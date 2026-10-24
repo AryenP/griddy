@@ -211,10 +211,12 @@ class Schedule(BaseModel):
     shortfalls: list[Shortfall] = Field(default_factory=list)
     explanations: list[str] = Field(default_factory=list, description="solver-derived facts only")
     planned_w: list[float] = Field(default_factory=list,
-                                   description="machine W per slot from calibrated deltas (planned, not measured)")
+                                   description="machine W per slot: calibrated idle and deltas plus background_w (planned, not measured)")
     caps_w: list[float | None] = Field(default_factory=list)
     chat_busy_streams: float | None = Field(default=None,
                                             description="measured chat traffic the plan assumed (None = full concurrency)")
+    background_w: float = Field(default=0.0,
+                                description="measured load outside the plan the solver counted against the cap (W)")
     solver_status: str = ""
     solve_wall_s: float = 0.0
     relaxed: bool = False

@@ -97,3 +97,48 @@ async def test_traffic_drift_triggers_resolve_rate_limited(rig, monkeypatch):
     assert "chat traffic 0.00 -> 2.00" in e.drift_reason()
     await e.resolve("drift")
     assert e.schedule.chat_busy_streams == 2.0 and e.drift_reason() is None
+
+
+async def test_load_outside_the_plan_under_a_cap_resolves(rig, monkeypatch):
+    e, clock, tmp = rig
+    e.policy = e.policy.model_copy(update={"replan": {
+        "background_window_s": 20, "settle_s": 5, "background_delta_w": 0.5, "chat_busy_delta": 0.5}})
+    monkeypatch.setattr(ex.Executor, "chat_busy", staticmethod(lambda: None))
+    monkeypatch.setattr(ex, "load_jobs", lambda cal: [j for j in jobs() if j.id != "batch"])
+    await e.on_signal(signal([5.0] * 4 + [50.0] * 92))
+    await e.add_event(CapEvent(source="ui", start=SLOTS[0], duration_s=3600, target_w=15.5))
+    assert ctl(tmp, "train")["state"] == "run" and ctl(tmp, "train")["device"] == "cpu"
+    assert e.plan.planned_w == pytest.approx(15.0)
+
+    def meter(w, seconds):
+        for _ in range(seconds):
+            clock["t"] += 1
+            e.on_power(PowerReading(t=clock["t"], combined_w=w))
+
+    meter(15.0, 10)
+    assert e.background_drift() is None              # the plan has not run a settled window yet
+    meter(15.0, 20)
+    assert e.background_drift() is None              # measured matches the plan
+    meter(16.2, 20)                                  # 1.2 W nobody planned appears
+    bg = e.background_drift()
+    assert bg == pytest.approx(1.2, abs=0.05)
+    e.background_w = bg
+    s = await e.resolve("drift: background")
+    assert s.background_w == pytest.approx(bg) and ctl(tmp, "train")["state"] == "pause"
+    assert e.plan.planned_w == pytest.approx(9.0 + bg)
+    assert e.background_drift() is None              # just re-solved: settle first
+    meter(9.0 + bg, 30)                              # idle + chat as planned, plus the same outside load
+    assert e.background_drift() is None
+    meter(9.0, 30)                                   # the outside load goes away: re-solve so train can run
+    assert e.background_drift() == pytest.approx(0.0)
+
+
+async def test_no_background_resolve_without_a_cap(rig, monkeypatch):
+    e, clock, _ = rig
+    e.policy = e.policy.model_copy(update={"replan": {"background_window_s": 20, "settle_s": 5, "background_delta_w": 0.5}})
+    monkeypatch.setattr(ex.Executor, "chat_busy", staticmethod(lambda: None))
+    await e.on_signal(signal([50.0] * 96))
+    for _ in range(40):
+        clock["t"] += 1
+        e.on_power(PowerReading(t=clock["t"], combined_w=40.0))
+    assert e.background_drift() is None

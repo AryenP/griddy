@@ -31,6 +31,7 @@ class Inputs:
     deadline_slot: dict[str, int]    # job id -> number of slots ending on or before its deadline
     remaining_work: dict[str, int]   # job id -> milli-slots of GPU-speed work still to do
     chat_busy: float | None = None   # measured avg busy chat streams; None = plan for full concurrency
+    background_w: float = 0.0        # measured load outside the plan (meter minus calibrated plan), held flat
 
 
 @dataclass
@@ -166,9 +167,11 @@ def build(inp: Inputs, relax: Relax = Relax()) -> Built:
                 starts.append(st)
             m.Add(sum(starts) <= 1)
 
-    idle_mw = round(inp.cal.idle_w * 1000)
+    # The meter reads the whole machine: load Brownout does not control (the display, other apps, a site's
+    # cooling) counts against the cap like any job. It is a constant, so it never changes the cost optimum.
+    floor_mw = round(inp.cal.idle_w * 1000) + round(max(0.0, inp.background_w) * 1000)
     for s in range(S):
-        expr = sum(power[s]) + idle_mw
+        expr = sum(power[s]) + floor_mw
         b.power_mw.append(expr)
         cap = inp.cap_w[s]
         if cap is None:
