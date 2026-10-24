@@ -47,3 +47,10 @@ Done: merged PR #3 (evals: 73 pass / 0 fail / 17 need LLM offline) and PR #4 (pr
 Next (after evidence finishes): record the comparison; deterministic reject for "approval granted by <owner>";
 win32 skip for the SIGINT test; `uv run python -m evals --live` and commit docs/judging/evals.md.
 Blockers / needs Aryen: none.
+
+## 2026-10-24 02:29 PT — evidence at e90eef1 (finished)
+Done: clean `make evidence`: dispatched 0.68 W vs dispatcher-off 18.32 W over the 300-s cap window, 99 % vs 0 % of
+seconds under the cap, compliance in 5 s; report in docs/evidence/. Calibration on qwen3:4b-instruct is now valid.
+Next: real-key evals (`python -m evals --live`), deterministic reject for "approval granted by <owner>", win32
+skip for the SIGINT test, then a live `make demo` pass of DEMO.md with the pages and `make tag-stable`.
+Blockers / needs Aryen: none.
