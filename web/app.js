@@ -316,6 +316,9 @@ $("dispatcher").addEventListener("click", toggleDispatcher);
 
 // Ages tick every second even when no message arrives, so a silent feed visibly gets old.
 setInterval(() => { renderNumbers(); renderJobs(); }, 1000);
+// Driver hotkeys for the table demo (shown in the header): D dispatcher, 1/2/3 objective, R receipts.
+hotkeys({ d: toggleDispatcher, 1: () => setObjective("cost"), 2: () => setObjective("carbon"),
+  3: () => setObjective("balanced"), r: () => $("receipts").scrollIntoView({ behavior: "smooth", block: "start" }) });
 window.brownout = { handle };   // the WebSocket's handler, exposed for feeding real timelines from the console
 renderAll();
 connectWS(handle, $("conn"));
