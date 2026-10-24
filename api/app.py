@@ -106,6 +106,7 @@ class Runtime:
                 "iso": self.watcher.iso if self.watcher else settings.iso,
                 "dispatcher_enabled": ex.dispatcher_enabled, "agent": self.agent.status, "agent_model": self.agent.llm.name,
                 "approvals": [dump(x) for x in self.agent.pending(status=None)],
+                "cap_events": [dump(e) for e in ex.active_events()],
                 "explanation": dump(self.agent.explanation), "run_id": self.tl.run_id,
                 "job_specs": {j.id: j.model_dump(mode="json") for j in ex.jobs()},
                 "quote": config.site.get("quote")}

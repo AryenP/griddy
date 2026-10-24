@@ -84,7 +84,9 @@ chat has `concurrency`, `inflight`, `p95_60s` (total latency), `ttft_p95_60s` (t
 WebSocket adds `{"kind": "approval", "data": ApprovalRequest}` whenever a request is created or changes
 status (and `{"kind": "approval", "data": {"request_id", "who", "decision": OwnerDecision}}` for each reply),
 and the snapshot gains `"approvals": [ApprovalRequest]` (all statuses), `"explanation": Explanation | null`
-and `"agent_model"`. Each new schedule's explanation arrives as `{"kind": "note", "data": {"schedule_id",
+`"agent_model"`, and `"cap_events": [CapEvent]` (the caps in force or upcoming, `target_w` resolved). Parsed
+requests are logged as `{"kind": "intake", "data": {"intake": IntakeResult, "who"}}` (since Sat 03:15; before
+that they shared the `event` kind); `event` now only ever carries a CapEvent. Each new schedule's explanation arrives as `{"kind": "note", "data": {"schedule_id",
 "explanation": Explanation}}`. Shortfall events carry `shortfall_kind` (`deadline` | `cap`), not `kind`.
 Approval flow (live on main since Sat 01:45): the owner of a job is asked first whenever a deadline could
 slip; `approve` -> the slipped finish becomes the deadline, a new time -> that deadline, `no ...` -> the
