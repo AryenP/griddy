@@ -109,6 +109,9 @@ def _run(b: Built, limit_s: float) -> tuple[cp_model.CpSolver, int]:
     solver.parameters.max_time_in_seconds = limit_s
     solver.parameters.num_workers = 8
     solver.parameters.random_seed = 0          # deterministic and reproducible from inputs
+    # CP-SAT's Ctrl-C catching, run from a worker thread, leaves SIGINT at the default action afterwards,
+    # which killed the runtime without its shutdown (no checkpoint, orphaned workloads). The runtime owns SIGINT.
+    solver.parameters.catch_sigint_signal = False
     return solver, solver.Solve(b.model)
 
 

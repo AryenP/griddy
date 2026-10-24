@@ -120,7 +120,8 @@ class Executor:
             self._last_solve_t = time.time()
             self.tl.log("schedule", reason=reason, **sched.model_dump(mode="json"))
             for sf in sched.shortfalls:
-                self.tl.log("shortfall", schedule_id=sched.id, **sf.model_dump(mode="json"))
+                d = sf.model_dump(mode="json")          # Shortfall.kind would collide with the event kind
+                self.tl.log("shortfall", schedule_id=sched.id, shortfall_kind=d.pop("kind"), **d)
         self.tick()
         return sched
 

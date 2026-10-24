@@ -3,6 +3,7 @@ state; the workload converges to it) and logged as an `action` event when a time
 Workloads run as child processes started here."""
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 import time
@@ -14,8 +15,8 @@ MODULES = {"chat": "workloads.chat_proxy", "train": "workloads.train", "batch": 
 
 
 class Knobs:
-    def __init__(self, timeline: Timeline | None = None, log_dir: str = "runs/logs"):
-        self.tl, self.log_dir = timeline, log_dir
+    def __init__(self, timeline: Timeline | None = None, log_dir: str = "runs/logs", env: dict | None = None):
+        self.tl, self.log_dir, self.env = timeline, log_dir, env
         self.procs: dict[str, subprocess.Popen] = {}
 
     def _set(self, job: str, **changes) -> dict:
@@ -35,10 +36,11 @@ class Knobs:
         p = self.procs.get(job)
         if p and p.poll() is None:
             return
-        import os
         os.makedirs(self.log_dir, exist_ok=True)
         log = open(f"{self.log_dir}/{job}.log", "a")
-        self.procs[job] = subprocess.Popen([sys.executable, "-m", MODULES[job]], stdout=log, stderr=subprocess.STDOUT)
+        env = {**os.environ, **self.env} if self.env else None
+        self.procs[job] = subprocess.Popen([sys.executable, "-m", MODULES[job]], stdout=log, stderr=subprocess.STDOUT,
+                                           env=env)
 
     def stop_all(self, timeout: float = 15) -> None:
         for job in ("train", "batch"):
