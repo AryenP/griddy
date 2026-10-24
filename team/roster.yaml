@@ -62,6 +62,7 @@ members:
   - infra/**
   - azure.yaml
   - docs/*
+  - docs/evidence/**
   - README.md
   - config/isos.yaml
   - tests/test_report*.py
