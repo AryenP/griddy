@@ -28,6 +28,7 @@
         </select>
       </label>
       <button id="dispatcher" class="toggle" type="button">DISPATCHER ?</button>
+      <div class="keys"><kbd>D</kbd> dispatcher · <kbd>1</kbd> cost · <kbd>2</kbd> carbon · <kbd>3</kbd> balanced · <kbd>R</kbd> receipts</div>
     </div>
   </header>
 
@@ -62,6 +63,7 @@
           <h2>The next 24 hours: what runs when, and why</h2>
           <span id="feed-age" class="badge">no feed</span>
         </div>
+        <p class="cap">Each row is a job. Bright slots are when the solver runs it, dark ones it deferred; the amber line is the grid price, red bands are the utility's caps. Hover a slot for the reason.</p>
         <div id="map" class="map"><p class="empty">no schedule yet: the map appears when the solver publishes one</p></div>
         <div class="legend">
           <span><i class="sw price"></i>price $/MWh</span>
@@ -81,6 +83,7 @@
     <section class="row bottom">
       <div class="panel">
         <h2>Why this plan</h2>
+        <p class="cap">The solver's facts, worded by the agent when it is online; the agent may not add a number.</p>
         <div id="explain" class="explain"></div>
         <div class="src" id="explain-src"></div>
         <h2 class="sub-h">Current slot</h2>
@@ -91,6 +94,7 @@
       </div>
       <div class="panel">
         <h2>Event log</h2>
+        <p class="cap">Everything the runtime logged, newest first: grid updates, caps, plans, knob actions, approvals.</p>
         <ol id="log" class="log"><li class="empty">no events yet</li></ol>
       </div>
     </section>
@@ -100,6 +104,7 @@
         <h2>Receipts: what the meter says happened</h2>
         <span class="src" id="runs-src">runs not loaded yet</span>
       </div>
+      <p class="cap">Computed afterwards from the recorded timelines: measured watts, not the plan.</p>
       <div class="receipt-pick">
         <label>Event report for run <select id="rc-run"></select></label>
         <label>Dispatched run <select id="rc-dispatched"></select></label>
