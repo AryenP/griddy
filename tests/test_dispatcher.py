@@ -212,3 +212,17 @@ def test_negative_background_never_loosens_the_cap():
     assert a.solver_status == b.solver_status == "OPTIMAL"
     assert a.assignments == b.assignments and a.planned_w == b.planned_w and b.background_w == 0.0
     assert not set(run_slots(b, "train")) & {0, 1, 2, 3}      # 15 W of CPU training never fits 14.5 W
+
+
+def test_backtest_one_real_day_offline():
+    """dispatcher/backtest.py on one committed real CAISO day (docs/evidence/backtest/CAISO.csv, a real pull): the
+    solver's plan never costs more than run-now under the cost objective and meets the deadline."""
+    from core.types import Calibration
+    from dispatcher import backtest
+    data = backtest.load_days("CAISO")
+    cal = Calibration.model_validate_json(backtest.CAL.read_text())
+    day = sorted({h.date() for h in data.index})[0]
+    r = backtest.backtest_day("CAISO", data, day, cal)
+    assert r is not None and r["cost"]["deadlines_met"]
+    assert r["cost"]["usd"] <= r["run_now"]["usd"] + 1e-9
+    assert r["carbon"]["g"] <= r["run_now"]["g"] + 1e-6

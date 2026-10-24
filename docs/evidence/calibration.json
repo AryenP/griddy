@@ -1,0 +1,54 @@
+{
+  "measured_at": 1792875271.747514,
+  "machine": "Apple M2 Pro macOS 15.4.1",
+  "idle_w": 1.5279,
+  "window_s": 20,
+  "jobs": {
+    "chat": {
+      "gpu": {
+        "delta_w": 25.65635,
+        "rate": null,
+        "concurrency": 4,
+        "streams_w": {
+          "1": 28.620900000000002,
+          "2": 27.836650000000002,
+          "4": 25.65635
+        },
+        "samples": 20
+      }
+    },
+    "train": {
+      "gpu": {
+        "delta_w": 19.834950000000003,
+        "rate": 18.503,
+        "concurrency": null,
+        "streams_w": {},
+        "samples": 20
+      },
+      "cpu": {
+        "delta_w": 12.065363157894735,
+        "rate": 4.901,
+        "concurrency": null,
+        "streams_w": {},
+        "samples": 19
+      }
+    },
+    "batch": {
+      "gpu": {
+        "delta_w": 22.522550000000003,
+        "rate": 531.9,
+        "concurrency": null,
+        "streams_w": {},
+        "samples": 20
+      },
+      "cpu": {
+        "delta_w": 16.7924,
+        "rate": 144.98,
+        "concurrency": null,
+        "streams_w": {},
+        "samples": 20
+      }
+    }
+  },
+  "source": "powermetrics"
+}
