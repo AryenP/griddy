@@ -77,9 +77,15 @@ running and the page says "agent offline"; plain-form requests still work, becau
 `DEMO.md` failure drills).
 
 **13. Does chat stay fast while you cut power?**
-The promise is time to first token, p95 at most 1.0 s. Measured worst cases are 0.29 s idle and 0.24 s with
-training on the GPU (D 00:22). Full replies take 5-9 s for 256 tokens; that is reply length, not a promise. A
-run with chat traffic during a cap has not been recorded yet, so we do not claim it.
+Not yet proven, and our one recorded try failed. The promise is time to first token, p95 at most 1.0 s; without
+a cap the worst measured is 0.29 s idle and 0.24 s with training on the GPU (D 00:22). In run 20261024-094941 two
+people chatted while a cap of 19.68 W held: the machine averaged 26.46 W and never got under it, and time to first
+token went from 0.20 s before the cap to 4.56 s at worst (D 10:00, `docs/evidence/20261024-094941.md`). Why: the
+plan priced chat per stream from a 4-stream calibration, but one busy stream already draws ~20 W on the GPU, so it
+cut chat to one stream on its own and the two users queued. That cut belongs to the operator, not the solver.
+The fix (b06cd51, D 10:09): chat keeps full speed unless the operator approves degrading it, and chat watts follow
+a measured curve by busy streams. It is not measured yet: the re-run needs the demo Mac's sudo. Until it passes,
+we do not claim chat keeps its SLA under a cap.
 
 ## Scale and the customer
 
