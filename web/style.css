@@ -129,3 +129,23 @@ body.phone { max-width: 760px; padding: 14px 16px 24px; font-size: 18px; }
 .msg.error .meta { color: #ffc2c7; }
 .composer { position: sticky; bottom: 0; display: grid; grid-template-columns: 1fr auto; gap: 8px; padding: 10px 0 4px; background: var(--bg); }
 .composer textarea { min-height: 46px; }
+
+/* approval cards (owner + operator) */
+.board { display: grid; gap: 12px; }
+.ask { border: 2px solid var(--warn); border-radius: 12px; padding: 12px 14px; background: var(--panel2); }
+.ask.closed { border-color: var(--line); }
+.ask.expired { opacity: 0.6; }
+.ask-head { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; }
+.ask-head b { font-size: 1.15rem; }
+.ask-head .src { width: 100%; }
+.ask-msg { font-size: 1.2rem; line-height: 1.4; margin: 8px 0; }
+.ask-facts { border-left: 3px solid var(--line); padding-left: 10px; margin: 8px 0; }
+.ask-reply { margin-top: 10px; }
+.ask-decision:not(:empty) { margin-top: 10px; }
+.decision-line { font-size: 1.15rem; }
+.ask-change:not(:empty) { font-size: 0.95rem; margin-top: 10px; padding: 8px 10px; border-radius: 8px; background: rgba(255,255,255,.04); }
+.change-h { color: var(--muted); font-size: 0.85rem; font-weight: 650; text-transform: uppercase; letter-spacing: .04em; }
+.ask-change .was { color: var(--muted); }
+.ask-change .now { font-weight: 600; }
+.mine-job { padding: 8px 0; border-top: 1px solid var(--line); }
+.mine-job:first-child { border-top: 0; }
