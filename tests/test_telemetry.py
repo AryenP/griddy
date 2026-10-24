@@ -29,6 +29,22 @@ def test_spans_reach_recent_spans(monkeypatch):
     assert telemetry.flush()
 
 
+def test_missing_azure_extra_never_fails_configure(monkeypatch):
+    """CI installs only .[dev]: with a connection string set and no exporter, configure() keeps the ring
+    buffer and reports the exporter as unavailable instead of raising."""
+    import sys
+
+    from opentelemetry.sdk.trace import TracerProvider
+
+    monkeypatch.setitem(sys.modules, "azure.monitor.opentelemetry.exporter", None)   # import fails
+    monkeypatch.setenv("APPLICATIONINSIGHTS_CONNECTION_STRING", "InstrumentationKey=00000000-0000-0000-0000-000000000000")
+    monkeypatch.setattr(telemetry, "_configured", [])
+    scratch = TracerProvider()                          # keep the extra processor off the process's provider
+    monkeypatch.setattr(telemetry.trace, "get_tracer_provider", lambda: scratch)
+    assert telemetry.azure_processor("InstrumentationKey=x") is None
+    assert telemetry.configure() == ["memory", "azure-monitor unavailable"]
+
+
 def test_azure_processor_builds_exporter():
     pytest.importorskip("azure.monitor.opentelemetry.exporter")
     # A syntactically valid connection string; constructing the exporter makes no network call.

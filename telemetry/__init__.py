@@ -3,10 +3,13 @@
 `configure()` once at startup (machine 1 calls it from the API). Spans are created elsewhere with
 `opentelemetry.trace.get_tracer("brownout.agent")`; this module only decides where they go:
   - always: an in-memory ring buffer, read by `recent_spans(n)` (served at /api/trace);
-  - when APPLICATIONINSIGHTS_CONNECTION_STRING is set: Azure Monitor (Application Insights).
+  - when APPLICATIONINSIGHTS_CONNECTION_STRING is set and the `[azure]` extra is installed:
+    Azure Monitor (Application Insights). Without the extra the ring buffer still works and
+    `configure()` says the exporter is missing; it never fails startup.
 """
 from __future__ import annotations
 
+import logging
 import os
 import threading
 from collections import deque
@@ -19,6 +22,7 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor
 SERVICE_NAME = os.getenv("OTEL_SERVICE_NAME", "brownout")
 BUFFER_SIZE = int(os.getenv("TRACE_BUFFER_SPANS", "500"))
 
+log = logging.getLogger("telemetry")
 _lock = threading.Lock()
 _buffer: deque[dict] = deque(maxlen=BUFFER_SIZE)
 _configured: list[str] = []
@@ -49,28 +53,39 @@ class RingBufferProcessor(SpanProcessor):
             _buffer.append(_span_dict(span))
 
 
-def azure_processor(connection_string: str) -> BatchSpanProcessor:
+def azure_processor(connection_string: str) -> BatchSpanProcessor | None:
+    """The Application Insights exporter, or None when the `[azure]` extra is not installed."""
     try:
         from azure.monitor.opentelemetry.exporter import AzureMonitorTraceExporter
-    except ImportError as e:
-        raise RuntimeError("APPLICATIONINSIGHTS_CONNECTION_STRING is set but the Azure exporter is not "
-                           "installed: uv pip install -e '.[azure]'") from e
+    except ImportError:
+        return None
     return BatchSpanProcessor(AzureMonitorTraceExporter(connection_string=connection_string))
 
 
 def configure() -> list[str]:
-    """Install the tracer provider (once per process). Returns the active sinks, e.g. ["memory", "azure-monitor"]."""
+    """Attach the sinks to the process's tracer provider (once per process). Returns the active sinks,
+    e.g. ["memory"] or ["memory", "azure-monitor"]; "azure-monitor unavailable" when a connection
+    string is set but the exporter is not installed. Reuses an SDK provider someone already installed
+    (OpenTelemetry allows only one per process), else installs one."""
     with _lock:
         if _configured:
             return list(_configured)
-        provider = TracerProvider(resource=Resource.create({"service.name": SERVICE_NAME}))
+        provider = trace.get_tracer_provider()
+        if not isinstance(provider, TracerProvider):
+            provider = TracerProvider(resource=Resource.create({"service.name": SERVICE_NAME}))
+            trace.set_tracer_provider(provider)
         provider.add_span_processor(RingBufferProcessor())
         sinks = ["memory"]
-        conn = os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING", "")
+        conn = os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING", "").strip()
         if conn:
-            provider.add_span_processor(azure_processor(conn))
-            sinks.append("azure-monitor")
-        trace.set_tracer_provider(provider)
+            proc = azure_processor(conn)
+            if proc is None:
+                log.warning("APPLICATIONINSIGHTS_CONNECTION_STRING is set but the Azure exporter is not "
+                            "installed (uv pip install -e '.[azure]'); spans stay in memory only")
+                sinks.append("azure-monitor unavailable")
+            else:
+                provider.add_span_processor(proc)
+                sinks.append("azure-monitor")
         _configured.extend(sinks)
         return sinks
 
