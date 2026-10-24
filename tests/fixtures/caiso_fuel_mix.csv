@@ -1,0 +1,5 @@
+# FIXTURE: real gridstatus CAISO pull saved 2026-10-23 21:44 PDT. Test data only; never shown to a judge.
+interval_start,Solar,Wind,Geothermal,Biomass,Biogas,Small Hydro,Coal,Nuclear,Natural Gas,Large Hydro,Batteries,Imports,Other
+2026-10-23 21:30:00-07:00,-59,2308,805,202,137,148,-7,1101,8380,1700,6251,3748,0
+2026-10-23 21:35:00-07:00,-59,2340,797,202,137,147,-7,1101,8386,1696,6161,3725,0
+2026-10-23 21:40:00-07:00,-59,2374,803,203,123,147,-7,1101,8442,1685,6112,3599,0
