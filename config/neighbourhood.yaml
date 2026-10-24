@@ -1,0 +1,20 @@
+# A SIMULATED neighbourhood power line around the real, measured sites (Aryen's decision, Sat 05:35: a full
+# grid on screen matters more than keeping every number measured). Everything here is simulated and labelled
+# "simulated" on screen, except our own sites' watts, which stay measured. Simulated parts are driven by real
+# inputs where one exists: the homes' load follows the shape of today's real ISO load forecast, and the
+# simulated data centers' flexible load follows our real sites' measured response to the same cap.
+line_limit_kw: 1000            # the line's rating
+homes_offices_peak_kw: 760     # homes and offices at the day's forecast peak (shape: the ISO's load forecast)
+solar_kw: 260                  # solar farm nameplate; output follows a clear-day profile (simulated)
+solar_day: [6.5, 18.5]         # sunrise and sunset hours of that profile
+data_centers:
+  count: 20
+  size_kw: [8, 30]             # spread evenly between these sizes, smallest to largest
+  flexible_share: 0.6          # the part of each data center's load Brownout can move, like our own jobs
+diesel_kw: 600                 # backup generator: covers whatever the line cannot carry
+cap_trigger_pct: 95            # the utility calls for a cut when the line reaches this share of its limit
+cap_margin_pct: 8              # and asks for enough to land this far below the limit
+scenario:
+  name: evening peak
+  hours: [16, 21]              # the stretch of today's load forecast that is replayed
+  seconds: 90                  # in this many real seconds

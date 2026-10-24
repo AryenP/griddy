@@ -24,6 +24,7 @@ from core.config import available_isos, settings
 from core.timeline import Timeline
 from dispatcher.solve import load_calibration, load_policy
 from fleet.hub import Fleet
+from neighbourhood.model import Neighbourhood
 from grid.watcher import GridWatcher
 from meter.powermetrics import PowerMeter
 
@@ -47,6 +48,7 @@ class Runtime:
         self.fleet = Fleet(self.tl)                   # laptops that join as measured sites (config/fleet.yaml)
         self.executor.fleet = self.fleet
         self.meter.subscribers.append(lambda r: self.executor.on_power(self.fleet.combine(r)))
+        self.neighbourhood = Neighbourhood(self.tl, self.executor)   # SIMULATED line around the real sites
         self.agent = AgentBridge(self.tl, self.executor)
         self.agent.snapshot = self.snapshot
         self.watcher: GridWatcher | None = None
@@ -92,6 +94,21 @@ class Runtime:
             self.knobs.start(j, paused=True)
         await self._start_watcher(settings.iso, settings.location)
         self._tasks.append(asyncio.create_task(self.executor.run()))
+        if self.neighbourhood.enabled:
+            self._tasks.append(asyncio.create_task(self._neighbourhood_loop()))
+
+    async def _neighbourhood_loop(self):
+        """Once a second: the simulated line; its call for a cut goes to the real dispatcher."""
+        while True:
+            try:
+                self.neighbourhood.tick()
+                ev, self.neighbourhood.pending_cap = self.neighbourhood.pending_cap, None
+                if ev is not None:
+                    await self.executor.add_event(ev)
+            except Exception as e:                  # the simulation never stops the real loop
+                log.exception("neighbourhood tick failed")
+                self.tl.log("note", level="error", msg=f"neighbourhood tick failed: {e!r}"[:300])
+            await asyncio.sleep(1.0)
 
     async def stop(self):
         for t in self._tasks + ([self.watcher_task] if self.watcher_task else []):
@@ -110,7 +127,7 @@ class Runtime:
         return {"grid": dump(ex.signal), "schedule": dump(ex.schedule), "plan": dump(ex.plan),
                 "power": dump(self.meter.latest), "power_history": [[round(t, 2), round(w, 3)] for t, w in ex.power],
                 "jobs": {j: Knobs.status(j) for j in ("chat", "train", "batch")},
-                "calibration": dump(ex.cal), "fleet": self.fleet.status(), "policy": dump(ex.policy), "iso_options": available_isos(),
+                "calibration": dump(ex.cal), "fleet": self.fleet.status(), "neighbourhood": self.neighbourhood.summary(), "policy": dump(ex.policy), "iso_options": available_isos(),
                 "iso": self.watcher.iso if self.watcher else settings.iso,
                 "dispatcher_enabled": ex.dispatcher_enabled, "agent": self.agent.status, "agent_model": self.agent.llm.name,
                 "approvals": [dump(x) for x in self.agent.pending(status=None)],

@@ -160,13 +160,13 @@ text, 3:1 large text and graph marks) for every text/background pair the pages u
 the approvals list and the event log so a new approval is announced; every control reachable by keyboard
 in a sensible order on operator and owner pages. Done when: the test passes and the PR is merged.
 
-### 14. MOVED to machine 4 (Sat 04:55, now docs/briefing/architecture.svg): architecture diagram
+### 14. BACK WITH YOU (Sat 05:40, machine 4 now supervises): architecture diagram `docs/judging/architecture.svg`
 Hand-written SVG, legible at Devpost width, light background: ISO feeds -> GridWatcher -> CP-SAT solver ->
 Schedule -> Executor -> knobs -> workloads; powermetrics -> meter -> timeline; owner and operator approvals;
 the LLM agent beside the solver with arrows only to intake, explanations and negotiation, and **no arrow to a
 knob**. Label each box with its file. Machine 1 links it from README.md and docs/devpost.md. Done when merged.
 
-### 15. MOVED to machine 4 (Sat 04:55, now docs/briefing/driver-card.md): driver card
+### 15. BACK WITH YOU (Sat 05:40): driver card `docs/judging/driver-card.md`
 One printable page for whoever drives the demo: the preflight command, URLs and QR, the 4-minute beats from
 DEMO.md with the exact clicks and hotkeys, the proof page, and what to say, truthfully, if the feed goes
 stale, Ollama dies or the agent is offline. Done when merged.
@@ -204,3 +204,26 @@ over `web/*.html web/*.js` first (some names are common words), then delete the 
 - **demo tag:** the FAIL hint says `git checkout demo-stable-1`, which would roll the demo back to an old
   commit. Say instead: "tag this commit once the rehearsal passes: make tag-stable".
 Done when: tests cover both (monkeypatched probes), PR merged.
+
+## Order from Sat 05:40 (Aryen: "number 2 is ready for tasks"): 18, 19, 14, 15, 12, 13, 11, 17
+Machine 4 (Arumalla) is the supervisor now and will open `[supervisor]` issues; machine 1 answers them.
+Since 05:35 part of the demo is SIMULATED by Aryen's decision: a neighbourhood power line around our real,
+measured sites (config/neighbourhood.yaml, neighbourhood/model.py, DECISIONS 05:45). Every simulated thing must
+say "simulated" wherever it appears; measured things never do.
+
+### 19. Operator phone page: "Replay the evening peak (simulated)"
+On `web/operator.html` (yours), add one control that starts and stops the neighbourhood's time-lapse:
+`POST /api/neighbourhood {"action": "start" | "stop"}` (HANDOFF.md, since 05:45; add the route to
+CONTRACT_ROUTES in tests/test_web_pages.py, which is yours). While it runs, show from the WebSocket's
+`neighbourhood` events (one a second, every one carries `"simulated": true`): the simulated clock
+(`sim_hour`), the line's loading (`loading_pct` of `limit_kw`), the diesel generator (`diesel_kw`) and
+`diesel_kwh` vs `diesel_off_kwh` (diesel avoided). Label the block "Simulated neighbourhood" with one line
+saying what is real: our sites' watts are measured, the homes follow today's real load forecast shape,
+everything else is simulated. The utility's cut it triggers is a real cap to the real dispatcher, so the
+existing time-to-compliance counter on the page keeps working. Done when: it works on a phone at 375 px
+against `make demo`, tests pass, PR merged.
+
+### 14 (updated). The architecture picture now also shows the simulated neighbourhood
+Draw the neighbourhood (homes, solar, 20 data centers, line limit, diesel) in a dashed box labelled
+"simulated", with one arrow from our measured sites' response into it and one arrow out of it (the utility's
+cut) into the real dispatcher. Everything else as task 14 says.

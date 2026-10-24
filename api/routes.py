@@ -71,6 +71,10 @@ class SiteCalibration(BaseModel):
     meter: str
 
 
+class NeighbourhoodIn(BaseModel):
+    action: Literal["start", "stop"]
+
+
 class ChatIn(BaseModel):
     messages: list[dict]
     max_tokens: int | None = None
@@ -121,6 +125,13 @@ def make_router(rt) -> APIRouter:
         if site_id not in rt.fleet.sites:
             raise HTTPException(404, f"{site_id!r} is not a site in config/fleet.yaml")
         return rt.fleet.calibrate(site_id, body.model_dump())
+
+    @r.post("/api/neighbourhood")
+    async def neighbourhood(body: NeighbourhoodIn):
+        """Start or stop the SIMULATED neighbourhood's time-lapse (config/neighbourhood.yaml scenario)."""
+        if not rt.neighbourhood.enabled:
+            raise HTTPException(404, "no neighbourhood configured (config/neighbourhood.yaml)")
+        return rt.neighbourhood.start() if body.action == "start" else rt.neighbourhood.stop()
 
     @r.get("/api/state")
     async def state():

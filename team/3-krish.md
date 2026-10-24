@@ -1,5 +1,38 @@
 # 3 Krish: supervisor
 
+## NEW (Sat 05:45): your queue for the next hours, in order. Machine 4 (Arumalla) now does the 10-minute checks
+Aryen asked for you to have work. You still never edit machine 1's or 2's code: you review, verify and write
+your own files (`team/review/**`, `docs/qa/**`, your status file). Real bugs go in GitHub issues titled
+`[supervisor] ...` with file, line, what you expected, what you saw. Branch `krish/<task>`, then a pull request.
+Since 05:35 part of the demo is SIMULATED by Aryen's decision (DECISIONS 05:45): read that entry first.
+
+### K1. Deep review of the two new pieces (about 45 min)
+`fleet/agent.py`, `fleet/hub.py`, `neighbourhood/model.py`, and their wiring in `controller/execute.py`,
+`api/app.py`, `api/routes.py` (DECISIONS 05:10-05:45, HANDOFF.md). Look for real failures, for example:
+a laptop that drops out while a cap is in force; a laptop that is plugged in; the neighbourhood's call for a cut
+when our sites are idle (their baseline is tiny, so their "response" cannot move); the time-lapse ending while a
+cap is still in force; a simulated number that reaches a page or a report without "simulated"; anything that
+changes the single-Mac behaviour when no laptop and no neighbourhood are configured. Run `uv run pytest -q`.
+Write `team/review/0545-fleet-neighbourhood.md` (findings, most severe first, each with file:line) and open an
+issue for each real bug. Done when: the review is merged and every finding has an issue or a "not a bug" line.
+
+### K2. The judges' hard questions: `docs/qa/judge-questions.md` (about 45 min)
+15 to 20 questions a Microsoft judge is likely to ask in 4 minutes, each with a 1 to 3 sentence answer that is
+true and cites its source (a `DECISIONS.md` time, a `RESEARCH.md` section, a file or a run id). Start with:
+"What exactly is simulated, and what is measured?", "Why should I trust the watts?", "What happens if the AI is
+wrong?", "How does this get to 50 MW?", "What did a real operator say?" (answer honestly: to be collected at
+the 10 AM workshop until Aryen adds it). Never invent a number. Done when: merged.
+
+### K3. Number audit across what judges read (about 40 min)
+Every number in `README.md`, `docs/devpost.md`, `docs/judging/*.md` and `docs/evidence/*.md`: does it match the
+`DECISIONS.md` line or evidence report it claims? Is anything simulated presented as measured? Write
+`team/review/0545-number-audit.md` (number, where, source, matches yes/no) and open an issue per mismatch.
+Done when: merged. Re-run it after the final evidence run (~07:20) lands, when README and Devpost numbers change.
+
+### K4. If one of the Windows laptops is yours
+Tell Aryen in your status file. After 07:20 you may be asked to join it to the demo: `fleet/README.md`.
+
+
 **Changed Sat 02:05.** Your phase 1 is finished; machine 1 is merging it (`krish/submission`). Your
 remaining phase-2 work moved to machine 2. Your Claude is now the team's **supervisor**: it watches machine 1
 (Aryen, the demo Mac) and machine 2 (Anuraag) and tells them what is wrong. **It never edits code, never
