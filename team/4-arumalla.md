@@ -1,92 +1,84 @@
-# 4 Arumalla: agent layer (LLM intake, negotiation, explanations)
+# 4 Arumalla: briefing pages for the judges
 
-**Mission:** handle what the solver cannot (messy human requests, owner negotiation in free text, plain
-explanations) without ever deciding or touching a knob. Your functions take data and return the pydantic
-types at the bottom of `core/types.py`; machine 1 wires them into the API.
+Hi! Your earlier job (the AI helper code) moved to machine 1 at 1:45 AM. You have a new job now (Sat 4:55 AM).
+It is all yours: you work in your own folder, `docs/briefing/`, and nobody else touches it. So you cannot
+break anyone's work, and nobody can break yours.
 
-**Owns:** `agent/__init__.py`, `agent/llm.py`, `agent/intake.py`, `agent/negotiator.py`, `agent/explainer.py`,
-`agent/channels/**`, `tests/test_agent*.py`, `tests/fixtures/openadr/**`.
+## How to start
+1. In the repo folder, get the latest copy: `git pull`
+2. Check who you are: `uv run python scripts/team.py whoami --save`. It should say you are number 4.
+3. For each task, make a new branch (your own working copy): `git checkout -b arumalla/<short-name>`,
+   for example `arumalla/picture`.
+4. Only add or change files in `docs/briefing/` and your notes file `team/status/4-arumalla.md`.
+   A safety check stops changes anywhere else.
+5. When a task is done: commit, push the branch, and open a pull request (a request to add your work to
+   the main copy): `gh pr create --fill`. Machine 1 checks it and adds it.
+6. After each task, add a few lines to `team/status/4-arumalla.md`: what you finished, what is next, and
+   anything that is stopping you.
 
-**Keys:** `ANTHROPIC_API_KEY` / `ANTHROPIC_MODEL` in your own `.env`; Azure via `uv pip install -e ".[azure]"`
-and `AZURE_AI_PROJECT_ENDPOINT` / `AZURE_MODEL_DEPLOYMENT`. Tests never call a network: use recorded fixtures.
+## Ground rules (from CLAUDE.md)
+- Never make up a number. Every number must come from `DECISIONS.md` or `RESEARCH.md`. If it is not
+  there, write "to be measured".
+- No passwords or keys in any file, ever.
+- Short, plain commit messages.
 
-## Interfaces (implement exactly; machine 1 codes against these)
-```python
-# agent/llm.py
-class AgentOffline(Exception): ...
-class LLM:
-    name: str                      # "claude:<model>" or "foundry:<deployment>"
-    available: bool
-    async def text(self, system: str, user: str) -> str: ...
-    async def json(self, system: str, user: str, schema: type[BaseModel]) -> BaseModel: ...
-def get_llm() -> LLM               # Agent Framework + Foundry when AZURE_AI_PROJECT_ENDPOINT, else Claude
+## Your tasks, in order
 
-# agent/intake.py
-def parse_openadr(event: dict) -> IntakeResult                       # deterministic, no LLM
-async def parse_request(text: str, llm: LLM, context: dict) -> IntakeResult
-#   context = {"now": iso8601, "baseline_w": float|None, "jobs": [...], "policy": {...}}
+### 1. The picture: `docs/briefing/architecture.svg`
+**What:** one picture that shows how Brownout works, for Devpost and the README.
+Boxes and arrows, left to right:
+- Grid data (CAISO and ERCOT electricity prices) → the planner (the "solver") → the 24-hour plan →
+  the controller → the three jobs on the Mac (chat, training, batch).
+- The power meter (macOS "powermetrics") → the record of everything that happened (the "timeline") →
+  the dashboard and the receipts.
+- People: the job owner and the operator say yes or no to risky changes.
+- The AI helper (the "agent") sits beside the planner. It reads requests, explains the plan, and asks
+  people questions. Draw its arrows only to "requests", "explanations" and "questions".
+  **It must have NO arrow to the controller or the jobs: the AI never turns a knob.** This is the most
+  important part of the picture.
 
-# agent/negotiator.py
-async def draft_ask(shortfall: Shortfall, job: Job, llm: LLM) -> ApprovalRequest
-async def parse_reply(request: ApprovalRequest, text: str, llm: LLM, now: datetime) -> OwnerDecision
+Under each box, write the code file in small text (for example `dispatcher/solve.py`). `README.md` and
+`SPEC.md` tell you which file does what.
+Use any drawing tool you like (Excalidraw or draw.io are easy) and export as SVG with a white or light
+background. The text must be easy to read when the picture is 700 pixels wide.
+**Done when:** the SVG is in `docs/briefing/`, it opens in a browser, and your pull request is merged.
 
-# agent/explainer.py
-async def explain(schedule: Schedule, signal: GridSignal, llm: LLM) -> Explanation
-async def answer(question: str, state: dict, llm: LLM) -> Explanation   # phase 2; state = /api/state snapshot
+### 2. The driver's cheat sheet: `docs/briefing/driver-card.md`
+**What:** one page for whoever runs the 4-minute demo, so they do not have to remember anything.
+Put in it, in this order:
+- **Before you start:** the commands `make preflight`, then `make demo`, and the web addresses of the
+  dashboard, chat, owner, operator and proof pages (you find them in `DEMO.md`).
+- **The 4-minute script** from `DEMO.md`: each step with its time (0:00, 0:15, ...), what to click or type,
+  and the one sentence to say.
+- **Dashboard shortcuts:** D turns the dispatcher on or off; 1, 2, 3 pick cost, carbon or balanced;
+  R jumps to the receipts.
+- **If something breaks, what to say (truthfully):** internet down, chat model stopped, AI helper offline.
+  Use the "Failure drills" part of `docs/rehearsal.md` and turn each one into one sentence to say out loud.
 
-# agent/negotiator.py (phase 2)
-async def draft_operator_ask(shortfalls: list[Shortfall], schedule: Schedule, llm: LLM) -> ApprovalRequest
-```
-Every call: one OpenTelemetry span (`opentelemetry.trace.get_tracer("brownout.agent")`) with model, latency,
-tokens. Offline (no key, API down): every function still returns a valid result: `clarify`/`unclear` with
-"agent offline", or the solver's facts joined plainly, with `llm_used=False`.
+**Done when:** it fits on one printed page and your pull request is merged.
 
-## Start now (Sat 01:00, from machine 1)
-State: all four phase-1 tasks are done but unmerged in one commit on `arumalla/agent-layer` (llm, intake,
-negotiator, explainer, tests, OpenADR fixture). No PR is open. Main has moved 9 commits (guardrails, CI,
-branch protection, chat model now qwen3:4b-instruct, `Comparison` type, traffic-aware chat planning).
-1. `git fetch origin && git checkout arumalla/agent-layer`, then `uv run python scripts/team.py whoami --save`
-   (prints "You are 4 Arumalla").
-2. Then: `git fetch origin && git rebase origin/main` on your branch. If `DECISIONS.md` conflicts, keep both
-sides' lines (main's first, yours after); it is append-only, nothing is lost. `make test`, `uv run python
-scripts/team.py check` (must print ok), `git push --force-with-lease`.
-3. CI runs on Ubuntu with no API keys: every test must pass offline (recorded fixtures, `llm_used=False`
-   paths). Nothing may call the network in tests.
-4. Open ONE PR from `arumalla/agent-layer`: "4 Arumalla: agent layer phase 1". CI must be green. Machine 1
-   wires it into `/request`, `/openadr/event`, approvals, `/api/explain` once merged.
-5. Create `team/status/4-arumalla.md` with an entry, then start Phase 2 below (task 5: injection-proof intake;
-   share cases with machine 3's `evals/`).
-API access: use your own Anthropic API key, or the Foundry endpoint machine 3 provisions in their phase 2.
-Never paste keys in Slack, the repo or a PR.
+### 3. The question sheet for the Microsoft workshop: `docs/briefing/workshop.md`
+At 10 AM Saturday there is a Microsoft workshop. Aryen will talk to Microsoft people there. We need one
+real quote from them for the dashboard.
+Write:
+- 6 to 8 short questions (one line each) for a Microsoft engineer or a data-center person, about: how data
+  centers handle grid emergencies today, who decides which jobs slow down, what proof the power company
+  wants afterwards, and whether a tool like Brownout would help them.
+- A box to fill in during the talk: the person's name, their job title, the exact words they said, and
+  "OK to show this on our screen? yes / no".
 
-## Tasks, in order
-1. **`agent/llm.py`** with both backends and the offline path. Done when: `get_llm().text(...)` answers with a
-   key, raises/flags offline without one; spans visible with the console exporter.
-2. **`intake.py`.** `parse_openadr` for OpenADR 3.1 EVENT JSON (`IMPORT_CAPACITY_LIMIT` in KW/W,
-   `intervalPeriod` start/duration ISO 8601) → `CapEvent`; fixture from RESEARCH.md in `tests/fixtures/openadr/`.
-   `parse_request`: regex fast path for plain forms ("30% for 20 minutes", "cap at 15 W until 1 AM"); the LLM
-   only for messy text; Azure Content Safety `shieldPrompt` on free text when configured (rejected on attack);
-   ambiguity → exactly one clarifying question. Done when: DEMO.md's "grid alert, I need 30% off for the next
-   twenty minutes" becomes a `CapEvent` with a readback.
-3. **`negotiator.py`.** `draft_ask` turns a deadline `Shortfall` into a short message to the owner using only
-   its facts; `parse_reply`: "no, this has to finish by 9 AM Monday" → refuse with reason; "ok if it's done by
-   Tuesday noon" → `new_deadline`; plain yes/no via regex first. Done when: DEMO.md 1:45 works on fixtures.
-4. **`explainer.py`.** Two sentences from `Schedule.explanations` + the grid signal; **reject its own output**
-   if any number in it is not in the input facts (fall back to the facts). Done when: a test proves no invented
-   numbers on the real `tests/fixtures/real_timeline_solve_20261023.jsonl` schedule.
+**Done when:** your pull request is merged before 9:30 AM.
 
-## Phase 2: when phase 1 is merged
-5. **Injection-proof intake**: free text is data, never instructions. Requests to touch knobs, skip approvals,
-   ignore the cap or reveal keys come back `rejected` with the reason; Content Safety `shieldPrompt` when
-   configured. Share your cases with machine 3's `evals/`. Done when: machine 3's injection evals pass.
-6. **Operator shortfall ask** `draft_operator_ask` (DEMO.md 3:00, "ask for 90%"): from the solver's cap and
-   deadline shortfalls, one message offering exactly the options the solver proved ("floor with chat protected
-   is N W; approve going dark on everything else, or accept N W?"), numbers copied from the facts only.
-7. **Operator Q&A** `answer(question, state, llm)` behind `POST /api/ask`: "why is training paused?" answered
-   from the live state (schedule explanations, plan, grid, events) only; the same no-invented-numbers check.
-   With Agent Framework configured, implement it as an `agent_framework` agent whose tools are read-only views
-   of `state`; spans include the tool calls. Done when: three real questions answered with facts that check out.
-8. **Slack owner channel** `agent/channels/slack.py` (only with `SLACK_BOT_TOKEN`/`SLACK_APP_TOKEN`; slack-bolt,
-   Socket Mode): posts each `ApprovalRequest` to its owner and relays the reply to
-   `POST /api/approvals/{id}/reply` over HTTP. The channel never calls the executor. Done when: an ask
-   round-trips through Slack.
+### 4. Check our sources: `docs/briefing/sources.md`
+`RESEARCH.md` lists facts and the web links they came from. Judges may click them.
+For each link in `RESEARCH.md`:
+- Open it. Does it load?
+- Does the page really say what `RESEARCH.md` says? Check the number or the date.
+
+Make a table with these columns: the fact (short), the link, "loads? yes / no",
+"says it? yes / no / partly", and a note.
+**Do not change `RESEARCH.md`.** If something is wrong, just mark it in your table; machine 1 fixes it.
+**Done when:** every link has a row and your pull request is merged.
+
+## When all four are done
+Write "all four done" in `team/status/4-arumalla.md`. Machine 1 will add more tasks here.

@@ -160,13 +160,13 @@ text, 3:1 large text and graph marks) for every text/background pair the pages u
 the approvals list and the event log so a new approval is announced; every control reachable by keyboard
 in a sensible order on operator and owner pages. Done when: the test passes and the PR is merged.
 
-### 14. Architecture diagram: `docs/judging/architecture.svg`
+### 14. MOVED to machine 4 (Sat 04:55, now docs/briefing/architecture.svg): architecture diagram
 Hand-written SVG, legible at Devpost width, light background: ISO feeds -> GridWatcher -> CP-SAT solver ->
 Schedule -> Executor -> knobs -> workloads; powermetrics -> meter -> timeline; owner and operator approvals;
 the LLM agent beside the solver with arrows only to intake, explanations and negotiation, and **no arrow to a
 knob**. Label each box with its file. Machine 1 links it from README.md and docs/devpost.md. Done when merged.
 
-### 15. Driver card: `docs/judging/driver-card.md`
+### 15. MOVED to machine 4 (Sat 04:55, now docs/briefing/driver-card.md): driver card
 One printable page for whoever drives the demo: the preflight command, URLs and QR, the 4-minute beats from
 DEMO.md with the exact clicks and hotkeys, the proof page, and what to say, truthfully, if the feed goes
 stale, Ollama dies or the agent is offline. Done when merged.
