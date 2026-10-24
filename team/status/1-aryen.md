@@ -74,3 +74,8 @@ Blockers / needs Aryen: none.
 Done: no PRs or [supervisor] issues; main CI green (13f6b3b, 1ec9ff8).
 Next: record the evidence comparison when the run finishes; DEMO pass on the pages; tag.
 Blockers / needs Aryen: none.
+
+## 2026-10-24 03:10 PT — evidence at 13f6b3b (finished)
+Done: dispatched 1.64 W vs dispatcher-off 21.18 W over the 300-s cap window, 99 % vs 0 % of seconds under the cap, compliance in 7 s; reproduces 02:28. Report in docs/evidence/.
+Next: merge PRs #6 (receipts) and #7 (qr); Anuraag's asks (active cap events in the snapshot, a distinct kind for intake events); DEMO pass + make preflight; tag.
+Blockers / needs Aryen: none.
