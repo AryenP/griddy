@@ -1,0 +1,12 @@
+# Laptops that join the demo as extra, measured sites (fleet/agent.py on each, fleet/hub.py on the Mac).
+# A laptop is listed only after its battery probe (fleet/battery_probe.ps1) says GOOD in its owner's status
+# file: its watts are then measured by its own battery, never estimated. With no sites listed, or none online,
+# Brownout is one site and nothing changes.
+sites: []
+#  - {id: surface1, name: "Surface Pro 11", owner: "<teammate>"}
+stale_s: 5                 # a laptop's watts count only while its last battery reading is this fresh
+job:                       # what every laptop runs: lzma-compress its own Python standard library (real CPU work)
+  kind: droppable
+  owner: data-eng
+  priority: 3
+  backlog_mb: 20000        # the job's size per laptop: the planner spreads it over the horizon

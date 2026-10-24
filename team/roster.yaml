@@ -20,6 +20,7 @@ members:
   - config/jobs.yaml
   - config/policy.yaml
   - config/site.yaml
+  - config/fleet.yaml
   - Makefile
   - pyproject.toml
   - uv.lock
