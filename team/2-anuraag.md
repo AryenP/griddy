@@ -195,3 +195,12 @@ over `web/*.html web/*.js` first (some names are common words), then delete the 
 `.bottom`, `.tile`, `.big .value`, `.job`, `.job-head`, `.toggle`, `.toggle.off`, `.row`. Keep `.state-*` and
 `.ev-*` (built at runtime), `.kv`, `.bar`, `.keys`, `.legend`, `.sw.*`, `.map-*`, `.log`, `.plan*`,
 `.explain*`, `.receipt*`, `.rtable`. Done when: no page changes visually at 1440 and 375 px and tests pass.
+
+### 18. Two preflight fixes found in machine 1's cold-start rehearsal (Sat 04:50), small, do first
+- **sudo:** `check_sudo` runs `sudo -n true`, which fails on the demo Mac because its sudoers rule allows only
+  the exact powermetrics command (team/README.md). Probe that command instead, the same one the Makefile's
+  `SUDO_PM` uses: `sudo -n /usr/bin/powermetrics --samplers cpu_power,gpu_power -i 1000 -n 1`. PASS when it
+  exits 0; the FAIL hint stays "run sudo -v in this terminal".
+- **demo tag:** the FAIL hint says `git checkout demo-stable-1`, which would roll the demo back to an old
+  commit. Say instead: "tag this commit once the rehearsal passes: make tag-stable".
+Done when: tests cover both (monkeypatched probes), PR merged.

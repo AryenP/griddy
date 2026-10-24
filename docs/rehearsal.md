@@ -39,3 +39,25 @@ Time each with a stopwatch; the judge sees four minutes (DEMO.md).
       evidence run differs (they come from docs/evidence/ reports, never typed).
 - [ ] Record the video (docs/demo-video.md) from the same setup.
 - [ ] Repo public or judges added; Devpost opt-ins per docs/devpost.md.
+
+## Scripted cold start, Sat 24 Oct 04:48 PT (machine 1, run 20261024-044805, main at 279cfd5)
+From nothing running (no runtime, no workloads, port 8080 free), `make demo`:
+
+| Step | Seconds after `make demo` |
+|---|---|
+| first knob action (workloads paused at start) | 4.5 |
+| first powermetrics sample | 7.5 |
+| first live CAISO signal | 10.1 |
+| first CP-SAT schedule | 11.6 |
+| dashboard answering `/api/state` | 12.3 |
+
+Every page (`/`, `/chat`, `/owner.html`, `/operator.html`, `/proof.html`) and every read route in HANDOFF.md
+(`/api/state`, `/api/runs`, `/api/runs/{id}/series`, `/api/report`, `/api/compare` with both baselines,
+`/api/trace`, `/api/approvals`, `/api/explain`) answered 200; a path in place of a run id answered 404.
+`POST /api/ask` "Why is batch not running right now?" came back from the agent, grounded in the solver's facts
+(batch planned for one slot at Sat 14:00-14:15, $4.98/MWh vs $34.45/MWh). The snapshot carried the trace's
+`power_history`. Shutdown with Ctrl-C checkpointed the workloads and stopped the meter.
+`make preflight` with the demo up: 13 PASS, 4 FAIL. Expected: ports 8080 and 8090 in use (the demo was running)
+and no demo-stable tag at HEAD (cut after the final evidence run). Wrong: the sudo check tests `sudo -n true`,
+which fails under the pinned powermetrics-only sudoers rule although the demo starts unattended, and the tag
+hint says `git checkout demo-stable-1`, which would roll the demo back (Anuraag task 18).
