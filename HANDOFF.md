@@ -82,7 +82,14 @@ chat has `concurrency`, `inflight`, `p95_60s` (total latency), `ttft_p95_60s` (t
 | GET | `/api/trace?n=50` | | recent OpenTelemetry spans `[{"name","start","end","attributes",...}]` |
 
 WebSocket adds `{"kind": "approval", "data": ApprovalRequest}` whenever a request is created or changes
-status, and the snapshot gains `"approvals": [ApprovalRequest]` and `"explanation": Explanation | null`.
+status (and `{"kind": "approval", "data": {"request_id", "who", "decision": OwnerDecision}}` for each reply),
+and the snapshot gains `"approvals": [ApprovalRequest]` (all statuses), `"explanation": Explanation | null`
+and `"agent_model"`. Each new schedule's explanation arrives as `{"kind": "note", "data": {"schedule_id",
+"explanation": Explanation}}`. Shortfall events carry `shortfall_kind` (`deadline` | `cap`), not `kind`.
+Approval flow (live on main since Sat 01:45): the owner of a job is asked first whenever a deadline could
+slip; `approve` -> the slipped finish becomes the deadline, a new time -> that deadline, `no ...` -> the
+deadline turns hard and the solver goes over the cap instead, which creates an operator request with
+`job_id: "power_cap"`. `/api/ask` arrives with machine 4's phase 2.
 Pages: `/` dashboard, `/chat` (or `/chat.html`), `/owner.html`, `/operator.html`.
 
 Real captured timelines for building against before the API is up: `tests/fixtures/real_timeline_*.jsonl`

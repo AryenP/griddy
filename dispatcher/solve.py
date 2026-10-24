@@ -196,7 +196,9 @@ def _relaxation(inp: Inputs, relax: Relax, limit_s: float, slots: list[datetime]
 
 def solve(sig: GridSignal, jobs: list[Job], policy: Policy, cal: Calibration,
           events: list[CapEvent] | None = None, baseline_w: float | None = None,
-          chat_busy: float | None = None) -> Schedule:
+          chat_busy: float | None = None, hard_deadlines: frozenset[str] = frozenset()) -> Schedule:
+    """`hard_deadlines`: jobs whose owner refused a slip; if the model is infeasible, only the cap
+    (or other jobs' deadlines) may bend for them."""
     t0 = time.time()
     slots = [s for s, _ in sig.price_curve]
     prices = [p for _, p in sig.price_curve]
@@ -216,9 +218,10 @@ def solve(sig: GridSignal, jobs: list[Job], policy: Policy, cal: Calibration,
         obj = solver.ObjectiveValue()
     elif st == cp_model.INFEASIBLE:
         # Two honest options for the negotiator: slip deadlines under the cap, or exceed the cap.
-        shortfalls = (_relaxation(inp, Relax(deadlines=True), policy.solver_time_limit_s, slots, policy.slot_minutes)
+        hard = frozenset(hard_deadlines)
+        shortfalls = (_relaxation(inp, Relax(deadlines=True, fixed=hard), policy.solver_time_limit_s, slots, policy.slot_minutes)
                       + _relaxation(inp, Relax(cap=True), policy.solver_time_limit_s, slots, policy.slot_minutes))
-        rb = build(inp, Relax(deadlines=True, cap=True))
+        rb = build(inp, Relax(deadlines=True, cap=True, fixed=hard))
         rs, rst = _run(rb, policy.solver_time_limit_s)
         assign, watts = _extract(inp, rb, rs)
         status, obj, relaxed = "INFEASIBLE -> minimal relaxation", rs.ObjectiveValue(), True

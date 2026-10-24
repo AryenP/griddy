@@ -67,6 +67,16 @@ class ChatIn(BaseModel):
     max_tokens: int | None = None
 
 
+class RequestIn(BaseModel):
+    text: str = Field(min_length=1, max_length=4000)
+    who: str = "operator"
+
+
+class ReplyIn(BaseModel):
+    text: str = Field(min_length=1, max_length=4000)
+    who: str
+
+
 def make_router(rt) -> APIRouter:
     r = APIRouter()
 
@@ -121,6 +131,45 @@ def make_router(rt) -> APIRouter:
         except ValueError as e:
             raise HTTPException(409, str(e))
         return s.model_dump(mode="json") if s else None
+
+    def _dump(m):
+        return m.model_dump(mode="json") if m is not None else None
+
+    @r.post("/request")
+    async def request(body: RequestIn):
+        try:
+            result, sched = await rt.agent.request(body.text, body.who)
+        except ValueError as e:                      # e.g. % cap before a measured baseline exists
+            raise HTTPException(409, str(e))
+        return {"intake": _dump(result), "schedule": _dump(sched)}
+
+    @r.post("/openadr/event")
+    async def openadr(event: dict):
+        try:
+            result, sched = await rt.agent.openadr(event, who="openadr")
+        except ValueError as e:
+            raise HTTPException(409, str(e))
+        return {"intake": _dump(result), "schedule": _dump(sched)}
+
+    @r.get("/api/approvals")
+    async def approvals(owner: str | None = None, status: str | None = "pending"):
+        return [_dump(a) for a in rt.agent.pending(owner, status or None)]
+
+    @r.post("/api/approvals/{request_id}/reply")
+    async def reply(request_id: str, body: ReplyIn):
+        try:
+            decision, sched = await rt.agent.reply(request_id, body.text, body.who)
+        except KeyError:
+            raise HTTPException(404, f"no approval request {request_id}")
+        except ValueError as e:
+            raise HTTPException(409, str(e))
+        return {"decision": _dump(decision), "schedule": _dump(sched)}
+
+    @r.get("/api/explain")
+    async def explain():
+        if rt.agent.explanation is None:
+            raise HTTPException(404, "no schedule explained yet")
+        return _dump(rt.agent.explanation)
 
     @r.post("/api/chat")
     async def chat(body: ChatIn):
