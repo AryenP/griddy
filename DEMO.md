@@ -29,7 +29,10 @@ The agent reads it back: target watts, what will move, what needs approval. Noth
 **1:30 They are the owner.** Their phone shows the training owner's request. Ask them to refuse in words: "no,
 this has to finish by 9 AM Monday." The plan holds the utility's cap and asks the operator; they decide. On the
 dashboard: the red cap line appears, measured watts drop under it, "Within the cap", the seconds it took, and
-"N% below the 60 s before the cap" (the number that reads the same at 50 MW).
+"N% below the 60 s before the cap" (the number that reads the same at 50 MW). Let their last chat reply finish
+before the 1:10 request: a streaming reply draws most of the GPU, so while chat is busy this Mac cannot get under
+a 30 % cut, and by design chat keeps full speed and the operator is asked instead (DECISIONS 10:00, 14:16). If they
+chat during the cut, show that: "chat is serving 1 request at full speed (slowing chat is the operator's call)".
 
 **2:20 The grid around it (simulated, say so).** "Around this Mac we drew a simulated neighbourhood: homes on
 today's real load forecast, a solar farm, 20 data centers, a line limit and a diesel generator." Press **Replay
@@ -40,7 +43,7 @@ diesel it would have burned had our sites ignored the cut.
 
 **3:10 Receipts.** Open the proof page: the same utility call measured under three policies (DECISIONS 09:46):
 ignore the call 20.85 W and 0 % of seconds under the cap; pause everything 0.80 W, 99 %, 19 training steps;
-Brownout 14.34 W, 93 %, compliant in 12 s, 1575 steps, about 83 times the work of pausing everything. Then one
+Brownout 14.34 W, 93 %, compliant in 12 s, 1575 steps (over the same 315 s), about 83 times the work of pausing everything. Then one
 decision's trace (Application Insights, or `/api/trace` while Azure lags).
 
 **3:45 Close.** "This is tens of watts on a laptop. The feeds, the solver, the approvals and the audit trail are

@@ -170,6 +170,11 @@ class Executor:
         if self.signal is None:
             return None
         async with self._lock:
+            # an operator's yes (go over) or no (chat may degrade) holds for the caps in force when they gave it,
+            # never for a later cap that happens to have the same key (a policy cap set again to the same watts)
+            key = self.cap_key()
+            self.cap_overrides &= {key}
+            self.cap_held &= {key}
             sig, jobs, events = self.signal, self.jobs(), self.active_events()
             sched = await asyncio.to_thread(solve, sig, jobs, self.policy, self.solve_cal(), events, self.baseline_w(),
                                             self.chat_busy(), frozenset(self.hard_deadlines),

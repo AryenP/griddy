@@ -119,7 +119,7 @@ class Run:
                 r.policies.append(ev)
             elif ev.kind == "action":
                 r.actions.append(ev)
-            elif ev.kind == "note" and (d.get("cap_withdrawn") or d.get("trigger") == "fleet"):
+            elif ev.kind == "note" and (d.get("cap_withdrawn") or d.get("trigger") in ("fleet", "background")):
                 r.notes.append(ev)
             elif ev.kind == "note" and d.get("msg") == "runtime start" and r.start_note is None:
                 r.start_note = {"t": ev.t, **d}
@@ -380,6 +380,17 @@ def _dedupe(xs: list[str]) -> list[str]:
     return list(dict.fromkeys(xs))
 
 
+def _worst_shortfalls(events: list[TimelineEvent]) -> list[str]:
+    """One line per shortfall kind and job: the largest amount. A run re-solves often and logs the same shortfall
+    with a slightly different amount each time (Krish 14:22: one report repeated it 12 times)."""
+    worst: dict[tuple, TimelineEvent] = {}
+    for e in events:
+        key = (e.data.get("shortfall_kind"), e.data.get("job_id"))
+        if key not in worst or float(e.data.get("amount") or 0) > float(worst[key].data.get("amount") or 0):
+            worst[key] = e
+    return _dedupe([e.data.get("message") or str(e.data) for e in sorted(worst.values(), key=lambda e: e.t)])
+
+
 def build_report(timeline_path: str | Path, window: tuple[float, float] | None = None) -> Report:
     """The Report for one run over `window` (default: its first cap event, else the whole run)."""
     run = Run.load(timeline_path)
@@ -393,7 +404,7 @@ def build_report(timeline_path: str | Path, window: tuple[float, float] | None =
     ttc = time_to_compliance(run, start, end, cap) if in_cap else None
     wh, usd, co2, notes = integrate(run, start, end)
     before, during = chat_p95(run, start, end)
-    shortfalls = _dedupe([e.data.get("message") or str(e.data) for e in run.shortfalls if e.t <= end])
+    shortfalls = _worst_shortfalls([e for e in run.shortfalls if e.t <= end])
     if run.cap is None:
         shortfalls.append("no cap event in this run: the window is the whole run")
     elif window is None and run.event_window() is None:
@@ -402,6 +413,11 @@ def build_report(timeline_path: str | Path, window: tuple[float, float] | None =
         shortfalls.append(f"the {ROLLING_S:.0f}-s mean never reached the {cap:.2f} W cap in the window")
     if in_cap and baseline_w is None:
         shortfalls.append(f"no power samples in the {BASELINE_S:.0f} s before the cap: no baseline")
+    bg = [n for n in run.notes if n.data.get("trigger") == "background" and start <= n.t <= end]
+    if bg:
+        shortfalls.append(f"load outside the plan up to {max(float(n.data.get('background_w') or 0) for n in bg):.2f} W "
+                          f"was measured and counted against the cap ({len(bg)} re-solve(s) for it): the window's "
+                          f"watts include it")
     for n in run.notes:
         if n.data.get("trigger") == "fleet" and start <= n.t <= end:
             shortfalls.append(f"the fleet changed at {_fmt(n.t)} ({n.data.get('msg', '').replace('re-solve: ', '')}): "

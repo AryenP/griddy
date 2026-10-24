@@ -55,7 +55,7 @@ the same call (run of record 09:15, DECISIONS 09:46; 315-327 s from each cap sta
 |---|---|---|---|---|
 | Ignore the call | 20.85 W | 0 % | never | 5899 |
 | Pause everything | 0.80 W | 99 % | 4 s | 19 |
-| Brownout | 14.34 W | 93 % | 12 s | 1575 |
+| Brownout | 14.34 W | 93 % | 12 s | 1575 (315 s; 1625 over ignore's 327 s) |
 
 Brownout keeps training on the CPU under the cap, about 83 times the work of pausing everything, and asks the
 owner about the ~19-minute slip. Two earlier attempts are void and say why (DECISIONS 04:25, 08:00).
@@ -95,10 +95,10 @@ Chat during a cap: our first measured run with real chat traffic during the cap 
 docs/evidence/20261024-094941.md): power never got under the 19.68 W cap (mean 26.46 W) and time to first token
 p95 rose from 0.20 s to 4.56 s. On this Mac one streaming reply draws most of the GPU, so busy chat alone is above
 a 30 % cut. The fix keeps chat at full speed and asks the operator instead (DECISIONS 10:00 and after). Re-run
-(DECISIONS 14:20): with two streams back to back, time to first token stayed 0.08 s at worst under the cap and power
+(DECISIONS 14:16): with two streams back to back, time to first token stayed 0.08 s at worst under the cap and power
 stayed over it (busy chat alone is above a 30 % cut here; the operator is asked); with one person chatting, the cap
 held in 8 s and for 80 % of capped seconds (47 % below baseline) with replies starting in 0.19 s, measured while
-the Mac was also in use (counted as outside load, stated in the report).
+the Mac was also in use (counted as outside load; DECISIONS 14:16, not in the report itself).
 
 ## Responsible design
 - The solver decides, the LLM explains and negotiates, the controller executes. The LLM has no code
@@ -109,7 +109,7 @@ the Mac was also in use (counted as outside load, stated in the report).
 - Reviewed with Microsoft's HVE Core reviewers (Responsible AI, System Architecture) at the Saturday workshop.
   They found that any phone on the venue network could approve going over the cap; now only this machine or a
   device that joined through the QR link can act, only a request's owner can answer it, going over the cap takes
-  a plain "yes" (never a model's reading), and every switch records who flipped it and from where (DECISIONS 15:10).
+  a plain "yes" (never a model's reading), and every switch records who flipped it and from where (DECISIONS 14:45).
 - Approvals gate the risky action: the running plan holds the utility's cap until the operator approves
   exceeding exactly the caps in force; a refusal keeps the cap and is not asked again.
 - Slowing chat is the operator's call too: chat keeps full concurrency under a cap, and the operator's ask says

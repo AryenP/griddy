@@ -22,7 +22,7 @@ and proves what it did with measured watts.
 | Grid draw under the utility's cap | ✅ | ❌ | ✅ | ✅ in seconds |
 | No on-site combustion | ❌ | ✅ | ✅ | ✅ |
 | Interactive service stays up | ✅ | ✅ | ⚠️ only if spared by hand | ✅ never paused |
-| Deferred work still meets its deadline | ✅ | ✅ | ⚠️ no rescheduling | ✅ re-planned around the cap |
+| Deferred work still meets its deadline | ✅ | ✅ | ⚠️ no rescheduling | ✅ re-planned, or the owner is asked before it slips |
 | Flexible work moves to cheap, clean hours every day | ❌ | ❌ | ❌ | ✅ live prices + fuel mix |
 | Owners asked before a deadline slips | n/a | n/a | ❌ | ✅ in plain words |
 | Says honestly when the cap can't be met | n/a | n/a | ❌ | ✅ the solver's own shortfall |
@@ -47,7 +47,7 @@ from each cap start, cap 15.10 W):
 |---|:---:|:---:|:---:|:---:|
 | [Ignore the call](docs/evidence/compare-20261024-093434-vs-20261024-091909-baseline.md) | 20.85 W | 0 % | never | 5899 |
 | [Pause everything](docs/evidence/compare-20261024-093434-vs-20261024-092650-pause_all.md) | 0.80 W | 99 % | 4 s | 19 |
-| **Brownout** | **14.34 W** | **93 %** | **12 s** | **1575** |
+| **Brownout** | **14.34 W** | **93 %** | **12 s** | **1575** (315 s; 1625 over ignore's 327 s) |
 
 Brownout keeps the training job moving on the CPU under the cap, about 83 times the work of pausing
 everything, and asks the owner about the ~19-minute slip instead of breaking the cap.
