@@ -141,10 +141,13 @@ def test_page_is_phone_ready(page):
 
 
 @pytest.mark.parametrize("page", PAGES)
-def test_only_pinned_chart_js_from_cdnjs(page):
+def test_only_pinned_chart_js_and_one_webfont_family(page):
     h = read(page)
     external = re.findall(r'(?:src|href)="(https?://[^"]+)"', h)
-    assert set(external) <= {CHART_JS}, external
+    fonts = [u for u in external if u.startswith("https://fonts.googleapis.com/css2?")]
+    assert set(external) - set(fonts) <= {CHART_JS, "https://fonts.googleapis.com", "https://fonts.gstatic.com"}, external
+    # brownout-ui: at most one webfont family, with a system fallback in style.css
+    assert len({f for u in fonts for f in re.findall(r"family=([^:&]+)", u)}) <= 1, fonts
     assert not re.search(r"<script(?![^>]*\bsrc=)[^>]*>", h), "no inline scripts"
     assert not re.search(r"\son[a-z]+=", h), "no inline event handlers"
 
