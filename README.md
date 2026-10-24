@@ -9,16 +9,65 @@ and proves the result with measured power. Built at Cal Hacks 13.0 for the Micro
 
 Nothing is simulated: every price, watt and dollar on screen is live or measured, with its source and age.
 
+### Diesel and "pause everything" are the naive answers. Brownout is the intelligent one.
+
+When a utility asks a data center to cut load, the options today are blunt: start backup generators,
+ignore the request, or switch off everything that can be switched off. Brownout decides per job and per
+15-minute slot instead, keeps the service people are using fast, asks before it breaks anyone's deadline,
+and proves what it did with measured watts.
+
+| | Backup diesel | Ignore the call | Pause everything | **Brownout** |
+|---|:---:|:---:|:---:|:---:|
+| Grid draw under the utility's cap | ✅ | ❌ | ✅ | ✅ in seconds |
+| No on-site combustion | ❌ | ✅ | ✅ | ✅ |
+| Interactive service stays up | ✅ | ✅ | ⚠️ only if spared by hand | ✅ never paused |
+| Deferred work still meets its deadline | ✅ | ✅ | ⚠️ no rescheduling | ✅ re-planned around the cap |
+| Flexible work moves to cheap, clean hours every day | ❌ | ❌ | ❌ | ✅ live prices + fuel mix |
+| Owners asked before a deadline slips | n/a | n/a | ❌ | ✅ in plain words |
+| Says honestly when the cap can't be met | n/a | n/a | ❌ | ✅ the solver's own shortfall |
+| Compliance proven with measured power | n/a | ❌ | ❌ | ✅ every second, timestamped |
+
+## The proof: early, but pointed
+Same jobs, same live grid, same request (a cap 30 % below the measured baseline, starting 2 min in, for
+5 min; training due 2 h out), once with the dispatcher off and once with it on. Measured by macOS
+powermetrics on one M2 Pro; computed from the runs' timelines only.
+
+| Run (code) | Mode | Mean power in the cap window | Seconds at or under the cap | Time to compliance | Deadline |
+|---|---|:---:|:---:|:---:|:---:|
+| [02:28](docs/evidence/compare-20261024-022026-vs-20261024-021247-baseline.md) (e90eef1) | dispatcher off | 18.32 W | 0 % | never | planned ✅ |
+| | **dispatched** | **0.68 W** | **99 %** | **5 s** | planned ✅ |
+| [03:10](docs/evidence/compare-20261024-025349-vs-20261024-024609-baseline.md) (13f6b3b) | dispatcher off | 21.18 W | 0 % | never | planned ✅ |
+| | **dispatched** | **1.64 W** | **99 %** | **7 s** | planned ✅ |
+
+> Read this as a signal, not a guarantee: two short runs on a laptop, not a fleet, and the comparison here is
+> against ignoring the call. A run against "pause everything" is next. Laptop watts make the dollar figures
+> fractions of a cent; the claim is compliance in seconds with the work still delivered. The live
+> request → owner refusal → operator approval run is in
+> [docs/evidence/demo-flow-live-20261024.md](docs/evidence/demo-flow-live-20261024.md), and the responsible-design
+> evals (86/90 live, all 12 injection attempts rejected) in [docs/evidence/evals-live-20261024.md](docs/evidence/evals-live-20261024.md).
+
+## Who controls what
+- **The utility** asks, in plain words or as an OpenADR 3.1 event. The request is parsed, read back with real
+  numbers, and becomes a cap. It never becomes an instruction to the system.
+- **The solver** (CP-SAT) decides every job's slots, device and concurrency from live prices, fuel mix, caps,
+  deadlines and measured watts. It is deterministic and reproducible from its inputs.
+- **Job owners** approve or refuse a deadline slip in their own words; a refusal makes the deadline hard.
+- **The operator** decides when the cap and a refused deadline conflict. Until they approve going over the
+  cap, the running plan holds it.
+- **The controller** is the only code path to a knob. The LLM explains and negotiates; it cannot touch one.
+- **The kill switch** is DISPATCHER OFF on the dashboard: every job runs as if Brownout weren't there.
+
 ## Run it (Apple-silicon Mac)
 ```bash
 make setup            # uv env + deps (add the Azure extra: uv pip install -e '.[azure]')
 cp .env.example .env  # add your keys; never commit .env. PJM also needs PJM_API_KEY (CAISO, ERCOT are keyless)
 ollama pull qwen3:4b-instruct   # the chat model (plain qwen3:4b always thinks and leaks its reasoning)
-sudo -v               # powermetrics needs sudo; the cache is per terminal, so run the targets below here
+sudo -v               # powermetrics needs sudo (or install the pinned passwordless rule: team/README.md)
 make probe            # what this Mac supports: powermetrics, MPS, Ollama, a live CAISO price
 make calibrate        # measure idle and each job's watts with powermetrics
 make demo             # grid feeds + meter + workloads + dispatcher + dashboard on :8080
 make baseline         # same jobs, dispatcher off, headless for 10 minutes, for the comparison
+make evidence         # unattended: calibrate, then dispatcher-off and dispatched runs with the same scripted cap, compare
 make report RUN=<id>  # reports/<id>.md + power chart, from that run's timeline only (default: latest)
 make compare          # newest dispatched run vs newest baseline run (or DISPATCHED=<id> BASELINE=<id>)
 make test

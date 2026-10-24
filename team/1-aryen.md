@@ -30,6 +30,14 @@ before wiring, so machines 2–4 can code against them). Types: bottom of `core/
 Check out each PR, run `uv run python scripts/team.py check --member <their number>`, `make test`,
 then merge. A PR that touches someone else's file goes back.
 
+## Next (Sat): the non-strawman comparison
+- **"Pause everything" baseline** (`POLICY=pause_all`): when a cap is active, pause every deferrable job and
+  keep chat, no rescheduling; otherwise run everything. Add it to `controller/baseline.py` as a second
+  dispatcher-off mode and to `make evidence` as a third run with the same scripted inputs, then show all three
+  in the README proof table. Pick the scripted deadline so the difference is real (e.g. a cap long enough that
+  pausing without rescheduling misses the deadline while Brownout's re-plan does not). Done when: the 3-way
+  comparison renders from three logged runs and the README table shows it.
+
 ## Phase 2: when phase 1 is merged
 7. **Second grid end to end.** ERCOT (`POST /api/iso`) live for a full slot: schedule repaints, watts follow;
    ERCOT frequency alert path exercised from real `system_conditions`. Done when: a timeline shows both ISOs.
