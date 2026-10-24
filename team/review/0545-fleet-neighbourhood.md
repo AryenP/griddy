@@ -89,3 +89,13 @@ points carry the ISO's zone. Under ERCOT the idle line is two hours off.
 - Laptop meter lag (~1 min, DECISIONS 05:28): documented, and the executor waits `meter_lag_s` before judging.
 - Labelling on pages: no page renders the neighbourhood yet (`web/` has no reference to it); re-check when the
   page lands (machine 2) that every value except `ours_w` says "simulated".
+
+## Addendum 06:04 PT: the neighbourhood page (anurag/neighbourhood 22a1406, not merged yet)
+Checked the labelling deferred above. `web/operator.html` puts the panel under a "SIMULATED" badge with "Real: our
+sites' watts (measured) ... Everything else in this box is simulated"; in `web/operator.js` every simulated readout
+(clock, line loading, diesel kW, diesel kWh and "avoided") says "(simulated)", "Our sites" says "(measured)", and
+the footer says the utility call is a real cap on the real dispatcher. The page only accepts events with
+`simulated: true`. Tests 306 passed, team.py ok, scan ok, merges clean. **Labelling: pass.**
+Ties to finding 6: "Stop the replay" shows "replay stopped" while the real cap it issued stays in force for up to
+two minutes; once finding 6 is fixed the note can say "replay stopped, its cap withdrawn". Ties to finding 3: the
+"% of their pre-cap baseline" under "Our sites (measured)" is real, but with the Mac idle it is meter noise.
