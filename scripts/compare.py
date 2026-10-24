@@ -1,110 +1,83 @@
 """Dispatched vs dispatcher-off, from two logged runs (`make compare`).
 
-    python scripts/compare.py                                   # newest dispatcher run vs newest baseline run
-    python scripts/compare.py --dispatched <id> --baseline <id>
+    python scripts/compare.py                                   # newest dispatched run vs newest baseline run
+    python scripts/compare.py --dispatched <id> --baseline <id>  # (make compare DISPATCHED=<id> BASELINE=<id>)
 
-A run's mode comes from the slot plans it executed (`plan.mode`). Both runs are compared over the
-same length of window: each from its own event start (or run start), cut to the shorter of the two.
-Every number comes from agent/reporter.py over that window; each run is priced at its own live price.
+A run's mode is the `dispatcher_enabled` of its "runtime start" note. The numbers are
+agent.reporter.compare_runs (the Comparison served at /api/compare); this script renders them as a
+markdown table and a power chart in reports/.
 """
 from __future__ import annotations
 
 import argparse
 from pathlib import Path
 
-from agent.reporter import Run, build_report, resolve
-from core.types import Report
-
-RUNS = Path("runs")
-
-
-def newest(mode: str, root: Path = RUNS) -> Path:
-    for p in sorted(root.glob("*/timeline.jsonl"), key=lambda p: p.stat().st_mtime, reverse=True):
-        if p.parent.is_symlink():
-            continue
-        if Run.load(p).mode == mode:
-            return p
-    raise SystemExit(f"no {mode} run under {root}/ (run `make demo` and `make baseline` first)")
-
-
-def share_under(run: Run, start: float, end: float, cap: float | None) -> float | None:
-    """Fraction of measured seconds in the window at or under the cap."""
-    s = run.watts(start, end)
-    if cap is None or not s:
-        return None
-    return sum(w <= cap for _, w in s) / len(s)
-
-
-def compare(dispatched: Path, baseline: Path) -> tuple[list[tuple[str, Run, Report, float | None]], float | None]:
-    runs = [("dispatched", Run.load(dispatched)), ("baseline", Run.load(baseline))]
-    windows = [r.default_window() for _, r in runs]
-    span = min(e - s for s, e in windows)
-    out, ref_cap = [], None
-    for (label, run), (s, _) in zip(runs, windows):
-        rep = build_report(run.path, window=(s, s + span))
-        rep.run_id = run.run_id
-        cap = run.cap_w(rep.baseline_w)
-        ref_cap = ref_cap if ref_cap is not None else cap
-        out.append((label, run, rep, cap if cap is not None else ref_cap))
-    return out, span
+from agent.reporter import RUNS, Run, chat_p95, compare_runs, newest, resolve, share_under
+from core.types import Comparison, Report
 
 
 def _f(v, spec, unit=""):
     return "n/a" if v is None else f"{v:{spec}}{unit}"
 
 
-def _delta(a, b, spec, unit=""):
-    return "" if a is None or b is None else f"{b - a:+{spec}}{unit}"
+def _d(c: Comparison, key: str, spec: str, unit: str = "") -> str:
+    v = c.delta.get(key)
+    return "" if v is None else f"{v:+{spec}}{unit}"
+
+
+def _pct(x: float | None) -> float | None:
+    return None if x is None else 100 * x
 
 
 def _met(r: Report) -> str:
     return f"{sum(r.deadlines.values())}/{len(r.deadlines)}" if r.deadlines else "n/a"
 
 
-def table(rows, span: float) -> str:
-    (_, _, d, cap_d), (_, _, b, cap_b) = rows
-    ud = share_under(rows[0][1], d.window_start, d.window_end, cap_d)
-    ub = share_under(rows[1][1], b.window_start, b.window_end, cap_b)
+def table(c: Comparison, runs: dict[str, Run]) -> str:
+    d, b = c.dispatched, c.baseline
+    tot = {k: chat_p95(runs[k], r.window_start, r.window_end, key="p95_60s")[1]
+           for k, r in (("dispatched", d), ("baseline", b))}
+    sla = runs["dispatched"].sla_s()
+    cap = runs["dispatched"].cap_w if runs["dispatched"].cap_w is not None else runs["baseline"].cap_w
+    under = {k: share_under(runs[k], r.window_start, r.window_end, cap) for k, r in (("dispatched", d), ("baseline", b))}
     lines = [
-        f"# Dispatched vs baseline over {span:.0f} s", "",
-        f"Dispatched run `{d.run_id}` vs dispatcher-off run `{b.run_id}`. Computed from their timelines only; "
-        "each run is priced at the live price and fuel mix it had.", "",
-        "| Measure | Dispatched | Baseline | Baseline minus dispatched |", "|---|---|---|---|",
-        f"| Cost at live price | ${d.cost_usd:.6f} | ${b.cost_usd:.6f} | {_delta(d.cost_usd, b.cost_usd, '.6f')} |",
-        f"| Carbon at live mix | {d.co2_g:.3f} g | {b.co2_g:.3f} g | {_delta(d.co2_g, b.co2_g, '.3f', ' g')} |",
-        f"| Energy (measured) | {d.energy_wh:.3f} Wh | {b.energy_wh:.3f} Wh | "
-        f"{_delta(d.energy_wh, b.energy_wh, '.3f', ' Wh')} |",
-        f"| Mean power | {_f(d.event_w, '.2f', ' W')} | {_f(b.event_w, '.2f', ' W')} | "
-        f"{_delta(d.event_w, b.event_w, '.2f', ' W')} |",
-        f"| Seconds at or under cap | {_f(ud and 100 * ud, '.0f', ' %')} | {_f(ub and 100 * ub, '.0f', ' %')} | |",
-        f"| Time to compliance | {_f(d.time_to_compliance_s, '.0f', ' s')} | "
-        f"{_f(b.time_to_compliance_s, '.0f', ' s')} | |",
-        f"| Deadlines met | {_met(d)} | {_met(b)} | |",
-        f"| Chat p95 (worst in window) | {_f(d.chat_p95_during_s, '.2f', ' s')} | "
-        f"{_f(b.chat_p95_during_s, '.2f', ' s')} | |", ""]
-    caps = {c for c in (cap_d, cap_b) if c is not None}
-    if caps:
-        lines += [f"Cap: {', '.join(f'{c:.1f} W' for c in sorted(caps))} "
-                  "(from each run's event; the dispatched run's cap where the baseline logged none).", ""]
-    notes = [f"- {label}: {s}" for label, _, r, _ in rows for s in r.shortfalls]
-    if notes:
-        lines += ["## Shortfalls and caveats", ""] + notes + [""]
+        f"# Dispatched vs baseline over {c.window_s:.0f} s", "",
+        f"Dispatched run `{d.run_id}` vs dispatcher-off run `{b.run_id}`. Computed from their timelines only "
+        "(powermetrics watts; each run priced at the live price and fuel mix it had).", "",
+        "| Measure | Dispatched | Baseline | Dispatched minus baseline |", "|---|---|---|---|",
+        f"| Cost at live price | ${d.cost_usd:.6f} | ${b.cost_usd:.6f} | {_d(c, 'cost_usd', '.6f')} |",
+        f"| Carbon at live mix | {d.co2_g:.3f} g | {b.co2_g:.3f} g | {_d(c, 'co2_g', '.3f', ' g')} |",
+        f"| Energy (measured) | {d.energy_wh:.3f} Wh | {b.energy_wh:.3f} Wh | {_d(c, 'energy_wh', '.3f', ' Wh')} |",
+        f"| Mean power | {_f(d.event_w, '.2f', ' W')} | {_f(b.event_w, '.2f', ' W')} | {_d(c, 'event_w', '.2f', ' W')} |",
+        f"| Time to compliance | {_f(d.time_to_compliance_s, '.0f', ' s')} | {_f(b.time_to_compliance_s, '.0f', ' s')} | "
+        f"{_d(c, 'time_to_compliance_s', '.0f', ' s')} |",
+        f"| Deadlines met | {_met(d)} | {_met(b)} | {_d(c, 'deadlines_met', '.0f')} |",
+        f"| Chat time-to-first-token p95, worst trailing 60 s (SLA {_f(sla, 'g', ' s')}) | "
+        f"{_f(d.chat_p95_during_s, '.2f', ' s')} | {_f(b.chat_p95_during_s, '.2f', ' s')} | {_d(c, 'chat_p95_s', '.2f', ' s')} |",
+        f"| Chat total-latency p95, worst trailing 60 s (reported, not an SLA) | "
+        f"{_f(tot['dispatched'], '.2f', ' s')} | {_f(tot['baseline'], '.2f', ' s')} | |",
+        f"| Measured seconds at or under the cap | {_f(_pct(under['dispatched']), '.0f', ' %')} | "
+        f"{_f(_pct(under['baseline']), '.0f', ' %')} | {_d(c, 'under_cap_pct', '.0f', ' points')} |", ""]
+    lines += ["## Notes", ""] + [f"- {n}" for n in c.notes] + [""]
+    caveats = [f"- {label}: {s}" for label, r in (("dispatched", d), ("baseline", b)) for s in r.shortfalls]
+    if caveats:
+        lines += ["## Shortfalls and caveats", ""] + caveats + [""]
     return "\n".join(lines)
 
 
-def chart(rows, out: Path) -> Path:
+def chart(c: Comparison, runs: dict[str, Run], out: Path) -> Path:
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
     fig, ax = plt.subplots(figsize=(9, 3.6))
-    for (label, run, rep, _), color in zip(rows, ("#1f6feb", "#bc4c00")):
-        s = run.watts(rep.window_start, rep.window_end)
+    for (label, rep), color in zip((("dispatched", c.dispatched), ("baseline", c.baseline)), ("#1f6feb", "#bc4c00")):
+        s = runs[label].watts(rep.window_start, rep.window_end)
         ax.plot([t - rep.window_start for t, _ in s], [w for _, w in s], lw=1.2, color=color,
                 label=f"{label} ({rep.run_id})")
-    cap = rows[0][3]
+    cap = runs["dispatched"].cap_w if runs["dispatched"].cap_w is not None else runs["baseline"].cap_w
     if cap is not None:
-        ax.axhline(cap, ls="--", color="#cf222e", label=f"cap {cap:.1f} W")
+        ax.axhline(cap, ls="--", color="#cf222e", label=f"cap {cap:.2f} W")
     ax.set_xlabel("seconds from window start")
     ax.set_ylabel("measured W (powermetrics)")
     ax.set_title("Dispatched vs baseline: measured SoC power")
@@ -118,19 +91,28 @@ def chart(rows, out: Path) -> Path:
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--dispatched", help="run id or timeline path (default: newest dispatcher run)")
+    ap.add_argument("--dispatched", help="run id or timeline path (default: newest dispatched run)")
     ap.add_argument("--baseline", help="run id or timeline path (default: newest baseline run)")
+    ap.add_argument("--runs", default=str(RUNS), help="where runs live (default: runs/)")
     ap.add_argument("--out", default="reports")
     a = ap.parse_args(argv)
-    d = resolve(a.dispatched)[0] if a.dispatched else newest("dispatcher")
-    b = resolve(a.baseline)[0] if a.baseline else newest("baseline")
-    rows, span = compare(d, b)
+    root = Path(a.runs)
+    try:
+        paths = {"dispatched": resolve(a.dispatched, root)[0] if a.dispatched else newest(True, root),
+                 "baseline": resolve(a.baseline, root)[0] if a.baseline else newest(False, root)}
+    except FileNotFoundError as e:
+        ap.error(f"{e}; or pass --dispatched/--baseline")
+    for k, p in paths.items():
+        if not p.is_file():
+            ap.error(f"{k}: no timeline at {p}")
+    c = compare_runs(paths["dispatched"], paths["baseline"])
+    runs = {k: Run.load(p, run_id=r.run_id) for (k, p), r in zip(paths.items(), (c.dispatched, c.baseline))}
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
-    name = f"compare-{rows[0][2].run_id}-vs-{rows[1][2].run_id}"
-    png = chart(rows, out / f"{name}.png")
+    name = f"compare-{c.dispatched.run_id}-vs-{c.baseline.run_id}"
+    png = chart(c, runs, out / f"{name}.png")
     md = out / f"{name}.md"
-    md.write_text(table(rows, span) + f"\n![measured power]({png.name})\n", encoding="utf-8")
+    md.write_text(table(c, runs) + f"\n![measured power]({png.name})\n", encoding="utf-8")
     print(md.read_text(encoding="utf-8"))
     print(f"wrote {md}")
     return 0
