@@ -79,7 +79,13 @@ extra or the connection string, spans stay in the in-memory buffer behind `/api/
 ## How it fits together
 Grid watcher → CP-SAT dispatcher → controller on the Mac → powermetrics → timeline → dashboard,
 report and comparison. The LLM handles messy intake, owner negotiation and explanations; it never
-touches a knob. Diagram: [docs/architecture.md](docs/architecture.md). Interfaces: [SPEC.md](SPEC.md).
+touches a knob. Around the real sites, a labelled SIMULATED neighbourhood power line (homes shaped by today's
+real load forecast, 20 data centers following our measured response, a line limit and a diesel generator) shows
+the same loop at grid scale; its call for a cut goes to the real dispatcher (DECISIONS 05:45).
+
+![How Brownout fits together; the simulated neighbourhood is the dashed box](docs/judging/architecture.svg)
+
+More: [docs/architecture.md](docs/architecture.md). Interfaces: [SPEC.md](SPEC.md).
 API contract: [HANDOFF.md](HANDOFF.md). Every decision taken during the build: [DECISIONS.md](DECISIONS.md).
 
 ## Where each sponsor tool is load-bearing

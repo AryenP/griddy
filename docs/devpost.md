@@ -97,7 +97,10 @@ Python 3.11, FastAPI, OR-Tools CP-SAT, gridstatus (CAISO, ERCOT), powermetrics, 
 qwen3:4b-instruct (chat, streamed), PyTorch MPS (training with checkpoints), sentence-transformers
 (batch embeddings), Microsoft Agent Framework with Foundry for the agent layer when Azure is configured
 (Claude behind the same interface otherwise), OpenTelemetry with the Azure Monitor exporter, Application Insights
-provisioned with `azd`, vanilla JS + Chart.js dashboard. Emission factors: IPCC AR5 lifecycle medians.
+provisioned with `azd` on Azure for Students, vanilla JS dashboard (hand-drawn SVG, no chart library).
+Emission factors: IPCC AR5 lifecycle medians. Architecture: docs/judging/architecture.svg. The neighbourhood
+power line on the dashboard is SIMULATED and labelled so (homes shaped by today's real load forecast, data
+centers following our measured response); every measured number stays measured (DECISIONS 05:45).
 
 ## Challenges
 - macOS 15 `powermetrics` prints GPU power twice per sample; the meter splits on sample headers.
