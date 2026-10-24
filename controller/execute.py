@@ -49,6 +49,8 @@ class Executor:
         self._plan_key = None
         self._last_latency_log = 0.0
         self._last_solve_t = 0.0
+        self._plan_t = 0.0                       # when the plan in force last changed
+        self.background_w = 0.0                  # measured load outside the plan, as passed to the last solve
 
     # ------------------------------------------------------------------ inputs
     def on_power(self, r: PowerReading) -> None:
@@ -146,7 +148,7 @@ class Executor:
             sig, jobs, events = self.signal, self.jobs(), self.active_events()
             sched = await asyncio.to_thread(solve, sig, jobs, self.policy, self.cal, events, self.baseline_w(),
                                             self.chat_busy(), frozenset(self.hard_deadlines),
-                                            self.cap_key() in self.cap_overrides)
+                                            self.cap_key() in self.cap_overrides, self.background_w)
             self.schedule = sched
             self._last_solve_t = time.time()
             self.tl.log("schedule", reason=reason, **sched.model_dump(mode="json"))
@@ -212,6 +214,7 @@ class Executor:
         key = (plan.mode, plan.schedule_id, plan.slot_index, tuple(a.model_dump_json() for a in plan.actions))
         if key != self._plan_key:
             self._plan_key = key
+            self._plan_t = time.time()
             self.plan = plan
             self.tl.log("plan", **plan.model_dump(mode="json"))
         self.apply(plan)
@@ -257,6 +260,31 @@ class Executor:
                     return f"measured {m:.2f} W vs planned {plan.planned_w:.2f} W over {window}s"
         return None
 
+    def background_drift(self) -> float | None:
+        """Under a cap, the measured load outside the plan when it has moved since the last solve.
+
+        The meter reads the whole machine; the plan covers idle and Brownout's jobs only. Once the current
+        plan has run a settled window, measured minus that calibrated plan is load nobody scheduled (the
+        display, another app, a site's cooling). When it moves by more than `background_delta_w`, the solver
+        must count it against the cap. Not while chat traffic is off the plan: that is the traffic re-solve's."""
+        r, s, plan = self.policy.replan, self.schedule, self.plan
+        if not (self.dispatcher_enabled and s and plan and r and plan.mode == "dispatcher") or plan.cap_w is None \
+                or plan.planned_w is None:
+            return None
+        window = r.get("background_window_s", 20)
+        now = time.time()
+        if now - max(self._plan_t, self._last_solve_t) < window + r.get("settle_s", 5):
+            return None
+        busy = self.chat_busy()
+        if busy is not None and s.chat_busy_streams is not None and \
+                abs(busy - s.chat_busy_streams) > r.get("chat_busy_delta", 0.5):
+            return None
+        xs = [w for t, w in self.power if t > now - window]
+        if len(xs) < window // 2:
+            return None
+        bg = max(0.0, sum(xs) / len(xs) - (plan.planned_w - s.background_w))
+        return bg if abs(bg - s.background_w) > r.get("background_delta_w", 0.5) else None
+
     async def run(self, period_s: float = 1.0) -> None:
         while True:
             try:
@@ -264,6 +292,12 @@ class Executor:
                     await self.resolve(f"{j} finished")
                 if self.dispatcher_enabled and self.schedule and self.slot_index() is None:
                     await self.resolve("horizon exhausted")
+                bg = self.background_drift()
+                if bg is not None:
+                    old, self.background_w = self.background_w, bg
+                    why = f"load outside the plan {old:.2f} -> {bg:.2f} W under the cap"
+                    self.tl.log("note", msg=f"re-solve: {why}", trigger="background", background_w=bg)
+                    await self.resolve(f"drift: {why}")
                 why = self.drift_reason()
                 if why:
                     self.tl.log("note", msg=f"re-solve: {why}", trigger="drift")

@@ -154,3 +154,29 @@ def test_refused_slip_holds_the_cap_until_the_operator_approves_going_over():
 def test_cap_bends_without_approval_only_when_nothing_fits():
     s = solve(signal([50.0] * 96), jobs(), POLICY.model_copy(update={"power_cap_w": 0.5}), CAL, chat_busy=0.0)
     assert any("nothing fits under it" in e for e in s.explanations)
+
+
+def test_background_load_counts_against_the_cap():
+    # cheap capped hour: 1 W idle + 8 W chat + 6 W CPU training = 15 W fits 15.5 W; 1 W of load outside the plan does not
+    from core.types import CapEvent
+    cap = [CapEvent(source="ui", start=SLOTS[0], duration_s=3600, target_w=15.5)]
+    prices = [5.0] * 4 + [50.0] * 92
+    js = [j for j in jobs() if j.id != "batch"]
+    s = solve(signal(prices), js, POLICY, CAL, events=cap)
+    assert set(run_slots(s, "train")) & {0, 1, 2, 3} and s.background_w == 0.0
+    s = solve(signal(prices), js, POLICY, CAL, events=cap, background_w=1.0)
+    assert not set(run_slots(s, "train")) & {0, 1, 2, 3} and s.background_w == 1.0 and not s.relaxed
+    assert all(s.planned_w[i] <= 15.5 + 1e-6 for i in range(4)) and s.planned_w[0] == pytest.approx(10.0)
+    assert any("measured load outside the plan: 1.00 W" in f for f in s.explanations)
+
+
+def test_negative_background_never_loosens_the_cap():
+    from core.types import CapEvent
+    cap = [CapEvent(source="ui", start=SLOTS[0], duration_s=3600, target_w=14.5)]
+    prices = [5.0] * 4 + [50.0] * 92
+    js = [j for j in jobs() if j.id != "batch"]
+    a = solve(signal(prices), js, POLICY, CAL, events=cap)
+    b = solve(signal(prices), js, POLICY, CAL, events=cap, background_w=-5.0)
+    assert a.solver_status == b.solver_status == "OPTIMAL"
+    assert a.assignments == b.assignments and a.planned_w == b.planned_w and b.background_w == 0.0
+    assert not set(run_slots(b, "train")) & {0, 1, 2, 3}      # 15 W of CPU training never fits 14.5 W

@@ -43,6 +43,7 @@ members:
   - tests/fixtures/*.csv
   - tests/fixtures/*.jsonl
   - tests/fixtures/README.md
+  - tests/fixtures/evidence3/**
   - team/README.md
   - team/roster.yaml
   - team/[1-4]-*.md
