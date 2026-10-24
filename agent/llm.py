@@ -55,7 +55,7 @@ def _parse_json(raw: str, schema: type[BaseModel]) -> BaseModel:
 
 
 class ClaudeLLM(LLM):
-    """Claude through the anthropic SDK. Structured output via one forced tool call."""
+    """Claude through the anthropic SDK. Structured output via `messages.parse` (structured outputs)."""
 
     def __init__(self, api_key: str, model: str, client: Any | None = None):
         if client is None:
@@ -67,18 +67,22 @@ class ClaudeLLM(LLM):
         self.name = f"claude:{model}"
         self.available = True
 
-    async def _create(self, kind: str, **kwargs: Any) -> Any:
+    async def _create(self, kind: str, method: str = "create", **kwargs: Any) -> Any:
         with tracer.start_as_current_span(f"llm.{kind}") as span:
             t0 = time.perf_counter()
             try:
-                msg = await self._client.messages.create(model=self.model, max_tokens=MAX_TOKENS, **kwargs)
-            except Exception as e:  # network, auth, rate limit: the agent is offline for this call
+                call = getattr(self._client.messages, method)
+                msg = await call(model=self.model, max_tokens=MAX_TOKENS, **kwargs)
+            except Exception as e:  # network, auth, rate limit, unparseable output: offline for this call
                 span.record_exception(e)
                 _record(span, self.model, t0, None, None)
                 raise AgentOffline(f"{OFFLINE}: {type(e).__name__}") from e
             usage = getattr(msg, "usage", None)
             _record(span, self.model, t0, getattr(usage, "input_tokens", None),
                     getattr(usage, "output_tokens", None))
+            if getattr(msg, "stop_reason", None) == "refusal":
+                span.set_attribute("llm.refusal", True)
+                raise AgentOffline(f"{OFFLINE}: the model declined this request")
             return msg
 
     async def text(self, system: str, user: str) -> str:
@@ -86,17 +90,17 @@ class ClaudeLLM(LLM):
         return "".join(b.text for b in msg.content if getattr(b, "type", "") == "text").strip()
 
     async def json(self, system: str, user: str, schema: type[BaseModel]) -> BaseModel:
-        tool = {"name": schema.__name__, "description": schema.__doc__ or schema.__name__,
-                "input_schema": schema.model_json_schema()}
-        msg = await self._create("json", system=system, messages=[{"role": "user", "content": user}],
-                                 tools=[tool], tool_choice={"type": "tool", "name": schema.__name__})
-        for b in msg.content:
-            if getattr(b, "type", "") == "tool_use":
-                try:
-                    return schema.model_validate(b.input)
-                except ValidationError as e:
-                    raise AgentOffline(f"model output did not match {schema.__name__}") from e
-        raise AgentOffline(f"model returned no {schema.__name__}")
+        # Structured outputs: the API constrains the reply to the schema and the SDK validates it.
+        # (Forced tool_choice returns a 400 on current models such as claude-sonnet-5-5.)
+        msg = await self._create("json", method="parse", system=system,
+                                 messages=[{"role": "user", "content": user}], output_format=schema)
+        parsed = getattr(msg, "parsed_output", None)
+        if parsed is None:
+            raise AgentOffline(f"model returned no {schema.__name__}")
+        try:
+            return parsed if isinstance(parsed, schema) else schema.model_validate(parsed)
+        except ValidationError as e:
+            raise AgentOffline(f"model output did not match {schema.__name__}") from e
 
 
 class FoundryLLM(LLM):

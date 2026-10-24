@@ -43,14 +43,25 @@ class ScriptedLLM(LLM):
 class _FakeMessages:
     """TEST FAKE for anthropic's `client.messages`."""
 
-    def __init__(self, content, fail=False):
+    def __init__(self, content, fail=False, parsed=None, stop_reason="end_turn"):
         self.content, self.fail, self.kwargs = content, fail, None
+        self.parsed, self.stop_reason = parsed, stop_reason
+
+    def _reply(self, **extra):
+        return SimpleNamespace(content=self.content, stop_reason=self.stop_reason,
+                               usage=SimpleNamespace(input_tokens=11, output_tokens=7), **extra)
 
     async def create(self, **kwargs):
         self.kwargs = kwargs
         if self.fail:
             raise ConnectionError("network down")
-        return SimpleNamespace(content=self.content, usage=SimpleNamespace(input_tokens=11, output_tokens=7))
+        return self._reply()
+
+    async def parse(self, **kwargs):
+        self.kwargs = kwargs
+        if self.fail:
+            raise ConnectionError("network down")
+        return self._reply(parsed_output=self.parsed)
 
 
 class Answer(BaseModel):
@@ -91,11 +102,19 @@ async def test_claude_text_records_span():
     assert span.attributes["llm.latency_ms"] >= 0
 
 
-async def test_claude_json_forces_tool():
-    fake = _FakeMessages([SimpleNamespace(type="tool_use", input={"value": 3})])
+async def test_claude_json_uses_structured_outputs():
+    fake = _FakeMessages([], parsed=Answer(value=3))
     llm = ClaudeLLM("k", "claude-test", client=SimpleNamespace(messages=fake))
     assert await llm.json("sys", "hi", Answer) == Answer(value=3)
-    assert fake.kwargs["tool_choice"] == {"type": "tool", "name": "Answer"}
+    assert fake.kwargs["output_format"] is Answer
+    assert "tool_choice" not in fake.kwargs and "tools" not in fake.kwargs   # forced tool use is a 400 now
+
+
+async def test_claude_refusal_is_offline():
+    fake = _FakeMessages([], parsed=Answer(value=3), stop_reason="refusal")
+    llm = ClaudeLLM("k", "claude-test", client=SimpleNamespace(messages=fake))
+    with pytest.raises(AgentOffline, match="declined"):
+        await llm.json("sys", "hi", Answer)
 
 
 async def test_claude_failure_is_offline():
@@ -105,7 +124,7 @@ async def test_claude_failure_is_offline():
 
 
 async def test_claude_bad_json_is_offline():
-    fake = _FakeMessages([SimpleNamespace(type="tool_use", input={"value": "many"})])
+    fake = _FakeMessages([], parsed={"value": "many"})
     llm = ClaudeLLM("k", "claude-test", client=SimpleNamespace(messages=fake))
     with pytest.raises(AgentOffline):
         await llm.json("sys", "hi", Answer)
