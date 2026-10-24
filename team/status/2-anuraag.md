@@ -34,3 +34,11 @@ operator}.png for PUBLIC_URL + /chat, /owner.html, /operator.html; refuses a loo
 with the fix. Ran it on this machine's LAN IP. PR "2 Anuraag: qr".
 Next: F4 design pass across all pages (after #6 merges: it touches style.css).
 Blockers / needs: none.
+
+## 2026-10-24 03:45 PT — follow-ups to machine 1's 03:15 server changes
+Done: PRs #6 (receipts) and #7 (make qr) merged. Follow-ups: dashboard logs the new `intake` kind;
+operator page seeds caps from the snapshot's `cap_events` and tracks the plan; both show "Cap held while
+the operator decides" from plan.needs_approval + the solver's "running plan:" fact (common.js
+runningPlanLine). PR "2 Anuraag: intake and cap-held follow-ups".
+Next: F4 design pass with the 24-h dispatch map as centrepiece.
+Blockers / needs: none.
