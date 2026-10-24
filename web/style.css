@@ -153,6 +153,15 @@ body.phone { max-width: 760px; padding: 14px 16px 24px; font-size: 18px; }
 .transcript-label { color: var(--warn); font-size: 0.9rem; margin-bottom: 4px; }
 textarea.mono { font-family: ui-monospace, "Cascadia Mono", Menlo, monospace; font-size: 15px; }
 .result:not(:empty) { margin-top: 10px; }
+
+/* Simulated content: a dashed edge and a SIMULATED badge, never the look of a measured number. */
+.panel.sim { border-style: dashed; border-color: var(--muted); }
+.panel.sim .cap { margin-top: 6px; }
+.badge.sim { border-style: dashed; border-color: var(--muted); color: var(--muted); letter-spacing: .06em; }
+.nb-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px 16px; margin-top: 10px; }
+.nb-grid .value { font-size: 1.6rem; margin: 0; }
+.nb-grid .bar span { background: var(--warn); }
+.nb-grid .bar.over span { background: var(--bad); }
 #events { display: grid; gap: 10px; }
 .ev { border: 2px solid var(--line); border-radius: 12px; padding: 10px 14px; background: var(--panel2); }
 .ev-active { border-color: var(--warn); }

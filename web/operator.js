@@ -1,7 +1,8 @@
 // Grid operator's console (operator.html): the utility's side of DEMO.md 1:15 and 3:00. Free text or a
 // dictated transcript -> POST /request; an OpenADR 3.1 EVENT -> POST /openadr/event; active cap events with a
 // countdown and a time-to-compliance counter computed from measured watts; the operator's own approval
-// requests (job_id "power_cap"); and "ask why" -> POST /api/ask. Nothing here decides: it sends words, the
+// requests (job_id "power_cap"); "ask why" -> POST /api/ask; and the SIMULATED neighbourhood's evening-peak replay
+// (POST /api/neighbourhood), whose utility call reaches the real dispatcher as a real cap. Nothing here decides: it sends words, the
 // agent reads them, the solver re-plans, and this page shows what came back.
 "use strict";
 
@@ -10,6 +11,8 @@ const P = {
   power: [],                 // PowerReading {t, combined_w}, oldest first, last POWER_KEEP_S seconds
   events: new Map(),         // CapEvent id -> CapEvent: the snapshot's cap_events, then `event` WS messages
   plan: null, loadedT: null, loadErr: null,
+  nb: null,                  // the snapshot's neighbourhood summary (config), null before the first snapshot
+  nbLast: null,              // the newest `neighbourhood` event: SIMULATED, except ours_w
 };
 const POWER_KEEP_S = 3 * 3600;
 const MEAN_S = 10;          // the compliance test: 10-s rolling mean of measured watts at or under the cap
@@ -199,6 +202,73 @@ async function sendAsk() {
     ${e.facts && e.facts.length ? html`<ul class="explanations src">${e.facts.map((f) => html`<li>${f}</li>`)}</ul>` : ""}`);
 }
 
+// ---------- the SIMULATED neighbourhood (config/neighbourhood.yaml, DECISIONS 05:45) ----------
+const NB_STALE_S = 15;      // events come every second during the replay and every 10 s otherwise
+
+function nbClock(h) {
+  if (h == null || !isFinite(h)) return "—";
+  const m = Math.floor((((h % 24) + 24) % 24) * 60);
+  return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+}
+
+function nbRunning() {
+  const d = P.nbLast;
+  return !!(d && d.scenario && nowS() - d.t < NB_STALE_S);
+}
+
+function renderNeighbourhood() {
+  const nb = P.nb, d = P.nbLast, btn = $("nb-toggle");
+  const sc = (nb && nb.scenario) || {};
+  const name = sc.name || "evening peak";
+  if (!nb || !nb.enabled) {
+    btn.disabled = true;
+    btn.textContent = `Replay the ${name} (simulated)`;
+    setHTML($("nb-now"), html`<p class="empty">${nb ? "no neighbourhood configured on the server (config/neighbourhood.yaml)" : "waiting for the server"}</p>`);
+    $("nb-src").textContent = "";
+    return;
+  }
+  const running = nbRunning();
+  btn.disabled = false;
+  btn.textContent = running ? "Stop the replay" : `Replay the ${name} (simulated)`;
+  const span = sc.hours ? `${nbClock(sc.hours[0])}–${nbClock(sc.hours[1])} of today's forecast in ${sc.seconds} s` : "";
+  if (!d) {
+    setHTML($("nb-now"), html`<p class="empty">no neighbourhood state yet${span ? `: the replay plays ${span}` : ""}</p>`);
+    $("nb-src").textContent = "";
+    return;
+  }
+  const over = d.loading_pct != null && d.loading_pct >= 100;
+  const avoided = d.diesel_off_kwh != null && d.diesel_kwh != null ? d.diesel_off_kwh - d.diesel_kwh : null;
+  setHTML($("nb-now"), html`
+    <div><div class="label">Clock (simulated)</div><div class="value">${nbClock(d.sim_hour)}</div>
+      <div class="src">${running ? `${name} replay: ${span}` : "wall clock: no replay running"}</div></div>
+    <div><div class="label">Line loading (simulated)</div><div class="value${over ? " bad" : ""}">${fixed(d.loading_pct, 0)}<small>%</small></div>
+      <div class="bar${over ? " over" : ""}"><span style="width:${Math.max(0, Math.min(100, d.loading_pct || 0)).toFixed(1)}%"></span></div>
+      <div class="src">${sig(d.demand_kw)} kW of a ${sig(d.limit_kw)} kW limit</div></div>
+    <div><div class="label">Diesel generator (simulated)</div><div class="value">${sig(d.diesel_kw)}<small>kW</small></div>
+      <div class="src">${nb.diesel_kw != null ? `of ${sig(nb.diesel_kw)} kW backup` : "backup generator"}</div></div>
+    <div><div class="label">Diesel this replay (simulated)</div><div class="value">${fixed(d.diesel_kwh, 1)}<small>kWh</small></div>
+      <div class="src">vs ${fixed(d.diesel_off_kwh, 1)} kWh with Brownout off · ${fixed(avoided, 1)} kWh avoided</div></div>
+    <div><div class="label">Our sites (measured)</div><div class="value">${fixed(d.ours_w, 1)}<small>W</small></div>
+      <div class="src">${d.response != null ? `${sig(100 * d.response)}% of their pre-cap baseline` : "no cap response yet"}</div></div>`);
+  const stale = nowS() - d.t >= NB_STALE_S;
+  $("nb-src").textContent = `${stale ? "STALE: " : ""}simulated neighbourhood, updated ${age(d.t)}`
+    + (d.cap_id ? " · its utility call is a real cap on the real dispatcher (see Active cap events)" : "");
+}
+
+async function toggleNeighbourhood() {
+  const btn = $("nb-toggle");
+  if (btn.disabled) return;
+  const action = nbRunning() ? "stop" : "start";
+  btn.disabled = true;
+  $("nb-note").textContent = action === "start" ? "starting the replay…" : "stopping…";
+  const r = await postJSON("/api/neighbourhood", { action });
+  btn.disabled = false;
+  if (!r.ok) { $("nb-note").textContent = `not ${action === "start" ? "started" : "stopped"}: ${routeError("/api/neighbourhood", r)}`; return; }
+  $("nb-note").textContent = r.data && r.data.running ? "replay running (simulated)" : "replay stopped";
+  if (!(r.data && r.data.running) && P.nbLast) P.nbLast = { ...P.nbLast, scenario: null };
+  renderNeighbourhood();
+}
+
 // ---------- dictation: the browser's speech recognition, shown as a transcript to check before sending ----------
 function setupDictation() {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -251,7 +321,9 @@ function handle(msg) {
       addPower(d.power);
       for (const e of d.cap_events || []) P.events.set(e.id, e);   // caps in force or upcoming, target_w resolved
       for (const q of d.approvals || []) { P.reqs.set(q.id, q); board.upsert(q); }
-      renderBadges(); renderPower(); renderSlot(); renderEvents(); loadPending();
+      P.nb = d.neighbourhood || { enabled: false };
+      if (P.nb.last) P.nbLast = P.nb.last;
+      renderBadges(); renderPower(); renderSlot(); renderEvents(); renderNeighbourhood(); loadPending();
       break;
     case "plan": P.plan = d; renderSlot(); break;
     case "power": addPower(d); renderPower(); break;
@@ -264,6 +336,7 @@ function handle(msg) {
       break;
     case "schedule": P.schedule = d; board.onSchedule(d); renderSlot(); break;
     case "policy": if (d.operator) { P.operator = d.operator; renderBadges(); } break;
+    case "neighbourhood": if (d.simulated === true && d.t != null) { P.nbLast = d; renderNeighbourhood(); } break;
   }
 }
 
@@ -273,13 +346,14 @@ $("req-text").addEventListener("keydown", (e) => {
 });
 $("adr-send").addEventListener("click", sendOpenADR);
 $("ask-send").addEventListener("click", sendAsk);
+$("nb-toggle").addEventListener("click", toggleNeighbourhood);
 $("ask-text").addEventListener("keydown", (e) => {
   if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); sendAsk(); }
 });
-hotkeys({ e: () => $("req-text").focus(), a: () => $("ask-text").focus() });
+hotkeys({ e: () => $("req-text").focus(), a: () => $("ask-text").focus(), n: toggleNeighbourhood });
 setupDictation();
 // Countdowns, compliance counters and ages tick every second even when no message arrives.
-setInterval(() => { renderPower(); renderEvents(); }, 1000);
+setInterval(() => { renderPower(); renderEvents(); renderNeighbourhood(); }, 1000);
 window.brownout = { handle };   // the WebSocket's handler, exposed for feeding real timelines from the console
 renderSlot();
 connectWS(handle, $("conn"));
