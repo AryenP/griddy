@@ -91,9 +91,41 @@
         <ol id="log" class="log"><li class="empty">no events yet</li></ol>
       </div>
     </section>
+
+    <section class="receipts panel" id="receipts">
+      <div class="panel-head">
+        <h2>Receipts: what the meter says happened</h2>
+        <span class="src" id="runs-src">runs not loaded yet</span>
+      </div>
+      <div class="receipt-pick">
+        <label>Event report for run <select id="rc-run"></select></label>
+        <label>Dispatched run <select id="rc-dispatched"></select></label>
+        <label>vs dispatcher off <select id="rc-baseline"></select></label>
+        <button id="rc-load" type="button" class="primary">Load receipts</button>
+      </div>
+      <div class="receipt-grid">
+        <div>
+          <h2 class="sub-h">Event report</h2>
+          <div id="report"><p class="empty">pick a run and load</p></div>
+          <div class="src" id="report-src"></div>
+        </div>
+        <div>
+          <h2 class="sub-h">Dispatched vs dispatcher off</h2>
+          <div id="compare"><p class="empty">pick two runs and load</p></div>
+          <div class="src" id="compare-src"></div>
+        </div>
+      </div>
+      <div class="panel-head">
+        <h2 class="sub-h">Audit trail: the latest decisions as OpenTelemetry spans</h2>
+        <button id="rc-trace" type="button">Refresh trace</button>
+      </div>
+      <div id="trace"><p class="empty">not loaded yet</p></div>
+      <div class="src" id="trace-src"></div>
+    </section>
   </main>
 
   <script src="common.js"></script>
   <script src="app.js"></script>
+  <script src="receipts.js"></script>
 </body>
 </html>

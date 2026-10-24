@@ -9,7 +9,7 @@ JS = (WEB / "app.js").read_text(encoding="utf-8")
 
 def test_dashboard_loads_chart_js_and_its_scripts():
     assert re.findall(r'<script src="([^"]+)"', HTML) == [
-        "https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js", "common.js", "app.js"]
+        "https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js", "common.js", "app.js", "receipts.js"]
 
 
 def test_posts_only_to_contract_routes():
@@ -31,3 +31,10 @@ def test_uses_the_snapshot_fields_from_the_contract():
 def test_timeline_feed_hook_is_exposed():
     # real timelines (tests/fixtures/real_timeline_*.jsonl) are fed through this from the console
     assert "window.brownout = { handle" in JS
+
+
+def test_receipts_only_read_the_receipts_routes():
+    src = (WEB / "receipts.js").read_text(encoding="utf-8")
+    routes = set(re.findall(r"/api/\w+", src))
+    assert routes == {"/api/runs", "/api/report", "/api/compare", "/api/trace"}, routes
+    assert "postJSON" not in src                      # receipts never change anything
