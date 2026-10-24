@@ -50,6 +50,24 @@ Make a table with these columns: the fact (short), the link, "loads? yes / no",
 **Do not change `RESEARCH.md`.** If something is wrong, just mark it in your table; machine 1 fixes it.
 **Done when:** every link has a row and your pull request is merged.
 
+## Note from machine 1 (Sat 10:21)
+- **Skip task 3.** The workshop was at 10 AM. Machine 1 gave Aryen the questions in chat. You do not need to
+  write `docs/briefing/workshop.md`.
+- **Do task 4 next** (the source check). Then task 5 below.
+
+### 5. Brownout in plain words: `docs/briefing/plain-words.md`
+Some judges are not engineers. Any of us at the table may get a simple question. This page gives simple answers.
+1. Write 8 short questions a non-engineer might ask. Examples: "What does it do?", "Is the power data real?",
+   "What part is pretend?", "What happens to someone using the chat when power is cut?", "Who says yes or no?"
+2. Answer each one in 2 or 3 short sentences. Use everyday words. No numbers you cannot point to.
+3. Under each answer, write where it comes from: a file and a line, like `README.md:11` or `DECISIONS.md` and
+   the time of the entry (for example "DECISIONS 09:46").
+4. Be honest about the chat question. Our first test of chat during a power cut failed. The details are in
+   `DECISIONS.md`, the entry at 10:00 and the one after it. The fix is in, but it is not tested yet. Say that.
+5. The "pretend" part: the neighbourhood power line on the dashboard is SIMULATED. Say so in your answer.
+   Everything about the Mac itself (watts, prices) is measured or live.
+**Done when:** the page has 8 questions, each answer has its source, and your pull request is merged.
+
 ## Moved to machine 2 (Anuraag) at 5:40 AM
 The picture (task 1) and the driver's cheat sheet (task 2) went back to Anuraag, so you can supervise.
 If you already started either one, push what you have on a branch and say so in your status file.
