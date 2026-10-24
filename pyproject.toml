@@ -31,7 +31,7 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
-include = ["core*", "grid*", "dispatcher*", "controller*", "agent*", "meter*", "workloads*", "api*", "telemetry*", "fleet*"]
+include = ["core*", "grid*", "dispatcher*", "controller*", "agent*", "meter*", "workloads*", "api*", "telemetry*", "fleet*", "neighbourhood*"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

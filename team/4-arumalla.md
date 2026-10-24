@@ -1,81 +1,31 @@
-# 4 Arumalla: briefing pages for the judges
+# 4 Arumalla: supervisor (since Sat 5:40 AM)
 
-Hi! Your earlier job (the AI helper code) moved to machine 1 at 1:45 AM. You have a new job now (Sat 4:55 AM).
-It is all yours: you work in your own folder, `docs/briefing/`, and nobody else touches it. So you cannot
-break anyone's work, and nobody can break yours.
+Aryen made you the supervisor. Your job: watch the work of machine 1 (Aryen's Mac) and machine 2 (Anuraag),
+and tell them quickly when something is wrong. You do not change their code. You only report.
+You also keep two small writing tasks (the workshop questions and the source check, at the bottom).
 
-## How to start
-1. In the repo folder, get the latest copy: `git pull`
-2. Check who you are: `uv run python scripts/team.py whoami --save`. It should say you are number 4.
-3. For each task, make a new branch (your own working copy): `git checkout -b arumalla/<short-name>`,
-   for example `arumalla/picture`.
-4. Only add or change files in `docs/briefing/` and your notes file `team/status/4-arumalla.md`.
-   A safety check stops changes anywhere else.
-5. When a task is done: commit, push the branch, and open a pull request (a request to add your work to
-   the main copy): `gh pr create --fill`. Machine 1 checks it and adds it.
-6. After each task, add a few lines to `team/status/4-arumalla.md`: what you finished, what is next, and
-   anything that is stopping you.
+## Every 10 minutes
+1. Get the latest copy: `git pull`
+2. Run the tests: `uv run pytest -q`. The last line should say "passed" and nothing "failed".
+3. Look at what changed since last time: `git log --oneline -15`. For each new change from machine 1 or
+   machine 2, open it (`git show <the code at the start of the line>`) and check these five things:
+   - **No made-up numbers.** Every number a judge sees must come from a measurement, from the live grid
+     feed, or from `DECISIONS.md` / `RESEARCH.md`. If you cannot tell where a number comes from, report it.
+   - **Simulated things say "simulated".** Some of the demo is now simulated on purpose (the neighbourhood
+     power line: homes, solar, 20 data centers, a diesel generator). Aryen decided this at 5:35 AM. Every
+     simulated thing must be labelled "simulated" on screen and in the files. Measured things must not be
+     labelled simulated. Report any mix-up. This is the most important check tonight.
+   - **No secrets.** No passwords, keys or connection strings in any file.
+   - **The checks on GitHub are green.** `gh run list -L 3` should show "success".
+   - **It does what its message says.** Read the commit message, then the change. Do they match?
+4. If something is wrong, open a GitHub issue that machine 1 or 2 will see:
+   `gh issue create --title "[supervisor] <one line: what is wrong>" --body "<where (file and line), what you
+   expected, what you saw>"`. Keep it short and exact.
+5. Write one line in `team/status/4-arumalla.md`: the time, "checked", and any issue you opened.
+   Send it on a branch `arumalla/status-<time>` with a pull request, like before.
 
-## Ground rules (from CLAUDE.md)
-- Never make up a number. Every number must come from `DECISIONS.md` or `RESEARCH.md`. If it is not
-  there, write "to be measured".
-- No passwords or keys in any file, ever.
-- Short, plain commit messages.
-
-## DO THIS FIRST (Sat 5:05 AM): the laptop power test, about 2 minutes
-Aryen wants to use the team's laptops as extra "sites" in the demo. First we must know if your laptop can
-measure its own power. This test answers that. It changes nothing on your laptop.
-1. **Unplug the charger.** The battery only reports its power while the laptop runs on battery.
-2. Get the latest copy: `git pull`
-3. Open PowerShell in the repo folder and run:
-   `powershell -ExecutionPolicy Bypass -File fleet\battery_probe.ps1`
-   It reads the battery for 20 seconds with the laptop resting, then 20 seconds with the laptop working hard.
-   The fan may spin up. That is expected.
-4. It ends with a few lines starting at `== SUMMARY`. The last line says GOOD, SLOW, NO READING, PLUGGED IN or
-   UNCLEAR. If it says PLUGGED IN, unplug and run it again.
-5. Copy the SUMMARY lines into `team/status/4-arumalla.md`, on a branch called `arumalla/probe`, and open a
-   pull request: `gh pr create --fill`. Also send the summary to Aryen.
-6. This script is new and could not be tested on the Mac. If it shows an error, copy the whole error into your
-   status file the same way. That helps just as much.
-7. **Your Claude cannot do this test.** It runs in the cloud, not on your laptop. You (the person) run it
-   on the Windows laptop and paste the summary to your Claude or to Aryen. The full laptop guide, including
-   how a laptop joins the demo later, is `fleet/README.md`.
-Then go on with task 1 below.
-
-## Your tasks, in order
-
-### 1. The picture: `docs/briefing/architecture.svg`
-**What:** one picture that shows how Brownout works, for Devpost and the README.
-Boxes and arrows, left to right:
-- Grid data (CAISO and ERCOT electricity prices) → the planner (the "solver") → the 24-hour plan →
-  the controller → the three jobs on the Mac (chat, training, batch).
-- The power meter (macOS "powermetrics") → the record of everything that happened (the "timeline") →
-  the dashboard and the receipts.
-- People: the job owner and the operator say yes or no to risky changes.
-- The AI helper (the "agent") sits beside the planner. It reads requests, explains the plan, and asks
-  people questions. Draw its arrows only to "requests", "explanations" and "questions".
-  **It must have NO arrow to the controller or the jobs: the AI never turns a knob.** This is the most
-  important part of the picture.
-
-Under each box, write the code file in small text (for example `dispatcher/solve.py`). `README.md` and
-`SPEC.md` tell you which file does what.
-Use any drawing tool you like (Excalidraw or draw.io are easy) and export as SVG with a white or light
-background. The text must be easy to read when the picture is 700 pixels wide.
-**Done when:** the SVG is in `docs/briefing/`, it opens in a browser, and your pull request is merged.
-
-### 2. The driver's cheat sheet: `docs/briefing/driver-card.md`
-**What:** one page for whoever runs the 4-minute demo, so they do not have to remember anything.
-Put in it, in this order:
-- **Before you start:** the commands `make preflight`, then `make demo`, and the web addresses of the
-  dashboard, chat, owner, operator and proof pages (you find them in `DEMO.md`).
-- **The 4-minute script** from `DEMO.md`: each step with its time (0:00, 0:15, ...), what to click or type,
-  and the one sentence to say.
-- **Dashboard shortcuts:** D turns the dispatcher on or off; 1, 2, 3 pick cost, carbon or balanced;
-  R jumps to the receipts.
-- **If something breaks, what to say (truthfully):** internet down, chat model stopped, AI helper offline.
-  Use the "Failure drills" part of `docs/rehearsal.md` and turn each one into one sentence to say out loud.
-
-**Done when:** it fits on one printed page and your pull request is merged.
+## Your two writing tasks
+Do these between checks. Task 3 is due first (9:30 AM).
 
 ### 3. The question sheet for the Microsoft workshop: `docs/briefing/workshop.md`
 At 10 AM Saturday there is a Microsoft workshop. Aryen will talk to Microsoft people there. We need one
@@ -100,5 +50,6 @@ Make a table with these columns: the fact (short), the link, "loads? yes / no",
 **Do not change `RESEARCH.md`.** If something is wrong, just mark it in your table; machine 1 fixes it.
 **Done when:** every link has a row and your pull request is merged.
 
-## When all four are done
-Write "all four done" in `team/status/4-arumalla.md`. Machine 1 will add more tasks here.
+## Moved to machine 2 (Anuraag) at 5:40 AM
+The picture (task 1) and the driver's cheat sheet (task 2) went back to Anuraag, so you can supervise.
+If you already started either one, push what you have on a branch and say so in your status file.

@@ -87,7 +87,7 @@ class TimelineEvent(BaseModel):
     kind: Literal[
         # dispatcher edition (SPEC §3)
         "grid", "policy", "event", "intake", "schedule", "plan", "approval", "action", "power",
-        "latency", "state", "shortfall", "report", "note", "fleet_power",
+        "latency", "state", "shortfall", "report", "note", "fleet_power", "neighbourhood",
         # facility-throttle edition, kept for the existing tests
         "sample", "request", "baseline",
     ]

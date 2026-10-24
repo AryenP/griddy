@@ -21,6 +21,7 @@ members:
   - config/policy.yaml
   - config/site.yaml
   - config/fleet.yaml
+  - config/neighbourhood.yaml
   - Makefile
   - pyproject.toml
   - uv.lock
@@ -37,6 +38,8 @@ members:
   - web/dashboard.css
   - tests/test_web_dashboard.py
   - fleet/**
+  - neighbourhood/**
+  - tests/test_neighbourhood*.py
   - tests/test_fleet*.py
   - scripts/team.py
   - scripts/check_runtime.py
@@ -117,7 +120,7 @@ members:
   - team/status/2-anuraag.md
 - number: 3
   name: Krish
-  role: 'Supervisor: reviews, tests and verifies machines 1 and 2; never edits code'
+  role: 'Reviewer: deep reviews, number audits, judge Q and A (docs/qa); never edits machine 1 or 2 code. Machine 4 does the 10-minute checks since Sat 05:40'
   github: krishteli
   emails:
   - krishteli62@gmail.com
@@ -125,10 +128,11 @@ members:
   branch_prefix: krish/
   owns:
   - team/review/**
+  - docs/qa/**
   - team/status/3-krish.md
 - number: 4
   name: Arumalla
-  role: Briefing pages for the judges (picture, driver card, workshop questions, source check) since Sat 04:55 PT; agent layer moved to machine 1 at 01:45
+  role: "Supervisor since Sat 05:40 PT: checks machines 1 and 2 every 10 min and reports [supervisor] issues; never edits their code. Also the workshop question sheet and the source check (docs/briefing)"
   github: MauryaAru
   emails:
   - arumallamaurya@gmail.com
