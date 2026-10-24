@@ -42,8 +42,22 @@ comparison table (dispatched vs dispatcher off: $, gCO2, energy, deadlines, TTFT
 Terminal QR codes (qrcode is installed) for `settings.public_url` + `/chat`, `/owner.html`, `/operator.html`;
 PNGs saved under `reports/qr/`.
 
+### Server changes you asked for (done by machine 1, Sat 03:15)
+- Snapshot has `cap_events` (active and upcoming CapEvents, `target_w` resolved): seed the operator page from it.
+- Parsed requests now arrive as kind `intake` (`{intake, who}`); `event` only ever carries a CapEvent. Add
+  `intake` to the dashboard's `LOG_KINDS` and the operator page's switch (keep the old `event`+`intake` branch
+  only if you want to read older timelines).
+- Approvals gate going over a cap (DECISIONS 02:55): show "cap held while the operator decides" from
+  `plan.needs_approval` and the schedule explanation line starting "running plan:".
+
 ### F4. Design pass across all pages (with both skills)
-Write the design plan first in the PR description (tokens: 4-6 named colours, type, layout, principles), check it
+**Centerpiece: a 24-hour dispatch map** (reference: the "context map" in github.com/a-Fig/accordion, a winning
+2026 Berkeley hackathon project: one glanceable grid where colour says what each block is and brightness says
+whether it is live). Ours: one row per job, one cell per 15-min slot for 24 h; colour = job, bright = runs (solid
+GPU / hatched CPU), recessed = deferred; cap windows as a banded overlay with their W limit; the current slot
+marked; the price curve above it on the same time axis; a cell's tooltip says why (price, cap, deadline) from the
+schedule's explanations. It must be readable from 1.5 m and should be the first thing on the dashboard after the
+header numbers. Then: Write the design plan first in the PR description (tokens: 4-6 named colours, type, layout, principles), check it
 against the brownout-ui brief, then apply it consistently to index/chat/owner/operator/receipts via `style.css`
 `:root` tokens and `common.js`. Screenshots at 375 px and 1440 px in the PR, made with the real fixtures.
 

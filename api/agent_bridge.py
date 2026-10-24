@@ -137,7 +137,7 @@ class AgentBridge:
                 "policy": self.ex.policy.model_dump(mode="json")}
 
     async def _apply(self, result: IntakeResult, who: str):
-        self.tl.log("event", intake=result.model_dump(mode="json"), who=who)
+        self.tl.log("intake", intake=result.model_dump(mode="json"), who=who)   # a parsed request, not a cap
         if result.kind == "cap_event" and result.cap_event:
             return await self.ex.add_event(result.cap_event)
         if result.kind == "policy" and result.policy:
