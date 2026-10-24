@@ -1,114 +1,115 @@
 # Who is who. scripts/team.py reads this to tell each machine which assignment is its own and to
 # refuse changes to files another machine owns. Edit only on machine 1.
 members:
-  - number: 1
-    name: Aryen
-    role: Runtime and integration (the demo Mac)
-    github: AryenP
-    emails: [aryen.ronenpalkar@gmail.com]
-    assignment: team/1-aryen.md
-    branch_prefix: main            # machine 1 commits to main and merges everyone's PRs
-    owns:
-      - api/**
-      - controller/**
-      - dispatcher/**
-      - grid/**
-      - meter/**
-      - workloads/**
-      - core/**
-      - config/jobs.yaml
-      - config/policy.yaml
-      - config/site.yaml
-      - Makefile
-      - pyproject.toml
-      - uv.lock
-      - .env.example
-      - .gitignore
-      - .python-version
-      - scripts/probe_mac.sh
-      - scripts/verify_feed.py
-      - scripts/team.py
-      - scripts/check_runtime.py
-      - tests/__init__.py
-      - tests/test_types.py
-      - tests/test_grid.py
-      - tests/test_meter.py
-      - tests/test_dispatcher.py
-      - tests/test_controller.py
-      - tests/test_execute.py
-      - tests/test_api*.py
-      - tests/test_chat_proxy.py
-      - tests/test_team.py
-      - tests/fixtures/*.csv
-      - tests/fixtures/*.jsonl
-      - tests/fixtures/README.md
-      - team/README.md
-      - team/roster.yaml
-      - team/[1-4]-*.md
-      - team/status/1-aryen.md
-      - .claude/**
-      - .github/**
-      - .worktreeinclude
-      - HANDOFF.md
-      - CLAUDE.md
-      - PLAN.md
-      - SPEC.md
-      - DEMO.md
-      - KICKOFF.md
-
-  - number: 2
-    name: Anuraag
-    role: Frontend (everything the judge sees and touches)
-    github: ARP-source
-    emails: [anuraagpunnam6@gmail.com]
-    assignment: team/2-anuraag.md
-    branch_prefix: anurag/
-    owns:
-      - web/**
-      - scripts/qr.py
-      - tests/test_web*.py
-      - team/status/2-anuraag.md
-
-  - number: 3
-    name: Krish
-    role: Proof and production (receipts, telemetry, submission)
-    github: krishteli
-    emails: [krishteli62@gmail.com]
-    assignment: team/3-krish.md
-    branch_prefix: krish/
-    owns:
-      - agent/reporter.py
-      - scripts/compare.py
-      - telemetry/**
-      - infra/**
-      - azure.yaml
-      - docs/**
-      - README.md
-      - config/isos.yaml
-      - tests/test_report*.py
-      - tests/test_compare*.py
-      - tests/test_telemetry*.py
-      - evals/**
-      - team/status/3-krish.md
-
-  - number: 4
-    name: Arumalla
-    role: Agent layer (LLM intake, negotiation, explanations)
-    github: MauryaAru
-    emails: [arumallamaurya@gmail.com]
-    assignment: team/4-arumalla.md
-    branch_prefix: arumalla/
-    owns:
-      - agent/__init__.py
-      - agent/llm.py
-      - agent/intake.py
-      - agent/negotiator.py
-      - agent/explainer.py
-      - agent/channels/**
-      - tests/test_agent*.py
-      - tests/fixtures/openadr/**
-      - team/status/4-arumalla.md
+- number: 1
+  name: Aryen
+  role: Runtime and integration (the demo Mac)
+  github: AryenP
+  emails:
+  - aryen.ronenpalkar@gmail.com
+  assignment: team/1-aryen.md
+  branch_prefix: main
+  owns:
+  - api/**
+  - controller/**
+  - dispatcher/**
+  - grid/**
+  - meter/**
+  - workloads/**
+  - core/**
+  - config/jobs.yaml
+  - config/policy.yaml
+  - config/site.yaml
+  - Makefile
+  - pyproject.toml
+  - uv.lock
+  - .env.example
+  - .gitignore
+  - .python-version
+  - scripts/probe_mac.sh
+  - scripts/verify_feed.py
+  - scripts/team.py
+  - scripts/check_runtime.py
+  - tests/__init__.py
+  - tests/test_types.py
+  - tests/test_grid.py
+  - tests/test_meter.py
+  - tests/test_dispatcher.py
+  - tests/test_controller.py
+  - tests/test_execute.py
+  - tests/test_api*.py
+  - tests/test_chat_proxy.py
+  - tests/test_team.py
+  - tests/fixtures/*.csv
+  - tests/fixtures/*.jsonl
+  - tests/fixtures/README.md
+  - team/README.md
+  - team/roster.yaml
+  - team/[1-4]-*.md
+  - team/status/1-aryen.md
+  - .claude/**
+  - .github/**
+  - .worktreeinclude
+  - HANDOFF.md
+  - CLAUDE.md
+  - PLAN.md
+  - SPEC.md
+  - DEMO.md
+  - KICKOFF.md
+  - web/**
+  - scripts/qr.py
+  - tests/test_web*.py
+  - agent/reporter.py
+  - scripts/compare.py
+  - telemetry/**
+  - infra/**
+  - azure.yaml
+  - docs/**
+  - README.md
+  - config/isos.yaml
+  - tests/test_report*.py
+  - tests/test_compare*.py
+  - tests/test_telemetry*.py
+  - evals/**
+  - agent/__init__.py
+  - agent/llm.py
+  - agent/intake.py
+  - agent/negotiator.py
+  - agent/explainer.py
+  - agent/channels/**
+  - tests/test_agent*.py
+  - tests/fixtures/openadr/**
+- number: 2
+  name: Anuraag
+  role: Frontend (everything the judge sees and touches) - PAUSED Sat 01:45 PT; files moved to machine 1
+  github: ARP-source
+  emails:
+  - anuraagpunnam6@gmail.com
+  assignment: team/2-anuraag.md
+  branch_prefix: anurag/
+  owns:
+  - team/status/2-anuraag.md
+- number: 3
+  name: Krish
+  role: Proof and production (receipts, telemetry, submission) - PAUSED Sat 01:45 PT; files moved to machine 1
+  github: krishteli
+  emails:
+  - krishteli62@gmail.com
+  assignment: team/3-krish.md
+  branch_prefix: krish/
+  owns:
+  - team/status/3-krish.md
+- number: 4
+  name: Arumalla
+  role: Agent layer (LLM intake, negotiation, explanations) - PAUSED Sat 01:45 PT; files moved to machine 1
+  github: MauryaAru
+  emails:
+  - arumallamaurya@gmail.com
+  assignment: team/4-arumalla.md
+  branch_prefix: arumalla/
+  owns:
+  - team/status/4-arumalla.md
 
 # Everyone may append (never edit existing lines) to these.
 shared_append_only:
-  - DECISIONS.md
+- DECISIONS.md
