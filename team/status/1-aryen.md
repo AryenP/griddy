@@ -13,9 +13,7 @@
 - **Team:** no open PRs or [supervisor] issues at 10:15. Machine 2 last active 06:04 (queue: 21, 22, 12, 20);
   machine 3 last 08:42 (queue: K6 now, K10 review the chat fix, K11 judge Q13, K9 waits for the demo);
   machine 4 last 05:46.
-- **Needs Aryen:** (1) done 14:13 (chat evidence);
-  (calibrates chat at 1/2/4 streams, then the 2-stream worst case, then one person chatting with 15 s to read).
-  Optional, your call (a security setting): the pinned passwordless powermetrics rule in team/README.md lets
+- **Needs Aryen:** (1) sudo for any further evidence (chat evidence done 14:13). Optional, your call (a security setting): the pinned passwordless powermetrics rule in team/README.md lets
   evidence runs go without a password; remove it after the hackathon;
   (2) the .env command for the Application Insights connection string; (3) the workshop quote (config/site.yaml);
   (4) judges' access to the private repo before Sun 08:50; (5) yes/no on the Foundry deployment; (6) rotate the
