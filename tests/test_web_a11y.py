@@ -14,44 +14,49 @@ TOKENS = dict(re.findall(r"--([\w-]+):\s*(#[0-9a-fA-F]{6})\b", CSS.split("}", 1)
 BODY, LARGE, MARK = 4.5, 3.0, 3.0
 
 # (foreground, background, minimum, where). A colour is a token name, a #rrggbb literal, or (r, g, b, a) drawn
-# over the token after it (a translucent badge or band). Large = 18.66 px bold or 24 px and up.
+# over the colour after it (a translucent panel or band). Large = 18.66 px bold or 24 px and up.
+# The panels are translucent glass over the black page (style.css --glass, --glass-raised).
+GLASS = ((24, 24, 24, .74), "ground")
+RAISED = ((44, 44, 44, .82), "ground")
 PAIRS = [
-    ("text", "bg", BODY, "body text"),
-    ("text", "panel", BODY, "panel text"),
-    ("text", "panel2", BODY, "inputs, buttons, chat bubbles, approval cards"),
-    ("text", "#1d3b6e", BODY, ".msg.user (your own chat message)"),
-    ("muted", "bg", BODY, ".src, .cap, captions on the page"),
-    ("muted", "panel", BODY, ".src, .label, .kv b in panels"),
-    ("muted", "panel2", BODY, ".msg .meta, .ask-change .was"),
-    ("#8fd3ff", "bg", BODY, "links"),
-    ("#ffffff", "action", BODY, "button.primary"),
-    ("warn", "panel", BODY, ".warn-line, .transcript-label, .state-paused"),
-    ("warn", "panel2", BODY, ".warn-line inside approval cards"),
-    ("#ffc2c7", "panel", BODY, "li.bad, .bad-text"),
-    ("#ffc2c7", "panel2", BODY, ".msg.error .meta"),
-    ("#b8f1e9", "panel", BODY, ".state-running, .rtable td.good"),
-    ("#b8f1e9", ((47, 181, 165, .22), "panel"), BODY, ".badge.ok"),
-    ("warn", ((242, 204, 96, .16), "panel"), BODY, ".badge.warn"),
-    ("#ffc2c7", ((255, 90, 103, .22), "panel"), BODY, ".badge.bad"),
-    ("#ffd0d0", ((255, 91, 91, .22), "panel"), BODY, ".map-cap span (cap W on its band)"),
-    ("bad", "panel", LARGE, ".value.bad, .ttc.bad .ttc-n (large numbers)"),
-    ("ok", "panel", LARGE, ".ttc.ok .ttc-n"),
-    ("warn", "panel", LARGE, ".ttc.wait .ttc-n"),
-    ("job-chat", "panel", BODY, ".map-label b"),
-    ("job-train", "panel", BODY, ".map-label b"),
-    ("job-batch", "panel", BODY, ".map-label b"),
-    ("job-chat", "off", MARK, "map cell: chat runs, next to a deferred slot"),
-    ("job-train", "off", MARK, "map cell: train runs"),
-    ("job-batch", "off", MARK, "map cell: batch runs"),
-    ("price", "panel", MARK, "price line"),
-    ("bad", "panel", MARK, "cap band border, over-cap bars"),
-    ("#5a7596", "panel", MARK, ".map-bar i (planned watts)"),
-    ("action", "panel", MARK, "button.primary's shape"),
+    ("ink", "ground", BODY, "body text"),
+    ("ink", GLASS, BODY, "panel text"),
+    ("ink", RAISED, BODY, "inputs, buttons, chat bubbles, approval cards"),
+    ("ink", "recess", BODY, "text in wells: textareas, the transcript"),
+    ("ink-muted", "ground", BODY, ".cap, .label, status words on the page"),
+    ("ink-muted", GLASS, BODY, ".label, .kv b, captions in panels"),
+    ("ink-muted", RAISED, BODY, ".ask-facts, status words in cards"),
+    ("ink-quiet", "ground", BODY, ".src on the page"),
+    ("ink-quiet", GLASS, BODY, ".src in panels, .msg .meta"),
+    ("ink-quiet", RAISED, BODY, ".src in approval and event cards"),
+    ("ink-quiet", "recess", BODY, "placeholders, .ask-change .was"),
+    ("current", GLASS, BODY, "live numbers, the scene's total tag"),
+    ("on-current", "current", BODY, "button.primary"),
+    ("price", GLASS, BODY, ".warn-line, .transcript-label, .badge.warn, .state-paused"),
+    ("price", RAISED, BODY, ".warn-line inside approval cards"),
+    ("limit", GLASS, BODY, ".badge.bad, .value.bad, .ttc.bad .ttc-n"),
+    ("limit", RAISED, BODY, "button.danger inside cards"),
+    ("on-limit", "limit", BODY, "button.danger on hover"),
+    ("limit-ink", GLASS, BODY, "li.bad, .bad-text"),
+    ("limit-ink", RAISED, BODY, ".msg.error .meta"),
+    ("limit-ink", ((255, 96, 112, .18), GLASS), BODY, ".map-cap span (cap W on its band)"),
+    ("within", GLASS, BODY, ".rtable td.good, .ttc.ok .ttc-n"),
+    ("job-chat", GLASS, BODY, ".map-label b"),
+    ("job-train", GLASS, BODY, ".map-label b"),
+    ("job-batch", GLASS, BODY, ".map-label b"),
+    ("job-chat", "recess", MARK, "map cell: chat runs, next to a deferred slot"),
+    ("job-train", "recess", MARK, "map cell: train runs"),
+    ("job-batch", "recess", MARK, "map cell: batch runs"),
+    ("price", GLASS, MARK, "price line"),
+    ("limit", GLASS, MARK, "cap band border, over-cap bars"),
+    ("current-dim", GLASS, MARK, ".map-bar i (planned watts)"),
+    ("current", GLASS, MARK, "button.primary's shape, the measured trace"),
+    ("edge", RAISED, MARK, "control borders"),
 ]
 
 
 # Glyphs that carry no information (WCAG 1.4.3 exempts decoration): colour -> where.
-DECORATIVE = {"line": ".power-strip .sep, the dot between two numbers"}
+DECORATIVE: dict[str, str] = {}
 
 
 def _hex(value: str) -> str:
@@ -81,7 +86,8 @@ def contrast(a, b) -> float:
 
 
 def test_tokens_parsed():
-    assert {"bg", "panel", "panel2", "text", "muted", "warn", "bad", "ok", "action", "off"} <= TOKENS.keys()
+    assert {"ground", "recess", "ink", "ink-muted", "ink-quiet", "current", "current-dim", "on-current", "price", "limit",
+            "limit-ink", "on-limit", "within", "edge", "job-chat", "job-train", "job-batch"} <= TOKENS.keys()
 
 
 @pytest.mark.parametrize("fg,bg,minimum,where", PAIRS, ids=[p[3] for p in PAIRS])
