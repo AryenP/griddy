@@ -1,4 +1,4 @@
-.PHONY: ollama setup demo baseline calibrate chat-sweep solve report compare test probe qr clean
+.PHONY: tag-stable ollama setup demo baseline calibrate chat-sweep solve report compare test probe qr clean
 
 PY ?= uv run
 RUN ?= latest
@@ -34,6 +34,11 @@ compare:        ## side-by-side numbers: workload-aware vs uniform
 
 test:
 	$(PY) pytest -q
+
+tag-stable:     ## after a full live `make demo` worked end to end: tag it; demo from the newest tag
+	$(PY) pytest -q && $(PY) python scripts/check_runtime.py
+	n=$$(( $$(git tag -l 'demo-stable-*' | sed 's/demo-stable-//' | sort -n | tail -1) + 1 )); \
+	git tag -a "demo-stable-$$n" -m "$(or $(MSG),end-to-end demo verified on the demo Mac)" && git push origin "demo-stable-$$n" && echo "tagged demo-stable-$$n"
 
 probe:          ## what does this Mac support?
 	bash scripts/probe_mac.sh | tee runs/probe-$$(date +%s).txt

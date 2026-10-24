@@ -7,6 +7,7 @@ import sys
 import time
 from pathlib import Path
 
+import pytest
 import yaml
 
 from core.timeline import Timeline
@@ -41,6 +42,7 @@ def _wait(path: Path, pred, timeout=120):
 
 
 def test_train_pause_resume_roundtrip(tmp_path):
+    pytest.importorskip("torch")          # Mac extra; CI and non-Mac machines skip this one
     cfg = yaml.safe_load((ROOT / "config" / "jobs.yaml").read_text())
     cfg["workloads"].update(control_dir=str(tmp_path / "ctl"), checkpoint_dir=str(tmp_path / "ck"))
     cfg["workloads"]["train"].update(d_model=32, n_layers=1, n_heads=2, seq_len=32, batch_size=4, checkpoint_every_steps=5)
