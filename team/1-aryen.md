@@ -63,3 +63,16 @@ Evidence is no longer re-run after every change: the only evidence run tonight i
   the final numbers, what needs Aryen today. Done when: written after E.
 - **DONE 06:08: simulated neighbourhood line** (Aryen 05:35, DECISIONS 05:45): model, real cap to the real
   dispatcher, dashboard panel with every simulated part labelled; live check 06:07 (diesel 0 vs 62.9 kWh simulated).
+
+## Sat 10:20 to ~15:30 (Aryen away; sudo expired, so no power measurement until he is back), in order
+- **DONE 10:08-10:30: chat under a cap.** Failed run recorded (789b777); fix b06cd51 (operator gate, measured
+  chat curve); outside-load estimate prices chat from requests in service (abf8d53); dashboard says when chat is
+  why power is over (03faf21); Devpost honest-scope lines (9569136); `make evidence-chat-judge` (7afdc13).
+- **G (needs sudo).** `make evidence-chat && make evidence-chat-judge`, Mac idle ~20 min. Record both in
+  DECISIONS, the brief, vault 132 and docs/devpost.md "Honest scope" (replace "not recorded yet" with the numbers,
+  pass or fail). Done when: both reports are in docs/evidence/.
+- **H (after G).** Live check with `make demo`: a cap, then one chat message during it; the dashboard says
+  "chat is serving 1 request at full speed"; then `make tag-stable MSG=...` (demo-stable-4).
+- **I (after H).** Real dashboard screenshots for the Devpost gallery (load trace with a cap, dispatch map, the
+  operator ask on the phone page, the neighbourhood panel with its "simulated" tags).
+- **Each tick meanwhile:** merge green teammate PRs, answer [supervisor] issues, keep queues at two or more.
