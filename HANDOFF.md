@@ -14,8 +14,8 @@ going into M4 tonight (overrides KICKOFF.md's "do not start M4 tonight").
 | M2 workloads + calibrate | idle 1.35 W; chat +24.8 W (conc 4); train GPU +19.5 W / CPU +13.0 W; batch GPU +22.8 W / CPU +18.7 W |
 | M3 dispatcher | `make solve`: OPTIMAL 0.06 s; train in Sat 14:00–16:00 at ~$5/MWh vs ~$36 skipped; chat conc 4 in all 96 slots |
 
-Open problems (owner's call, not silently fixed): chat p95 is **9.7 s** at concurrency 4 / 256 tokens vs the
-2 s SLA; emission factors in `config/isos.yaml` are uncited; batch is minutes of real work (18,794 man-page
+Chat SLA settled Sat 00:15: time to first token p95 <= 1.0 s (`policy.sla.chat_ttft_p95_s`), replies stream
+(`/api/chat/stream`); measured worst 0.23 s. Open problems: emission factors in `config/isos.yaml` are uncited; batch is minutes of real work (18,794 man-page
 passages), not 45 min; no operator/FDE quote yet (Sat 10 AM workshop).
 
 ## The split
@@ -64,6 +64,7 @@ chat has `concurrency`, `inflight`, `p95_60s` (total latency), `ttft_p95_60s` (t
 | POST | `/api/jobs/{id}` | `{"deadline": iso8601 \| null}` | new Schedule (owner/negotiator changed a deadline) |
 | POST | `/api/event` | `{"start": iso8601, "duration_s": int, "target_w"?: W, "target_pct"?: % of measured baseline, "reason"}` | new Schedule with the cap |
 | POST | `/api/chat` | `{"messages": [{"role","content"}], "max_tokens"?: int}` | `{"reply", "latency_s", "ttft_s", "tokens", "max_tokens"}` |
+| POST | `/api/chat/stream` | same | NDJSON: `{"delta": str}` lines as tokens arrive, then `{"done": true, "latency_s", "ttft_s", "tokens", "max_tokens"}`; `{"error"}` on failure. **Use this for the phone chat page.** |
 
 **Agent and receipts routes** (machine 1 wires them as machines 3 and 4 deliver; code against them now):
 | Method | Path | Body | Returns |

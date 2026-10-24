@@ -16,6 +16,7 @@ from collections import deque
 import httpx
 import uvicorn
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from core.config import settings
@@ -60,12 +61,16 @@ class ChatIn(BaseModel):
     max_tokens: int | None = None
 
 
-def make_app(max_concurrency: int) -> FastAPI:
+class ChatError(Exception):
+    pass
+
+
+def make_app(max_concurrency: int, transport: httpx.AsyncBaseTransport | None = None) -> FastAPI:
     app = FastAPI(title="brownout chat proxy")
     lim = Limiter(max_concurrency)
     lat: deque[tuple[float, float, float]] = deque(maxlen=5000)   # (t, total_s, ttft_s)
     state = {"max_tokens": CFG.get("max_tokens", 256), "served": 0, "errors": 0}
-    client = httpx.AsyncClient(base_url=settings.ollama_url, timeout=120)
+    client = httpx.AsyncClient(base_url=settings.ollama_url, timeout=120, transport=transport)
 
     def snapshot() -> dict:
         now = time.time()
@@ -94,10 +99,11 @@ def make_app(max_concurrency: int) -> FastAPI:
     async def _start():
         asyncio.create_task(follow_control())
 
-    @app.post("/chat")
-    async def chat(body: ChatIn):
-        t0 = time.time()          # includes time queued behind the concurrency limit
-        ttft, parts, tokens = None, [], None
+    async def generate(body: ChatIn):
+        """Yields {"delta": text} as Ollama produces it, then one {"done": true, ...stats}. Holds a
+        concurrency slot until the last token; TTFT and total include time queued for the slot."""
+        t0 = time.time()
+        ttft, tokens = None, None
         async with lim:
             n = min(body.max_tokens or state["max_tokens"], state["max_tokens"])
             try:
@@ -110,20 +116,44 @@ def make_app(max_concurrency: int) -> FastAPI:
                             continue
                         d = json.loads(line)
                         piece = d.get("message", {}).get("content", "")
-                        if piece and ttft is None:
-                            ttft = time.time() - t0
-                        parts.append(piece)
+                        if piece:
+                            if ttft is None:
+                                ttft = time.time() - t0
+                            yield {"delta": piece}
                         if d.get("done"):
                             tokens = d.get("eval_count")
             except httpx.HTTPError as e:
                 state["errors"] += 1
-                raise HTTPException(502, f"ollama: {e!r}")
+                raise ChatError(f"ollama: {e!r}") from e
         dt = time.time() - t0
         ttft = dt if ttft is None else ttft
         lat.append((time.time(), dt, ttft))
         state["served"] += 1
-        return {"reply": "".join(parts), "latency_s": round(dt, 3), "ttft_s": round(ttft, 3),
-                "tokens": tokens, "max_tokens": n}
+        yield {"done": True, "latency_s": round(dt, 3), "ttft_s": round(ttft, 3), "tokens": tokens, "max_tokens": n}
+
+    @app.post("/chat")
+    async def chat(body: ChatIn):
+        parts, final = [], {}
+        try:
+            async for ev in generate(body):
+                if "delta" in ev:
+                    parts.append(ev["delta"])
+                else:
+                    final = ev
+        except ChatError as e:
+            raise HTTPException(502, str(e))
+        final.pop("done", None)
+        return {"reply": "".join(parts), **final}
+
+    @app.post("/chat/stream")
+    async def chat_stream(body: ChatIn):
+        async def ndjson():
+            try:
+                async for ev in generate(body):
+                    yield json.dumps(ev) + "\n"
+            except ChatError as e:
+                yield json.dumps({"error": str(e)}) + "\n"
+        return StreamingResponse(ndjson(), media_type="application/x-ndjson")
 
     @app.get("/status")
     async def status():

@@ -8,7 +8,7 @@ from typing import Literal
 
 import httpx
 from fastapi import APIRouter, HTTPException, WebSocket
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 from core.config import available_isos
@@ -133,6 +133,22 @@ def make_router(rt) -> APIRouter:
         if resp.status_code != 200:
             raise HTTPException(resp.status_code, resp.text)
         return resp.json()
+
+    @r.post("/api/chat/stream")
+    async def chat_stream(body: ChatIn):
+        """Pass the proxy's NDJSON stream through: {"delta"} lines, then {"done", latency_s, ttft_s, ...}."""
+        url = f"http://127.0.0.1:{WL['chat']['proxy_port']}/chat/stream"
+
+        async def relay():
+            async with httpx.AsyncClient(timeout=180) as c:
+                try:
+                    async with c.stream("POST", url, json=body.model_dump(exclude_none=True)) as resp:
+                        async for line in resp.aiter_lines():
+                            if line:
+                                yield line + "\n"
+                except httpx.HTTPError as e:
+                    yield json.dumps({"error": f"chat service unavailable: {e!r}"}) + "\n"
+        return StreamingResponse(relay(), media_type="application/x-ndjson")
 
     @r.get("/chat")
     async def chat_page():

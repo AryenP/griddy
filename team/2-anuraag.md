@@ -10,6 +10,13 @@ CDN version). No build step. Must work at phone width.
 in `core/types.py`. Until the server runs, develop against `tests/fixtures/real_timeline_*.jsonl` fed in
 from the browser console (no replay mode in the code).
 
+## Follow-ups from machine 1 (do these first, Sat 00:15)
+- Chat SLA is now on **time to first token**: show `ttft_p95_60s` against `policy.sla.chat_ttft_p95_s` (1.0 s)
+  as the SLA tile, with total latency `p95_60s` beside it labelled "total (depends on reply length)".
+  `policy.sla.chat_p95_s` no longer exists.
+- `web/chat.html` should use `POST /api/chat/stream` (NDJSON deltas) so the reply appears as it is written.
+- Snapshot now has `job_specs` (owner, deadline) and `quote` (null until Saturday): see HANDOFF.md.
+
 ## Tasks, in order
 1. **Dashboard** `web/index.html`, `web/app.js`, `web/style.css` (SPEC §10). Header: the claim ("When the
    grid runs short, the plan for AI data centers is diesel generators. This is the alternative.") + quote
