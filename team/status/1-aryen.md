@@ -36,3 +36,8 @@ Next: clean `make calibrate` on qwen3:4b-instruct with the Mac idle, then `make 
 for the comparison, then a full DEMO.md pass and `make tag-stable`.
 Blockers / needs Aryen: (1) sudo password once in a new terminal for calibrate + baseline + demo;
 (2) a Console API key (sk-ant-api03-...) in .env via the command given in chat, for the first real-key agent test.
+
+## 2026-10-24 02:09 PT — evidence at 7e682a4 (started)
+Done: passwordless powermetrics rule in place; meter lock verified live; polluted overlapping calibrations discarded.
+Next: `make evidence` running unattended (~25 min); then record its comparison in DECISIONS.md, then tag.
+Blockers / needs Aryen: a Console API key in .env for the real-key agent test (asked once already).
