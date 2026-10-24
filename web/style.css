@@ -102,3 +102,30 @@ li.bad, .log li.bad, .bad-text { color: #ffc2c7; }
   .chart-box { height: 220px; }
   .keys { display: none; }
 }
+
+/* ---------- phone pages (chat, owner, operator): 375 px wide, no horizontal scroll ---------- */
+body.phone { max-width: 760px; padding: 14px 16px 24px; font-size: 18px; }
+.phone-top { margin-bottom: 12px; }
+.phone-top h1 { font-size: 1.6rem; }
+.phone-top .cap { margin: 4px 0; }
+.badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.phone main { gap: 14px; }
+.phone textarea, .phone input, .phone select { width: 100%; font-size: 18px; }
+.phone textarea { resize: vertical; min-height: 3em; }
+.phone button { min-height: 46px; padding: 8px 16px; }
+.phone .panel h2 { color: var(--text); font-size: 1.15rem; }
+.field { display: grid; gap: 4px; margin: 8px 0; }
+.field > span { color: var(--muted); font-size: 0.9rem; }
+.btn-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px; }
+
+.thread { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.msg { max-width: 92%; padding: 10px 13px; border-radius: 14px; background: var(--panel2); border: 1px solid var(--line); }
+.msg.user { justify-self: end; background: #1d3b6e; border-color: #2a5298; }
+.msg .body { white-space: pre-wrap; }
+.msg.pending .body::after { content: "…"; color: var(--muted); }
+.msg .meta { color: var(--muted); font-size: 0.8rem; margin-top: 4px; font-variant-numeric: tabular-nums; }
+.msg .meta:empty { display: none; }
+.msg.error { border-color: var(--bad); }
+.msg.error .meta { color: #ffc2c7; }
+.composer { position: sticky; bottom: 0; display: grid; grid-template-columns: 1fr auto; gap: 8px; padding: 10px 0 4px; background: var(--bg); }
+.composer textarea { min-height: 46px; }
