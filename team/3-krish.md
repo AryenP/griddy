@@ -132,6 +132,20 @@ judge who has never seen the code. On your Surface, in a NEW folder:
    question the README did not answer, every number you could not trace to a source, timed (minutes) per step.
 Done when: the file is on krish/judge-dry-run and says what you would score and why.
 
+### K15 (Sat 16:02). Check every citation in the real-event replays (about 45 min) — right after K14
+The demo's centrepiece is now a replay of a real grid emergency (DECISIONS, the entry after 16:00; config/events.yaml;
+docs/evidence/events/*.csv). Judges will open the sources. For each event:
+1. Open the report at `report_url` and check every alert's time and label, and every impact line, against the PDF page
+   the `source` names (the pages are PDF page numbers, not printed ones). Uri: FERC-NERC Nov 2021. Aug 2020: CAISO-CPUC-CEC
+   root cause analysis. Sep 2022: Cal Advocates, 22 Sep 2022 (and EIA Today in Energy, 28 Sep 2022, for 51,426 MW).
+2. Check the records used for Brownout's flag (ERCOT 65,750 MW winter record, 17 Jan 2018; CAISO 50,270 MW, 2006):
+   they must be records from BEFORE the event (no hindsight).
+3. Spot-check the EIA-930 CSVs: download one six-month file named in the CSV header, pick three hours per event, and
+   compare demand and forecast.
+4. Check the scale arithmetic on screen: freed MW = flexible MW x the smaller of (cut asked, cut measured); people =
+   the event's people / its MW shed x freed MW.
+Write one numbered line per mismatch in team/review/2026-10-24.md; machine 1 fixes them.
+
 ### K4. If one of the Windows laptops is yours
 Tell Aryen in your status file. After 07:20 you may be asked to join it to the demo: `fleet/README.md`.
 
