@@ -159,6 +159,8 @@ class Policy(BaseModel):
     slot_minutes: int = 15
     horizon_hours: int = 24
     solver_time_limit_s: float = 2.0
+    replan: dict[str, float] = Field(default_factory=dict,
+                                     description="re-solve thresholds: chat_busy_delta, watts_drift_pct, watts_drift_min_w, min_interval_s")
 
 
 class CapEvent(BaseModel):
@@ -211,6 +213,8 @@ class Schedule(BaseModel):
     planned_w: list[float] = Field(default_factory=list,
                                    description="machine W per slot from calibrated deltas (planned, not measured)")
     caps_w: list[float | None] = Field(default_factory=list)
+    chat_busy_streams: float | None = Field(default=None,
+                                            description="measured chat traffic the plan assumed (None = full concurrency)")
     solver_status: str = ""
     solve_wall_s: float = 0.0
     relaxed: bool = False

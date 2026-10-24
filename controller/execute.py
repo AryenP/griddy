@@ -3,7 +3,8 @@
 Once a second: find the slot that contains now, turn its assignments into a SlotPlan, apply it
 through the knobs (idempotent), log the plan whenever it changes, and log each job's status.
 Re-solve on: a new grid signal, a policy change, a CapEvent, a job change (e.g. new deadline),
-a job finishing, or the schedule's horizon running out. The LLM has no path into this module.
+a job finishing, the schedule's horizon running out, chat traffic moving away from what the plan
+assumed, or measured watts drifting from the plan. The LLM has no path into this module.
 """
 from __future__ import annotations
 
@@ -42,6 +43,7 @@ class Executor:
         self._lock = asyncio.Lock()
         self._plan_key = None
         self._last_latency_log = 0.0
+        self._last_solve_t = 0.0
 
     # ------------------------------------------------------------------ inputs
     def on_power(self, r: PowerReading) -> None:
@@ -97,6 +99,12 @@ class Executor:
         self.tick()
 
     # ------------------------------------------------------------------ solve
+    @staticmethod
+    def chat_busy() -> float | None:
+        """Measured average busy chat streams over the last 60 s, from the proxy (None until it reports)."""
+        v = Knobs.status("chat").get("busy_60s")
+        return float(v) if v is not None else None
+
     def active_events(self) -> list[CapEvent]:
         now = time.time()
         return [e for e in self.events if e.start.timestamp() + e.duration_s > now]
@@ -106,8 +114,10 @@ class Executor:
             return None
         async with self._lock:
             sig, jobs, events = self.signal, self.jobs(), self.active_events()
-            sched = await asyncio.to_thread(solve, sig, jobs, self.policy, self.cal, events, self.baseline_w())
+            sched = await asyncio.to_thread(solve, sig, jobs, self.policy, self.cal, events, self.baseline_w(),
+                                            self.chat_busy())
             self.schedule = sched
+            self._last_solve_t = time.time()
             self.tl.log("schedule", reason=reason, **sched.model_dump(mode="json"))
             for sf in sched.shortfalls:
                 self.tl.log("shortfall", schedule_id=sched.id, **sf.model_dump(mode="json"))
@@ -181,6 +191,31 @@ class Executor:
                 self.tl.log("latency", job="chat", p95_60s=st.get("p95_60s"), n_60s=st.get("n_60s"))
         return newly_done
 
+    def drift_reason(self) -> str | None:
+        """Why measured reality no longer matches the plan, if it doesn't (rate-limited by policy)."""
+        r = self.policy.replan
+        s, plan = self.schedule, self.plan
+        if not (self.dispatcher_enabled and s and plan and r):
+            return None
+        now = time.time()
+        if now - self._last_solve_t < r.get("min_interval_s", 60):
+            return None
+        busy = self.chat_busy()
+        if busy is not None and s.chat_busy_streams is not None and \
+                abs(busy - s.chat_busy_streams) > r.get("chat_busy_delta", 0.5):
+            return f"chat traffic {s.chat_busy_streams:.2f} -> {busy:.2f} busy streams"
+        # watts: only once the current slot has run a full window, so job start-up is not drift
+        window = self.baseline_window_s
+        if plan.slot_start and plan.planned_w is not None and now - plan.slot_start.timestamp() >= window + 5 \
+                and now - self._last_solve_t >= window:
+            xs = [w for t, w in self.power if t >= now - window]
+            if len(xs) >= window // 2:
+                m = sum(xs) / len(xs)
+                tol = max(r.get("watts_drift_pct", 20) / 100 * plan.planned_w, r.get("watts_drift_min_w", 2.0))
+                if abs(m - plan.planned_w) > tol:
+                    return f"measured {m:.2f} W vs planned {plan.planned_w:.2f} W over {window}s"
+        return None
+
     async def run(self, period_s: float = 1.0) -> None:
         while True:
             try:
@@ -188,6 +223,10 @@ class Executor:
                     await self.resolve(f"{j} finished")
                 if self.dispatcher_enabled and self.schedule and self.slot_index() is None:
                     await self.resolve("horizon exhausted")
+                why = self.drift_reason()
+                if why:
+                    self.tl.log("note", msg=f"re-solve: {why}", trigger="drift")
+                    await self.resolve(f"drift: {why}")
                 self.tick()
             except Exception as e:      # keep executing; the failure is on the timeline
                 log.exception("executor tick failed")

@@ -68,17 +68,26 @@ class ChatError(Exception):
 
 def make_app(max_concurrency: int, transport: httpx.AsyncBaseTransport | None = None) -> FastAPI:
     lim = Limiter(max_concurrency)
-    lat: deque[tuple[float, float, float]] = deque(maxlen=5000)   # (t, total_s, ttft_s)
+    lat: deque[tuple[float, float, float, float]] = deque(maxlen=5000)   # (t_end, total_s, ttft_s, service_s)
     state = {"max_tokens": CFG.get("max_tokens", 256), "served": 0, "errors": 0}
+    inflight_since: dict[int, float] = {}       # request id -> start time, while being served
     client = httpx.AsyncClient(base_url=settings.ollama_url, timeout=120, transport=transport)
+
+    def busy_streams(now: float, window: float = 60.0) -> float:
+        """Measured average number of requests in service over the last `window` s: the overlap of
+        each request's [start, end] with the window, divided by the window. Includes in-flight ones."""
+        lo = now - window
+        done = sum(max(0.0, t - max(lo, t - sv)) for t, _, _, sv in lat if t > lo)
+        live = sum(now - max(lo, t0) for t0 in inflight_since.values())
+        return (done + live) / window
 
     def snapshot() -> dict:
         now = time.time()
-        recent = [(l, f) for t, l, f in lat if now - t <= 60]
+        recent = [(l, f) for t, l, f, _ in lat if now - t <= 60]
         return {"job": "chat", "state": "running" if lim.limit > 0 else "paused", "device": "gpu",
                 "concurrency": lim.limit, "inflight": lim.inflight, "max_tokens": state["max_tokens"],
                 "p95_60s": p95([l for l, _ in recent]), "ttft_p95_60s": p95([f for _, f in recent]),
-                "n_60s": len(recent), "served": state["served"],
+                "n_60s": len(recent), "served": state["served"], "busy_60s": round(busy_streams(now), 3),
                 "errors": state["errors"], "model": settings.ollama_model, "t": now}
 
     async def follow_control():
@@ -109,6 +118,8 @@ def make_app(max_concurrency: int, transport: httpx.AsyncBaseTransport | None = 
         t0 = time.time()
         ttft, tokens = None, None
         async with lim:
+            rid = id(body)
+            inflight_since[rid] = time.time()
             n = min(body.max_tokens or state["max_tokens"], state["max_tokens"])
             try:
                 async with client.stream("POST", "/api/chat", json={
@@ -129,9 +140,12 @@ def make_app(max_concurrency: int, transport: httpx.AsyncBaseTransport | None = 
             except httpx.HTTPError as e:
                 state["errors"] += 1
                 raise ChatError(f"ollama: {e!r}") from e
+            finally:
+                served_from = inflight_since.pop(rid, t0)
         dt = time.time() - t0
+        service = time.time() - served_from    # time holding a slot (what draws power), not queueing
         ttft = dt if ttft is None else ttft
-        lat.append((time.time(), dt, ttft))
+        lat.append((time.time(), dt, ttft, service))
         state["served"] += 1
         yield {"done": True, "latency_s": round(dt, 3), "ttft_s": round(ttft, 3), "tokens": tokens, "max_tokens": n}
 

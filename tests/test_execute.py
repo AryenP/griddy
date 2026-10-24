@@ -82,3 +82,18 @@ async def test_job_change_resolves(rig):
     s = await e.set_job("train", deadline=SLOTS[0] + timedelta(hours=2, minutes=30))
     on = [i for i, a in enumerate(s.assignments["train"]) if a.run]
     assert on and max(on) < 10
+
+
+async def test_traffic_drift_triggers_resolve_rate_limited(rig, monkeypatch):
+    e, clock, tmp = rig
+    e.policy = e.policy.model_copy(update={"replan": {"chat_busy_delta": 0.5, "min_interval_s": 60}})
+    busy = {"v": 0.0}
+    monkeypatch.setattr(ex.Executor, "chat_busy", staticmethod(lambda: busy["v"]))
+    await e.on_signal(signal([50.0] * 96))
+    assert e.schedule.chat_busy_streams == 0.0
+    busy["v"] = 2.0
+    assert e.drift_reason() is None                    # within min_interval_s of the last solve
+    clock["t"] += 61
+    assert "chat traffic 0.00 -> 2.00" in e.drift_reason()
+    await e.resolve("drift")
+    assert e.schedule.chat_busy_streams == 2.0 and e.drift_reason() is None

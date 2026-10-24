@@ -52,7 +52,7 @@ runtime (`Job` in core/types.py). `quote` comes from `config/site.yaml`. After `
 Field names are exactly the pydantic models in `core/types.py` (`model_dump(mode="json")`). Job status
 objects are what the workloads write to `runs/control/<job>.status.json` (see `workloads/*.py`):
 train has `step`, `loss`, `rate` (steps/s); batch has `items_done`, `total`, `fraction`, `rate` (items/s);
-chat has `concurrency`, `inflight`, `p95_60s` (total latency), `ttft_p95_60s` (time to first token), `n_60s`, `max_tokens`, `model`. All have `state`, `device`, `t`.
+chat has `concurrency`, `inflight`, `p95_60s` (total latency), `ttft_p95_60s` (time to first token), `n_60s`, `busy_60s` (avg requests in service, the traffic the plan uses), `max_tokens`, `model`. All have `state`, `device`, `t`.
 
 **HTTP**
 | Method | Path | Body | Returns |

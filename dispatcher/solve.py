@@ -192,7 +192,8 @@ def _relaxation(inp: Inputs, relax: Relax, limit_s: float, slots: list[datetime]
 
 
 def solve(sig: GridSignal, jobs: list[Job], policy: Policy, cal: Calibration,
-          events: list[CapEvent] | None = None, baseline_w: float | None = None) -> Schedule:
+          events: list[CapEvent] | None = None, baseline_w: float | None = None,
+          chat_busy: float | None = None) -> Schedule:
     t0 = time.time()
     slots = [s for s, _ in sig.price_curve]
     prices = [p for _, p in sig.price_curve]
@@ -200,7 +201,7 @@ def solve(sig: GridSignal, jobs: list[Job], policy: Policy, cal: Calibration,
     dl, notes = deadline_slots(jobs, slots, policy.slot_minutes)
     inp = Inputs(jobs=jobs, cal=cal, policy=policy, prices=prices, carbons=carbons,
                  cap_w=cap_per_slot(slots, policy.slot_minutes, policy, events or [], baseline_w),
-                 deadline_slot=dl, remaining_work=remaining(jobs, policy.slot_minutes))
+                 deadline_slot=dl, remaining_work=remaining(jobs, policy.slot_minutes), chat_busy=chat_busy)
 
     b = build(inp)
     solver, st = _run(b, policy.solver_time_limit_s)
@@ -239,7 +240,8 @@ def solve(sig: GridSignal, jobs: list[Job], policy: Policy, cal: Calibration,
     sched = Schedule(slot_minutes=policy.slot_minutes, slots=slots, assignments=assign,
                      objective_value=obj, cost_usd=cost, co2_g=co2, deadline_misses=misses,
                      shortfalls=shortfalls, solver_status=status, solve_wall_s=time.time() - t0,
-                     relaxed=relaxed, on_stale_data=sig.stale, planned_w=watts, caps_w=inp.cap_w)
+                     relaxed=relaxed, on_stale_data=sig.stale, planned_w=watts, caps_w=inp.cap_w,
+                     chat_busy_streams=chat_busy)
     sched.explanations = notes + explain(sched, sig, jobs, dl)
     return sched
 

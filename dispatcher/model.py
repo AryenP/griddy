@@ -30,6 +30,7 @@ class Inputs:
     cap_w: list[float | None]        # machine watts cap per slot (policy cap or active CapEvent)
     deadline_slot: dict[str, int]    # job id -> number of slots ending on or before its deadline
     remaining_work: dict[str, int]   # job id -> milli-slots of GPU-speed work still to do
+    chat_busy: float | None = None   # measured avg busy chat streams; None = plan for full concurrency
 
 
 @dataclass
@@ -106,8 +107,18 @@ def build(inp: Inputs, relax: Relax = Relax()) -> Built:
             for s in range(S):
                 c = m.NewIntVar(lo, job.max_concurrency, f"conc_{job.id}_{s}")
                 b.conc[s] = c
-                power[s].append(round(per_w * 1000) * c)
-                obj.append(round(per_w * unit[s]) * c)
+                if inp.chat_busy is None:
+                    streams = c                      # worst case: every slot of concurrency busy
+                    per_unit = per_w                 # W per stream
+                else:
+                    # chat draws power for the streams actually in service: min(concurrency, measured
+                    # traffic). Centi-streams keep the integer model precise for fractional traffic.
+                    busy = round(min(inp.chat_busy, job.max_concurrency) * 100)
+                    streams = m.NewIntVar(0, job.max_concurrency * 100, f"busy_{job.id}_{s}")
+                    m.AddMinEquality(streams, [c * 100, busy])
+                    per_unit = per_w / 100
+                power[s].append(round(per_unit * 1000) * streams)
+                obj.append(round(per_unit * unit[s]) * streams)
                 obj.append(penalty * (job.max_concurrency - c))  # below max costs more than it saves
             continue
 

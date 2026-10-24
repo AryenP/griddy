@@ -31,6 +31,7 @@ def test_chat_collects_stream_and_reports_ttft():
     assert seen[0]["stream"] is True and seen[0]["options"]["num_predict"] == 64
     s = c.get("/status").json()
     assert s["served"] == 1 and s["ttft_p95_60s"] is not None and s["n_60s"] == 1
+    assert 0 <= s["busy_60s"] < 0.1         # one ~1 ms request in a 60 s window
 
 
 def test_stream_endpoint_yields_deltas_then_stats():

@@ -35,6 +35,11 @@ def explain(s: Schedule, sig: GridSignal, jobs: list[Job], deadline_slot: dict[s
                              f"({_ranges(reduced, s.slots, s.slot_minutes)}) because the power cap binds there")
             else:
                 facts.append(f"{j.id} runs in every slot at concurrency {j.max_concurrency} (never paused)")
+            if s.chat_busy_streams is None:
+                facts.append(f"{j.id} power planned for full concurrency (no traffic measured yet)")
+            else:
+                facts.append(f"{j.id} power planned at measured traffic: {s.chat_busy_streams:.2f} stream(s) busy "
+                             f"on average over the last 60 s, held flat (re-solved when traffic changes)")
             continue
         on = [i for i, x in enumerate(a) if x.run]
         window = range(min(deadline_slot[j.id], len(a)))
