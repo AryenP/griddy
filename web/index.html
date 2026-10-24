@@ -6,202 +6,42 @@
   <title>Brownout</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
-  <link rel="stylesheet" href="dashboard.css">
+  <link rel="stylesheet" href="world.css">
 </head>
-<body class="dash d">
-  <header class="d-top">
-    <div class="d-claim">
-      <h1>Brownout</h1>
-      <p>When the grid runs short, the plan for AI data centers is diesel generators. This is the alternative.</p>
-      <div id="quote" class="quote"></div>
-    </div>
-    <div class="d-controls">
-      <div class="d-badges">
-        <span id="conn" class="badge">connecting</span>
-        <span id="agent" class="badge">agent ?</span>
-        <span id="feed-age" class="badge">no feed</span>
-      </div>
-      <div class="d-knobs">
-        <label class="d-iso">Grid <select id="iso"></select></label>
-        <div class="d-seg" id="objective" role="group" aria-label="What the solver minimises">
-          <button type="button" data-objective="cost" aria-pressed="false">Cost</button>
-          <button type="button" data-objective="carbon" aria-pressed="false">Carbon</button>
-          <button type="button" data-objective="balanced" aria-pressed="false">Balanced</button>
-        </div>
-        <button id="dispatcher" class="d-switch" type="button" role="switch" aria-checked="false">
-          <span class="d-knob" aria-hidden="true"></span><span id="dispatcher-label">Dispatcher</span>
-        </button>
-      </div>
-      <div class="keys"><kbd>D</kbd> dispatcher <kbd>1</kbd> cost <kbd>2</kbd> carbon <kbd>3</kbd> balanced <kbd>R</kbd> receipts</div>
-    </div>
+<body class="w">
+  <header class="w-top">
+    <div class="w-brand"><b>Brownout</b><span>the grid's shock absorber for AI data centers</span></div>
+    <nav class="w-nav" aria-label="Pages"><a href="/" aria-current="page">Grid</a><a href="/info.html">Info</a><a href="/proof.html">Proof</a></nav>
+    <div class="w-status"><span id="w-feed" class="w-pill">grid feed —</span><span id="conn" class="w-pill">connecting</span></div>
   </header>
 
-  <main class="d-main">
-    <section class="panel d-load" aria-labelledby="load-h">
-      <div class="d-readout">
-        <h2 id="load-h">This machine, now</h2>
-        <p id="cap-state" class="d-state" aria-live="polite">Waiting for the meter</p>
-        <p id="cap-detail" class="d-state-sub"></p>
-        <p id="cap-ratio" class="d-ratio" hidden></p>
-        <div class="d-watts" id="watts">—</div>
-        <div class="src" id="watts-src">waiting for powermetrics</div>
-        <ul id="fleet" class="d-fleet" aria-label="laptops in the fleet"></ul>
-        <dl class="d-dl">
-          <div>
-            <dt>Cost at the live price</dt>
-            <dd class="d-num" id="cost">—</dd>
-            <dd class="src" id="cost-src">waiting for grid feed</dd>
-          </div>
-          <div>
-            <dt>Carbon at the live mix</dt>
-            <dd class="d-num" id="carbon">—</dd>
-            <dd class="src" id="carbon-src">waiting for grid feed</dd>
-          </div>
-          <div>
-            <dt id="ttft-label">Chat time to first token, p95 over 60 s</dt>
-            <dd class="d-num" id="ttft">—</dd>
-            <dd class="sub" id="total-p95"></dd>
-            <dd class="src" id="ttft-src">waiting for chat proxy</dd>
-          </div>
-        </dl>
-      </div>
-      <div class="d-chart">
-        <div class="d-chart-head">
-          <h2>Measured power against the cap</h2>
-          <div class="d-seg d-small" id="trace-window" role="group" aria-label="How much history to show">
-            <button type="button" data-window="300" aria-pressed="true">5 min</button>
-            <button type="button" data-window="900" aria-pressed="false">15 min</button>
-            <button type="button" data-window="3600" aria-pressed="false">1 h</button>
-          </div>
-        </div>
-        <div id="load-trace" class="d-trace">
-          <div class="d-plot"></div>
-          <div class="d-hover" hidden><span class="d-hover-text"></span></div>
-        </div>
-        <div class="legend">
-          <span><i class="sw d-sw-meas"></i>measured</span>
-          <span><i class="sw d-sw-plan"></i>current plan (calibrated)</span>
-          <span><i class="sw d-sw-cap"></i>the utility's cap</span>
-          <span><i class="sw d-sw-over"></i>over the cap</span>
-          <span><i class="sw d-sw-mark"></i>what changed the plan</span>
-        </div>
-        <div class="src" id="load-src">macOS powermetrics, combined CPU + GPU + ANE watts, one sample a second</div>
-      </div>
-    </section>
+  <canvas id="world" class="w-world" role="img" aria-label="The grid as a 3D world: power plants from the real fuel mix, the city lit by the demand served, this Mac's data center by its measured watts"></canvas>
+  <div id="w-alerts" class="w-toasts" aria-live="polite"></div>
 
-    <section class="panel d-replay" id="replay" aria-labelledby="replay-h" hidden>
-      <div class="panel-head">
-        <h2 id="replay-h">Replay a real grid emergency <span class="d-meas">recorded grid data · live response</span></h2>
-        <button id="replay-stop" type="button" hidden>Stop the replay</button>
-      </div>
-      <div id="replay-cards" class="d-replay-cards" role="list"></div>
-      <p id="replay-state" class="d-replay-state" aria-live="polite"></p>
-      <svg id="replay-chart" class="d-replay-chart" viewBox="0 0 600 180" preserveAspectRatio="none" role="img" aria-label="demand served and the day-ahead forecast"></svg>
-      <div class="src d-replay-key"><span class="k-dem">demand served</span> <span class="k-fc">operator's day-ahead forecast</span> <span class="k-gap">gap: load that went unserved</span></div>
-      <div class="d-replay-grid">
-        <ol id="replay-alerts" class="d-replay-alerts"></ol>
-        <div id="replay-impact" class="d-replay-impact"></div>
-      </div>
-      <div class="src" id="replay-src"></div>
-      <div class="d-scale" id="live-scale" hidden aria-live="polite"></div>
-    </section>
-
-    <section class="d-day">
-      <div class="panel d-map-panel">
-        <div class="panel-head">
-          <h2>The next 24 hours: what runs when, and why</h2>
-        </div>
-        <p class="cap">Each row is a job: bright where the solver runs it, dark where it waits. The amber line is the grid price, red bands are the utility's caps. Click a slot, or focus the map and use the arrow keys, to see why.</p>
-        <div id="map" class="map" tabindex="0" aria-label="24-hour dispatch map; arrow keys move between slots, Escape returns to now"><p class="empty">no schedule yet: the map appears when the solver publishes one</p></div>
-        <div class="legend">
-          <span><i class="sw price"></i>price $/MWh</span>
-          <span><i class="sw carbon"></i>carbon gCO2/kWh, own scale</span>
-          <span><i class="sw run-gpu"></i>runs on GPU</span>
-          <span><i class="sw run-cpu"></i>runs on CPU</span>
-          <span><i class="sw off"></i>deferred</span>
-          <span><i class="sw cap"></i>cap window</span>
-          <span><i class="sw now"></i>now</span>
-          <span><i class="sw d-sw-pin"></i>pinned</span>
-        </div>
-        <div class="src" id="curve-src">waiting for grid feed and schedule</div>
-      </div>
-      <aside class="panel d-inspect" aria-labelledby="inspect-h">
-        <h2 id="inspect-h">This slot</h2>
-        <div id="inspect" aria-live="polite"><p class="empty">the inspector follows the current slot once a schedule arrives</p></div>
-      </aside>
-    </section>
-
-    <section class="panel d-rack" aria-labelledby="jobs-h">
-      <h2 id="jobs-h">The jobs</h2>
-      <div id="jobs" class="d-jobs"></div>
-    </section>
-
-    <section class="d-why">
-      <div class="panel">
-        <h2>Why this plan</h2>
-        <p class="cap">The solver's facts, worded by the agent when it is online; the agent may not add a number.</p>
-        <div id="explain" class="explain"></div>
-        <div class="src" id="explain-src"></div>
-        <h2 class="sub-h">Current slot</h2>
-        <div id="plan" class="plan"></div>
-        <h2 class="sub-h">Solver's facts</h2>
-        <ul id="explanations" class="explanations"></ul>
-        <div class="src" id="solve-src"></div>
-      </div>
-      <div class="panel">
-        <div class="panel-head">
-          <h2>Event log</h2>
-          <div class="d-seg d-small" id="log-filter" role="group" aria-label="Which events to show">
-            <button type="button" data-filter="all" aria-pressed="true">All</button>
-            <button type="button" data-filter="plan" aria-pressed="false">Plans</button>
-            <button type="button" data-filter="people" aria-pressed="false">Caps and people</button>
-            <button type="button" data-filter="grid" aria-pressed="false">Grid</button>
-          </div>
-        </div>
-        <p class="cap">Everything the runtime logged, newest first.</p>
-        <ol id="log" class="log d-log" data-filter="all" aria-live="polite"><li class="empty">no events yet</li></ol>
-      </div>
-    </section>
-
-    <section class="receipts panel" id="receipts">
-      <div class="panel-head">
-        <h2>Receipts: what the meter says happened</h2>
-        <span class="src" id="runs-src">runs not loaded yet</span>
-      </div>
-      <p class="cap">Computed afterwards from the recorded timelines: measured watts, not the plan. The same utility call under all three policies, side by side: <a href="proof.html">the proof page</a>.</p>
-      <div class="receipt-pick">
-        <label>Event report for run <select id="rc-run"></select></label>
-        <label>Dispatched run <select id="rc-dispatched"></select></label>
-        <label>vs dispatcher off <select id="rc-baseline"></select></label>
-        <button id="rc-load" type="button" class="primary">Load receipts</button>
-      </div>
-      <div class="receipt-grid">
-        <div>
-          <h2 class="sub-h">Event report</h2>
-          <div id="report"><p class="empty">pick a run and load</p></div>
-          <div class="src" id="report-src"></div>
-        </div>
-        <div>
-          <h2 class="sub-h">Dispatched vs dispatcher off</h2>
-          <div id="compare"><p class="empty">pick two runs and load</p></div>
-          <div class="src" id="compare-src"></div>
-        </div>
-      </div>
-      <div class="panel-head">
-        <h2 class="sub-h">Audit trail: the latest decisions as OpenTelemetry spans</h2>
-        <button id="rc-trace" type="button">Refresh trace</button>
-      </div>
-      <div id="trace"><p class="empty">not loaded yet</p></div>
-      <div class="src" id="trace-src"></div>
-    </section>
-  </main>
+  <section class="w-dock" aria-label="The demo">
+    <div class="w-row">
+      <div id="w-picks" class="w-events" role="group" aria-label="Choose what the grid shows"></div>
+      <button id="w-work-btn" type="button" class="w-work" hidden>Give training a deadline</button>
+      <button id="w-play-btn" type="button" class="w-play">Replay it live</button>
+    </div>
+    <div class="w-row w-row-time">
+      <span id="w-clock" class="w-when">Live</span>
+      <div class="w-bar" aria-hidden="true"><i id="w-progress"></i></div>
+      <span id="w-head" class="w-headline"></span>
+    </div>
+    <div class="w-stats">
+      <div class="w-stat"><b id="s-served">—</b><span>served</span><small id="s-served-src"></small></div>
+      <div class="w-stat"><b id="s-needed">—</b><span>needed</span><small id="s-needed-src"></small></div>
+      <div class="w-stat"><b id="s-mac">—</b><span>this Mac</span><small id="s-mac-src">measured by powermetrics</small></div>
+      <div class="w-stat"><b id="s-impact">—</b><span id="s-impact-k">at grid scale</span><small id="s-impact-src">estimate</small></div>
+    </div>
+  </section>
+  <footer id="w-sources" class="w-src"></footer>
 
   <script src="common.js"></script>
-  <script src="map.js"></script>
-  <script src="trace.js"></script>
-  <script src="app.js"></script>
-  <script src="receipts.js"></script>
+  <script src="world.js"></script>
+  <script src="demo.js"></script>
 </body>
 </html>
