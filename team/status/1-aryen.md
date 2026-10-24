@@ -190,3 +190,6 @@ architecture picture and state the simulated neighbourhood plainly. Queues: Anur
 own pages; his dashboard-3d branch crosses machine 1's lane), Krish K0 (open PRs for K1-K3), K5, K6.
 Next: quiet from 06:28; final evidence 06:40; then record it, check #13 live with ISO=ERCOT, and the morning brief.
 Blockers / needs Aryen: the .env command for Azure; battery tests on the other two laptops.
+
+## 2026-10-24 06:40 PT — evidence started at 686767b
+Final evidence run (make evidence3), on the charger, nothing else running on the Mac; the loop is silent until it finishes.
