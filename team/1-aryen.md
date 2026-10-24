@@ -53,7 +53,7 @@ Evidence is no longer re-run after every change: the only evidence run tonight i
   Done when: its two comparison tables and run ids are in DECISIONS.md.
 - **B. Three-way proof table** in README.md and docs/devpost.md from the newest evidence3, with the 03:13 first
   pass and its fix told honestly in one line. Done when: both show ignore / pause everything / Brownout.
-- **C. Second grid end to end** (task 7): `make demo`, switch to ERCOT with `POST /api/iso` for one full slot,
+- **C. DONE 05:17 (DECISIONS 05:17): Second grid end to end** (task 7): `make demo`, switch to ERCOT with `POST /api/iso` for one full slot,
   schedule repaints, watts follow; back to CAISO. Done when: one timeline shows both ISOs; DECISIONS line.
 - **D. DONE 04:50 (docs/rehearsal.md): Cold-start rehearsal by script**: from nothing running, time `make demo` to first schedule, curl every
   page and route in HANDOFF.md, run `make preflight`; fix what breaks. Done when: docs/rehearsal.md has a dated
