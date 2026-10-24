@@ -37,6 +37,9 @@ measure its own power. This test answers that. It changes nothing on your laptop
    pull request: `gh pr create --fill`. Also send the summary to Aryen.
 6. This script is new and could not be tested on the Mac. If it shows an error, copy the whole error into your
    status file the same way. That helps just as much.
+7. **Your Claude cannot do this test.** It runs in the cloud, not on your laptop. You (the person) run it
+   on the Windows laptop and paste the summary to your Claude or to Aryen. The full laptop guide, including
+   how a laptop joins the demo later, is `fleet/README.md`.
 Then go on with task 1 below.
 
 ## Your tasks, in order
