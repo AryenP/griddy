@@ -1,0 +1,59 @@
+# The three jobs on this Mac. Watts are MEASURED by `make calibrate`, never typed here.
+jobs:
+  - id: chat
+    kind: interactive
+    owner: ops
+    priority: 1
+    interruptible: false
+    device: gpu
+    min_concurrency: 1
+    max_concurrency: 4
+    sla: {p95_latency_s: 2.0}
+  - id: train
+    kind: deferrable
+    owner: ml-team
+    priority: 2
+    interruptible: true
+    checkpoint_interval_s: 60
+    device: either
+    deadline: "2026-10-26T09:00:00-07:00"
+    required_runtime_min: 90        # at full GPU speed; the solver spreads it into cheap slots
+  - id: batch
+    kind: droppable
+    owner: data-eng
+    priority: 3
+    interruptible: true
+    device: either
+    deadline: null                  # runtime = remaining corpus items / measured GPU items/s
+
+# How each workload runs. Real data only: local text files that ship with macOS.
+workloads:
+  control_dir: runs/control          # knobs write <job>.json here; workloads write <job>.status.json
+  checkpoint_dir: checkpoints
+  chat:
+    proxy_port: 8090
+    max_tokens: 256                  # degrade knob clamps this lower
+    think: false                     # qwen3: answer directly, no reasoning trace
+    calibration_prompts:             # traffic for `make calibrate` only (measurement, not shown as users)
+      - "Explain in two sentences why electricity prices fall at midday in California."
+      - "Write a short haiku about a power grid at night."
+      - "List three ways a data center can reduce peak power."
+      - "What is a locational marginal price? Answer briefly."
+  train:
+    corpus: /usr/share/dict/web2a    # char-level language model over this text
+    d_model: 256
+    n_layers: 4
+    n_heads: 4
+    seq_len: 128
+    batch_size: 48
+    lr: 0.0003
+    checkpoint_every_steps: 200
+  batch:
+    corpus: ["/usr/share/man/man*/*"]   # macOS man pages, roff markup stripped, cut into passages
+    words_per_item: 200
+    model: sentence-transformers/all-MiniLM-L6-v2
+    batch_size: 32
+  calibration:                       # `make calibrate`: measure idle, then each job on each device
+    window_s: 20
+    warmup_s: 6
+    cooldown_s: 5

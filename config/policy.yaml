@@ -1,0 +1,14 @@
+# Replace owners/never_pause/approvals with what the Microsoft FDEs or an operator say on Saturday.
+objective: balanced            # cost | carbon | balanced
+weights: {cost: 0.5, carbon: 0.5, lateness_penalty: 1000}
+power_cap_w: null              # set by CapEvents at runtime
+sla: {chat_p95_s: 2.0}
+never_pause: [chat]
+approvals:
+  deadline_slip: owner
+  chat_degrade: operator
+  chat_pause: operator
+operator: ops
+slot_minutes: 15
+horizon_hours: 24
+solver_time_limit_s: 2

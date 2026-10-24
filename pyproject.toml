@@ -1,0 +1,41 @@
+[project]
+name = "brownout"
+version = "0.1.0"
+description = "Grid-responsive AI compute agent (Cal Hacks 13.0)"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.30",
+  "pydantic>=2.7",
+  "httpx>=0.27",
+  "pyyaml>=6",
+  "anthropic>=0.40",
+  "python-dotenv>=1.0",
+  "qrcode[pil]>=7.4",
+  "matplotlib>=3.8",
+  "opentelemetry-api>=1.25",
+  "opentelemetry-sdk>=1.25",
+  "gridstatus>=0.37",
+  "pandas>=2.2",
+  "ortools>=9.10",
+]
+
+[project.optional-dependencies]
+mac = ["torch>=2.4", "numpy", "sentence-transformers"]
+azure = ["agent-framework", "azure-identity>=1.17", "azure-monitor-opentelemetry>=1.6", "azure-ai-contentsafety>=1.0"]
+slack = ["slack-bolt>=1.20"]
+dev = ["pytest>=8", "pytest-asyncio>=0.23", "ruff>=0.5"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["core*", "grid*", "dispatcher*", "controller*", "agent*", "meter*", "workloads*", "api*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100

@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Brownout — Project Report</title>
+<style>
+@page { size: Letter; margin: 18mm 16mm 18mm 16mm; }
+body { font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; color:#1a1a1a; font-size:10.5pt; line-height:1.4; }
+h1 { font-size:24pt; margin:0 0 2pt; letter-spacing:-0.5px; }
+h2 { font-size:14pt; margin:18pt 0 6pt; border-bottom:1.5px solid #1a1a1a; padding-bottom:3pt; page-break-after:avoid; }
+h3 { font-size:11.5pt; margin:12pt 0 4pt; page-break-after:avoid; }
+.sub { color:#555; font-size:10pt; margin-bottom:14pt; }
+.box { border:1.5px solid #1a1a1a; padding:10pt 12pt; margin:10pt 0; background:#fafafa; }
+.box.big { font-size:12.5pt; }
+table { border-collapse:collapse; width:100%; margin:6pt 0 10pt; font-size:9.5pt; page-break-inside:avoid; }
+th, td { border:1px solid #bbb; padding:4pt 6pt; vertical-align:top; text-align:left; }
+th { background:#eee; }
+code { font-family: Menlo, Consolas, monospace; font-size:9pt; background:#f1f1f1; padding:0 3px; }
+ul, ol { margin:4pt 0 8pt 18pt; } li { margin:2pt 0; }
+.two { display:flex; gap:14pt; } .two > div { flex:1; }
+.tag { display:inline-block; border:1px solid #1a1a1a; border-radius:3px; padding:0 5px; font-size:8.5pt; margin-right:4px; }
+.muted { color:#666; }
+.pb { page-break-before:always; }
+.flow { font-family:Menlo,Consolas,monospace; font-size:8.6pt; white-space:pre; background:#f6f6f6; border:1px solid #ddd; padding:8pt; line-height:1.3; }
+</style></head><body>
+
+<h1>Brownout</h1>
+<div class="sub">Grid-aware AI compute dispatcher · Cal Hacks 13.0, Palace of Fine Arts, San Francisco · Fri 23 – Sun 25 Oct 2026 · Team brief, rewritten Fri 9:00 PM after the reframe</div>
+
+<div class="box big"><b>The claim (verified).</b> When the grid runs short, the plan for AI data centers is diesel generators: during Winter Storm Fern in January 2026, with over a million people out, the Energy Secretary authorized PJM, ERCOT and Duke to order data centers onto backup generators, citing 35 GW of diesel. Nobody asked them to shed compute, because no system exists to do it. <b>Brownout is that system:</b> it watches the grid live (real prices, forecasts, fuel mix, alerts), decides when and how every AI job runs so power goes to what needs it, executes on real hardware, asks job owners before a deadline slips, and proves the result with measured power.</div>
+
+<div class="two">
+<div><h3>What we are going for</h3>
+<ul>
+<li><b>Microsoft Challenge — "Built for the Real World"</b>: $3,800, a Surface per member, present at the Delta/Frontier FDE tech talk, 1:1 senior-FDE mentorship. Their five criteria: customer understanding, measurable usefulness, path to production, responsible design, end-to-end function.</li>
+<li>Also opting in: Most Technically Advanced, Best Planet-First, Best Solo Hack (if still solo), Hyphenate (needs a demo video).</li>
+</ul></div>
+<div><h3>Hard deadlines</h3>
+<ul>
+<li><b>Sun 8:50 AM</b> Devpost submission (late = not judged). Draft by Sat 10 PM.</li>
+<li>Sun 10:30–12:30 judging at our table; be there by 10:30, live demo required, ~2-min pitch.</li>
+<li>Hardware back by Sun 2 PM. Closing 2–4 PM.</li>
+</ul></div>
+</div>
+
+<h2>Why this, why now</h2>
+<ul>
+<li><b>It's becoming law.</b> Texas PUCT Docket 59220 (Jul 2026): co-located data centers must fully curtail on ERCOT's instruction within 30 minutes, uncompensated, with ~60 min notice. PJM (Jan 2026): new loads ≥50 MW without their own generation are curtailed first in emergencies. FERC show-cause orders (Jun 2026) on flexible large loads. EPRI estimates 10–30% peak-reduction potential.</li>
+<li><b>Everyone is promising flexibility; nobody proves it from the rack.</b> Emerald AI (Nvidia-backed) cut a GPU cluster 25% for 3 h in Phoenix (2025). Google signed ML-workload demand-response deals (Aug 2025). Google, Nvidia and Emerald formed an "AI Energy Management Alliance" (Sep 2026); OpenAI agreed to shed up to 1 GW in Georgia. Our differentiators: the agent layer (negotiation, approvals, honest shortfall) and <b>independent verification</b>.</li>
+<li><b>The data is real and keyless.</b> Verified Friday 8:50 PM from the venue: CAISO 5-minute prices (NP15 $58.10, SP15 $52.62/MWh at the time), 24-hour load forecast and fuel mix; ERCOT real-time frequency and demand. The dispatcher plans against what the grid is doing right now.</li>
+<li><b>Demo on one MacBook, nothing simulated.</b> Power is measured by macOS (<code>powermetrics</code>); workloads are a chat service (Ollama), a training job (PyTorch MPS, checkpointing) and a batch job. Scale is 5–40 W; the loop is the same at 50 MW and we say so.</li>
+</ul>
+
+<h2>How it works</h2>
+<div class="flow">ISO feeds (gridstatus: prices, forecast, fuel mix, alerts) ──▶ grid watcher ──▶ GridSignal ($/MWh, gCO2/kWh, 24-h curves, feed age)
+judge / utility ──OpenADR event · plain English · policy knobs──▶ agent.intake ──▶ Policy / CapEvent
+                                                           │
+                                                 dispatcher (CP-SAT): 24-h schedule, re-solved on every change
+                                                           │ deadline would slip? ──▶ agent.negotiator ◀──▶ owner's phone
+                                                 controller: run/pause, concurrency, threads, GPU/CPU on this Mac
+                                                           │
+                         workloads: chat (Ollama) · train (MPS, checkpointing) · batch        meter: powermetrics (measured)
+                                                           └──── timeline.jsonl ──▶ live dashboard · report · dispatched-vs-baseline</div>
+
+<h3>What the dispatcher controls (cheapest business cost first)</h3>
+<table><tr><th>#</th><th>Action</th><th>Approval</th><th>Why</th></tr>
+<tr><td>1</td><td>Defer new batch work</td><td>none</td><td>Nobody notices</td></tr>
+<tr><td>2</td><td>Kill batch (progress saved)</td><td>none</td><td>Restartable</td></tr>
+<tr><td>3</td><td>Checkpoint and pause training</td><td><b>job owner</b></td><td>Deferrable, but someone's deadline</td></tr>
+<tr><td>4</td><td>Move a job GPU→CPU or cut its threads</td><td>none</td><td>Resumes from checkpoint on the other device</td></tr>
+<tr><td>5</td><td>Reduce chat concurrency</td><td>none</td><td>Protects latency more than watts</td></tr>
+<tr><td>6</td><td>Degrade chat (shorter answers)</td><td><b>operator</b></td><td>Visible to users</td></tr>
+<tr><td>7</td><td>Pause chat</td><td><b>operator</b></td><td>Last resort; the "can't do 90%" moment</td></tr></table>
+<p>Rules the whole team holds to: <span class="tag">solver decides · LLM explains · controller executes</span> <span class="tag">every number shows its source and age</span> <span class="tag">every run writes a timeline</span> <span class="tag">no hardcoding</span> <span class="tag">no dead code</span> <span class="tag">nothing simulated reaches a judge</span></p>
+
+<h2 class="pb">The judge demo (one judge plays every role, ~4 min, no slides)</h2>
+<ol>
+<li><b>Open</b> on the dashboard header: the diesel line, and under it the quote from a Microsoft FDE or operator (collected Sat 10 AM). "Pick a grid."</li>
+<li><b>They pick the ISO and the policy</b> (cost, carbon, balanced). Live prices with timestamps, the 24-hour price and carbon curves, the schedule painted on top: training in cheap overnight slots, batch in clean midday solar, chat always on. The solver's two-sentence explanation.</li>
+<li><b>They use the service</b> from their phone; p95 latency, measured watts, $/h and gCO2/h all live.</li>
+<li><b>They're the utility:</b> "grid alert, I need 30% off for twenty minutes," in their words. Agent reads back the plan and asks the training owner.</li>
+<li><b>They're the owner:</b> they refuse in words ("has to finish by 9 AM Monday"). The solver re-plans with that constraint: "22%, not 30%, unless chat slows ~1 s. Approve?" They decide; watts drop; time-to-compliance in seconds; chat still fast.</li>
+<li><b>They move the grid:</b> switch to carbon, or to ERCOT. The schedule repaints against the new live curve; the Mac follows.</li>
+<li><b>Impossible ask:</b> 90%. "Floor with chat protected is N W (≈47%). Go dark on everything else, or accept 47%?" Shortfall logged.</li>
+<li><b>Receipts:</b> training resumes from checkpoint; report: baseline vs event watts, % reduction, time-to-compliance, approvals with names and times; comparison vs dispatcher-off: $ and gCO2 saved, deadlines met; the audit trace for one decision.</li>
+</ol>
+
+<h2>What the mock jury said (two trials, Fri night)</h2>
+<p>We put the idea on trial (prosecutor, defense, six blind jurors). <b>As first described it lost 4–2.</b> What judges will attack, and what we do about it:</p>
+<table><tr><th>Attack</th><th>Our answer (now in the plan)</th></tr>
+<tr><td>Customer evidence is secondhand (regulation and press)</td><td>Quote from a Microsoft FDE / operator on slide one; their answer becomes <code>permissions.yaml</code></td></tr>
+<tr><td>Production path is slides</td><td>Agent Framework agent with every action traced to Application Insights; audit log on screen during the demo</td></tr>
+<tr><td>Usefulness measured against a baseline we wrote</td><td>Measure like a utility: 5-min pre-event baseline → event mean → % reduction → <b>time-to-compliance in seconds on the wall meter</b>; uniform-throttle comparison is chart two</td></tr>
+<tr><td>Lamp step may be invisible on a 1 Hz meter</td><td>Rehearse with a stopwatch; cut from the live script if not under ~5 s</td></tr>
+<tr><td>The LLM looks optional</td><td>It owns the messy input (an email with two constraints and a typo), the free-text negotiation, and the shortfall explanation. Test for every LLM call: "could a regex do this?" If yes, it moves to the controller.</td></tr></table>
+<p>After the trials the project was reframed from a facility throttle to a grid-aware dispatcher (live ISO data → optimizer → execution → measurement), which directly answers "a solver could do this": the solver is the product and the LLM only explains and negotiates. A second trial on a space variant (satellite flood-mapping jobs as the workloads, for the SpaceXSI track) went <b>6–0 for the base framing</b>. Kept as a conditional: flood jobs become tenant workloads only if a pretrained Sen1Floods11 model runs live on the box by Sat 1 PM with under 2 h of work.</p>
+
+<h2>Build plan and who does what</h2>
+<table><tr><th>When</th><th>Milestone</th><th>Done when</th></tr>
+<tr><td>Fri 9–10 PM</td><td>M0 probe this Mac (powermetrics, Ollama, MPS, CAISO pull) + skeleton + config</td><td><code>make probe</code> prints watts, a live price, "MPS ok"</td></tr>
+<tr><td>Fri 10–11:30</td><td>M1 grid watcher + meter + timeline</td><td>timeline fills with real prices and real watts</td></tr>
+<tr><td>Fri 11:30–1 AM</td><td>M2 workloads + knobs + calibration</td><td>each job visibly moves powermetrics; measured deltas saved</td></tr>
+<tr><td>Fri 1–2 AM</td><td>M3 dispatcher v1 (CP-SAT) + tests</td><td><code>make solve</code> prints a readable 24-h schedule</td></tr>
+<tr><td colspan="3" class="muted">Sleep 2–7 AM.</td></tr>
+<tr><td>Sat 7:30–11</td><td>M4 execution loop + dashboard. <b>10:00 Microsoft workshop: one person goes, returns with the quote.</b></td><td>watts follow the schedule across a slot boundary</td></tr>
+<tr><td>Sat 11–2:30</td><td>M5 agent: intake (OpenADR + text), negotiator, explainer, reporter; owner console on a phone</td><td>typed emergency → re-solve → refusal in words changes the plan</td></tr>
+<tr><td>Sat 2:30–5:30</td><td>M6 dispatcher-off baseline + comparison; App Insights trace as the audit log</td><td>comparison from two logged runs; one trace visible</td></tr>
+<tr><td>Sat 5:30 gate</td><td>M7 only if core is solid: Fetch three-agent ASI:One flow; Foundry hosted agent</td><td>load-bearing or not built</td></tr>
+<tr><td>Sat 8–11 PM</td><td>M8 Devpost draft by 10, demo video (refusal first), README, two cold-start rehearsals</td><td>submitted draft</td></tr>
+<tr><td>Sun</td><td>7 AM freeze · 8:50 submit · 10:30 at the table</td><td></td></tr></table>
+
+<h3>Suggested split for a team</h3>
+<ul>
+<li><b>The demo Mac (Aryen):</b> grid watcher, meter, workloads, dispatcher, controller, calibration, baseline run. Claude Code drives; nothing simulated.</li>
+<li><b>Agent + Microsoft stack:</b> intake, negotiator, explainer, reporter; Agent Framework, Application Insights, Content Safety; collects the FDE quote at 10 AM; owns the pitch wording.</li>
+<li><b>Front of house:</b> dashboard polish, owner console and chat page on a phone, QR cards, demo video, Devpost, README, rehearsal clock, Slack watch, sponsor tables.</li>
+</ul>
+
+<h2 class="pb">Machine, data and stack facts (verified Fri)</h2>
+<ul>
+<li><b>Grid data (keyless, verified from the venue):</b> <code>gridstatus</code> — CAISO <code>get_lmp(date="today", market="REAL_TIME_5_MIN", locations=[...])</code>, <code>get_load_forecast("today")</code>, <code>get_fuel_mix("today")</code>; ERCOT <code>get_real_time_system_conditions()</code> (frequency, demand, capacity), <code>get_spp</code>; PJM <code>get_lmp</code>. Calls take 1–5 s; poll in the background. Carbon intensity is computed from the live fuel mix with cited emission factors.</li>
+<li><b>Power on the Mac:</b> <code>sudo powermetrics --samplers cpu_power,gpu_power -i 1000</code> gives CPU, GPU, ANE and combined watts every second, reported by macOS, independent of our code. Label it "SoC power, measured by macOS". Calibrate per-job deltas; never type watts into config.</li>
+<li><b>Workloads:</b> chat via Ollama behind our proxy (concurrency = our semaphore); training on PyTorch MPS with checkpoints and cooperative pause; batch embeddings resumable on CPU or GPU. Knobs: run/pause, concurrency, threads, device. No clock lock or power limit on macOS.</li>
+<li><b>Optimizer:</b> OR-Tools CP-SAT over 96 fifteen-minute slots; 2 s time limit; on infeasibility a slack model returns the minimal relaxation (which deadline must slip, by how much) for the negotiator.</li>
+<li><b>Request format:</b> OpenADR 3.1 events (what utilities send) plus plain English.</li>
+<li><b>Microsoft:</b> <code>pip install agent-framework</code> (<code>FoundryChatClient</code> on Azure); App Insights via <code>azd provision</code>; Teams two-way needs a tenant admin, so the demo uses a web owner console and states "Teams via the M365 Agents SDK in production"; Content Safety <code>shieldPrompt</code> on inbound text. Quote: Microsoft Security Blog, 16 Jul 2026, "Least privilege for AI agents".</li>
+</ul>
+
+<h2>Tracks: focus, opportunistic, skip</h2>
+<table><tr><th>Focus</th><th>Only if the piece is genuinely built</th><th>Skip (bolt-ons score down)</th></tr>
+<tr><td>Microsoft Challenge · Most Technically Advanced · Best Planet-First · Best Solo Hack · Hyphenate (video required)</td>
+<td>Fetch only as a real three-agent flow (grid-operator agent, dispatcher agent, site agent) with ASI:One as the operator console · Foundry hosted agent · SpaceXSI skipped (requires Cursor, no space data)</td>
+<td>Anthropic Public Benefit, Meta, Coinbase, CRS, Creao, Bright Data, Apify, Mana, Bitdeer, Capital One, Cartesia, Moss, Notability, Armadin, Atlassian, Figma, Visa</td></tr></table>
+<p><b>Wrapper rule:</b> remove any sponsor component and something must break, or it isn't integrated and we don't opt in.</p>
+
+<h2>Logistics</h2>
+<ul>
+<li>Credits: Claude $50 (link in #cohost-anthropic), Azure for Students. Claim before building.</li>
+<li>No external hardware. The demo Mac needs internet for the grid feeds: wired or a travel router at the table (hotspots get you removed; check the router rule).</li>
+<li>Pull all packages and the Ollama model tonight while the network works.</li>
+<li>Help: #1-ask-mentors, mentor queue at hive.hackberkeley.org/mentorship-queue; directors wear white shirts.</li>
+<li>Repo rules: no secrets, <code>.env</code> only; plain commit messages; judges get source access.</li>
+</ul>
+
+<p class="muted">Full detail lives in the build kit: CLAUDE.md, PLAN.md, SPEC.md, DEMO.md, RESEARCH.md, TRACKS.md, DECISIONS.md, and the trial record in .court/.</p>
+</body></html>
