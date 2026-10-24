@@ -104,7 +104,9 @@ class Runtime:
                 "power": dump(self.meter.latest), "jobs": {j: Knobs.status(j) for j in ("chat", "train", "batch")},
                 "calibration": dump(self.cal), "policy": dump(ex.policy), "iso_options": available_isos(),
                 "iso": self.watcher.iso if self.watcher else settings.iso,
-                "dispatcher_enabled": ex.dispatcher_enabled, "agent": agent_status(), "run_id": self.tl.run_id}
+                "dispatcher_enabled": ex.dispatcher_enabled, "agent": agent_status(), "run_id": self.tl.run_id,
+                "job_specs": {j.id: j.model_dump(mode="json") for j in ex.jobs()},
+                "quote": config.site.get("quote")}
 
 
 def make_app(rt: Runtime) -> FastAPI:

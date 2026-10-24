@@ -18,6 +18,7 @@ members:
       - core/**
       - config/jobs.yaml
       - config/policy.yaml
+      - config/site.yaml
       - Makefile
       - pyproject.toml
       - uv.lock

@@ -35,7 +35,8 @@ files served from `web/` at `/`, so `web/index.html` is `/` and `web/chat.html` 
   "grid": GridSignal | null, "schedule": Schedule | null, "plan": Plan-for-current-slot | null,
   "power": PowerReading | null, "jobs": {"chat": status, "train": status, "batch": status},
   "calibration": Calibration | null, "policy": Policy, "iso_options": ["CAISO", "ERCOT"],
-  "dispatcher_enabled": true, "agent": "online" | "offline"}}
+  "dispatcher_enabled": true, "agent": "online" | "offline", "run_id": str, "iso": str,
+  "job_specs": {"train": Job, ...}, "quote": {"text", "who", "role"} | null}}
 {"t": 1792822585.31, "kind": "power",    "data": PowerReading}
 {"t": ...,           "kind": "grid",     "data": {"feed": "signal", ...GridSignal}}
 {"t": ...,           "kind": "schedule", "data": Schedule}
@@ -45,6 +46,9 @@ files served from `web/` at `/`, so `web/index.html` is `/` and `web/chat.html` 
 {"t": ...,           "kind": "latency",  "data": {"p95_60s": 1.8, "n_60s": 12}}
 {"t": ...,           "kind": "note" | "shortfall" | "policy" | "event", "data": {...}}
 ```
+`job_specs` carries each job's owner, deadline (after any change), kind, priority, devices and derived
+runtime (`Job` in core/types.py). `quote` comes from `config/site.yaml`. After `POST /api/iso` or
+`/api/policy` the runtime logs `policy`, then `grid` (ISO switch) and `schedule` events on `/ws`.
 Field names are exactly the pydantic models in `core/types.py` (`model_dump(mode="json")`). Job status
 objects are what the workloads write to `runs/control/<job>.status.json` (see `workloads/*.py`):
 train has `step`, `loss`, `rate` (steps/s); batch has `items_done`, `total`, `fraction`, `rate` (items/s);
