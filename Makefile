@@ -1,4 +1,4 @@
-.PHONY: preflight tag-stable ollama setup demo baseline calibrate chat-sweep solve report compare test probe qr clean
+.PHONY: evidence preflight tag-stable ollama setup demo baseline calibrate chat-sweep solve report compare test probe qr clean
 
 PY ?= uv run
 RUN ?= latest
@@ -25,6 +25,14 @@ chat-sweep: ollama ## chat TTFT/total latency by concurrency x max_tokens (idle 
 
 solve:          ## print the 24-h schedule for the live price curve
 	$(PY) python -m dispatcher.solve --print
+
+EVIDENCE_ARGS ?= --cap-pct 30 --cap-at 120 --cap-for 300 --deadline train=2
+evidence: ollama ## ONE password, ~25 min, Mac otherwise idle: calibrate, dispatcher-off run, dispatched run, same scripted cap, compare
+	sudo -v || exit 1; ( while sudo -n -v 2>/dev/null; do sleep 50; done ) & K=$$!; \
+	$(PY) python -m controller.feasibility --calibrate && \
+	POLICY=baseline $(PY) python -m api.app --headless --duration 450 $(EVIDENCE_ARGS) && \
+	$(PY) python -m api.app --headless --duration 450 $(EVIDENCE_ARGS) && \
+	$(PY) python scripts/compare.py; s=$$?; kill $$K 2>/dev/null; exit $$s
 
 report:         ## render compliance report + charts from a timeline
 	$(PY) python -m agent.reporter --run $(RUN)

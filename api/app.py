@@ -128,6 +128,23 @@ class _Server(uvicorn.Server):
         yield
 
 
+async def scripted_inputs(rt: "Runtime", args) -> None:
+    """For headless evidence runs (`make evidence`): the same inputs in dispatched and baseline runs, so the
+    comparison covers the same window and the same request. Logged like any operator input."""
+    from datetime import datetime, timedelta
+
+    from core.types import CapEvent
+    for spec in args.deadline or []:
+        job, hours = spec.split("=")
+        await rt.executor.set_job(job, deadline=datetime.now().astimezone() + timedelta(hours=float(hours)))
+    if args.cap_pct is None and args.cap_w is None:
+        return
+    await asyncio.sleep(args.cap_at)
+    ev = CapEvent(source="ui", start=datetime.now().astimezone(), duration_s=args.cap_for, target_pct=args.cap_pct,
+                  target_w=args.cap_w, reason="scripted cap for the evidence run", raw=" ".join(map(str, vars(args).items())))
+    await rt.executor.add_event(ev)
+
+
 async def amain(args):
     loop = asyncio.get_running_loop()
     stop = asyncio.Event()
@@ -138,8 +155,10 @@ async def amain(args):
         await rt.start()
         print(f"run {rt.tl.run_id}: timeline {rt.tl.path}", flush=True)
         if args.headless:
+            scripted = asyncio.create_task(scripted_inputs(rt, args))
             with contextlib.suppress(asyncio.TimeoutError):
                 await asyncio.wait_for(stop.wait(), timeout=args.duration)
+            scripted.cancel()
         else:
             server = _Server(uvicorn.Config(make_app(rt), host=settings.host, port=settings.port, log_level="warning"))
             serving = asyncio.create_task(server.serve())
@@ -157,5 +176,10 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--headless", action="store_true")
     ap.add_argument("--duration", type=int, default=600)
+    ap.add_argument("--deadline", action="append", metavar="JOB=HOURS", help="headless: set a job's deadline N h from now")
+    ap.add_argument("--cap-pct", type=float, help="headless: cut this %% below the measured 60-s baseline")
+    ap.add_argument("--cap-w", type=float, help="headless: cap machine power at this many watts")
+    ap.add_argument("--cap-at", type=int, default=120, help="headless: seconds after start (>= 70 for a %% cap)")
+    ap.add_argument("--cap-for", type=int, default=300, help="headless: cap duration in seconds")
     logging.basicConfig(level=logging.WARNING)
     asyncio.run(amain(ap.parse_args()))
