@@ -107,6 +107,7 @@ class AgentBridge:
             else:
                 req.status = "refused"                               # the cap keeps holding; deadlines slip
                 self.cap_refused.add(self.ex.cap_key())
+                sched = await self.ex.hold_cap(who, decision.reason)   # and chat may degrade, as the ask said
         elif decision.decision == "approve":
             req.status = "approved"
             miss = next((m for m in (self.ex.schedule.deadline_misses if self.ex.schedule else [])

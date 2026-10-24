@@ -3,7 +3,7 @@
     sudo -v && make calibrate     # writes runs/calibration.json and a timeline
     make chat-sweep               # chat latency (TTFT and total) by concurrency x max_tokens, no sudo
 
-Each phase: start the job (or chat traffic at max concurrency), wait warmup_s, average
+Each phase: start the job (or chat traffic at each of `chat_streams` busy streams), wait warmup_s, average
 `Combined Power` over window_s, subtract the idle floor. Rates (steps/s, items/s) come from
 the workloads' own status files over the same window.
 """
@@ -109,18 +109,22 @@ async def calibrate(out: Path, only: list[str]) -> Calibration:
         idle, n = await win.measure(w)
         say(f"idle floor            {idle:6.2f} W  ({n} samples)", idle_w=idle)
 
-        if "chat" in only:   # chat at max concurrency
+        if "chat" in only:   # chat at each measured load, concurrency at max so every stream is served at once
             conc = jobs_cfg["chat"]["max_concurrency"]
-            stop = asyncio.Event()
-            task = asyncio.create_task(chat_traffic(stop, conc))
-            await asyncio.sleep(warm)
-            mean, n = await win.measure(w)
-            stop.set(); await task
-            st = Knobs.status("chat")
-            result["chat"] = {"gpu": DevicePower(delta_w=max(0.0, mean - idle), concurrency=conc, samples=n)}
-            say(f"chat  gpu  conc={conc}   {mean:6.2f} W  delta {mean - idle:+6.2f} W  p95 {st.get('p95_60s')} s",
-                job="chat", device="gpu", mean_w=mean, delta_w=mean - idle, p95_s=st.get("p95_60s"))
-            await asyncio.sleep(cool)
+            streams_w = {}
+            for k in sorted(set(CAL.get("chat_streams", [conc])) | {conc}):
+                stop = asyncio.Event()
+                task = asyncio.create_task(chat_traffic(stop, k))
+                await asyncio.sleep(warm)
+                mean, n = await win.measure(w)
+                stop.set(); await task
+                st = Knobs.status("chat")
+                streams_w[k] = max(0.0, mean - idle)
+                say(f"chat  gpu  streams={k}  {mean:6.2f} W  delta {mean - idle:+6.2f} W  p95 {st.get('p95_60s')} s",
+                    job="chat", device="gpu", streams=k, mean_w=mean, delta_w=mean - idle, p95_s=st.get("p95_60s"))
+                await asyncio.sleep(cool)
+            result["chat"] = {"gpu": DevicePower(delta_w=streams_w[conc], concurrency=conc, samples=n,
+                                                 streams_w=streams_w)}
 
         for j in [j for j in ("train", "batch") if j in only]:
             devs = ["gpu", "cpu"] if jobs_cfg[j]["device"] == "either" else [jobs_cfg[j]["device"]]

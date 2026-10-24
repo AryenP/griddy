@@ -106,14 +106,18 @@ def _operator_template(cap: Shortfall, shortfalls: list[Shortfall], schedule: Sc
         parts.append("The other option the solver found is the job owners' call: " + _sentence("; ".join(slips)))
     else:
         parts.append("No deadline slip closes the gap.")
+    chat = next((sf for sf in shortfalls if sf.kind == "sla" and sf.message), None)
+    if chat:
+        parts.append("Chat keeps full concurrency until you say otherwise: " + _sentence(chat.message))
     parts.append(f"Approve going over the cap by up to {cap.amount:.2f} W for this event, "
-                 f"or reply no with your reason.")
+                 f"or reply no with your reason" + ("; after a no, chat is degraded to get closer to it." if chat else "."))
     return " ".join(p for p in parts if p)
 
 
 _OPERATOR_SYSTEM = """Rewrite this message to a data-center operator as one short, plain message (at most four
 sentences). Keep every number and time exactly as written. Add no facts and no options: the operator may only
-approve going over the cap or say no with a reason. Never suggest pausing, stopping or moving a job."""
+approve going over the cap or say no with a reason. Never suggest pausing, stopping or moving a job. If the
+message says what happens to chat after a no, keep that sentence and its numbers."""
 
 
 async def draft_operator_ask(shortfalls: list[Shortfall], schedule: Schedule, llm: LLM, operator: str,
@@ -130,6 +134,9 @@ async def draft_operator_ask(shortfalls: list[Shortfall], schedule: Schedule, ll
         try:
             text = await llm.text(_OPERATOR_SYSTEM, template)
             keeps_amount = numbers(text) & allowed_numbers([f"{cap.amount:.2f}"])
+            chat = next((sf for sf in shortfalls if sf.kind == "sla" and sf.message), None)
+            if chat:      # the consequence of a no must survive the rewrite too
+                keeps_amount = keeps_amount and numbers(text) & allowed_numbers([f"{chat.amount:.2f}"])
             acts = guard(text, {"knob", "instructions", "secrets"})
             if text and keeps_amount and not ungrounded(text, [template]) and not acts:
                 message, used = text, True

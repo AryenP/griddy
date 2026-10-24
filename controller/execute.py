@@ -40,6 +40,7 @@ class Executor:
         self.job_changes: dict[str, dict] = {}
         self.hard_deadlines: set[str] = set()    # owner refused a slip: the deadline may not bend
         self.cap_overrides: set[frozenset[str]] = set()   # operator approved going over these caps
+        self.cap_held: set[frozenset[str]] = set()        # operator refused going over these: chat may degrade
         self.needs_approval: list[str] = []      # approval request ids the current plan is waiting on
         self.schedule_listeners: list = []       # async callbacks(schedule), e.g. the agent bridge
         self.finished: set[str] = set()
@@ -145,6 +146,15 @@ class Executor:
         self.tl.log("policy", reason="operator approved going over the cap", who=who, caps=sorted(key))
         return await self.resolve("over-cap approved")
 
+    async def hold_cap(self, who: str, reason: str) -> Schedule | None:
+        """The operator refused going over the cap: hold it with everything they control, which includes
+        degrading chat (policy approvals.chat_degrade). Lapses when the caps in force change."""
+        key = self.cap_key()
+        self.cap_held.add(key)
+        self.tl.log("policy", reason="operator refused going over the cap: chat may be degraded to hold it",
+                    who=who, why=reason, caps=sorted(key))
+        return await self.resolve("over-cap refused")
+
     def cap_in_force(self) -> bool:
         now = time.time()
         return self.policy.power_cap_w is not None or any(
@@ -161,7 +171,8 @@ class Executor:
             sig, jobs, events = self.signal, self.jobs(), self.active_events()
             sched = await asyncio.to_thread(solve, sig, jobs, self.policy, self.solve_cal(), events, self.baseline_w(),
                                             self.chat_busy(), frozenset(self.hard_deadlines),
-                                            self.cap_key() in self.cap_overrides, self.background_w)
+                                            self.cap_key() in self.cap_overrides, self.background_w,
+                                            self.cap_key() in self.cap_held)
             self.schedule = sched
             self._last_solve_t = time.time()
             self.tl.log("schedule", reason=reason, **sched.model_dump(mode="json"))

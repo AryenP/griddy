@@ -19,7 +19,7 @@ from core.timeline import Timeline
 from core.types import (Calibration, CapEvent, DeadlineMiss, GridSignal, Job, Policy, Schedule,
                         Shortfall, SlotAssignment)
 
-from .model import SCALE, Built, Inputs, Relax, build, devices_for, speed
+from .model import SCALE, Built, Inputs, Relax, build, chat_floor, chat_w, devices_for, speed
 from .schedule import explain, render
 
 
@@ -133,9 +133,9 @@ def _extract(inp: Inputs, b: Built, solver: cp_model.CpSolver) -> tuple[dict[str
 
 
 def greedy(inp: Inputs) -> tuple[dict[str, list[SlotAssignment]], list[float]]:
-    """Fallback only when CP-SAT times out with no solution: chat at max (min under a cap), then
+    """Fallback only when CP-SAT times out with no solution: chat at max (lower under a cap only if approved), then
     each job in priority order takes its cheapest (slot, device) pairs that fit the cap."""
-    from .model import chat_w_per_conc, objective_weights
+    from .model import objective_weights
     S = len(inp.prices)
     wc, wg = objective_weights(inp.policy)
     pmean = (sum(max(p, 0) for p in inp.prices) / S) or 1
@@ -145,14 +145,16 @@ def greedy(inp: Inputs) -> tuple[dict[str, list[SlotAssignment]], list[float]]:
     out: dict[str, list[SlotAssignment]] = {}
     for job in sorted(inp.jobs, key=lambda j: j.priority):
         if job.kind == "interactive":
-            per = chat_w_per_conc(job, inp.cal)
+            lo = chat_floor(job, inp.policy, inp.chat_degrade_approved)
+            busy = job.max_concurrency if inp.chat_busy is None else min(max(0.0, inp.chat_busy), job.max_concurrency)
             row = []
             for s in range(S):
                 c = job.max_concurrency
-                while inp.cap_w[s] is not None and c > job.min_concurrency and watts[s] + per * c > inp.cap_w[s]:
+                while inp.cap_w[s] is not None and c > lo and \
+                        watts[s] + chat_w(job, inp.cal, min(c, busy)) > inp.cap_w[s]:
                     c -= 1
-                watts[s] += per * c
-                row.append(SlotAssignment(run=True, concurrency=c, device="gpu"))
+                watts[s] += chat_w(job, inp.cal, min(c, busy))
+                row.append(SlotAssignment(run=c > 0, concurrency=c, device="gpu" if c else None))
             out[job.id] = row
             continue
         row = [SlotAssignment(run=False) for _ in range(S)]
@@ -194,15 +196,36 @@ def _relaxation(inp: Inputs, relax: Relax, limit_s: float, slots: list[datetime]
     return out
 
 
+def _chat_degrade(inp: Inputs) -> Shortfall | None:
+    """What degrading chat would buy, for the operator: chat keeps full concurrency until they approve
+    (policy approvals.chat_degrade). None when it is approved already or would save nothing at this traffic."""
+    if inp.chat_degrade_approved:
+        return None
+    job = next((j for j in inp.jobs if j.kind == "interactive"), None)
+    if job is None:
+        return None
+    lo = chat_floor(job, inp.policy, True)
+    busy = job.max_concurrency if inp.chat_busy is None else min(max(0.0, inp.chat_busy), job.max_concurrency)
+    save = chat_w(job, inp.cal, busy) - chat_w(job, inp.cal, min(lo, busy))
+    if save < 0.05:
+        return None
+    return Shortfall(kind="sla", job_id=job.id, amount=round(save, 2),
+                     message=f"degrading {job.id} from {job.max_concurrency} streams at a time to {lo} would save about "
+                             f"{save:.2f} W at the measured {busy:.2f} busy streams; requests beyond {lo} would queue")
+
+
 def solve(sig: GridSignal, jobs: list[Job], policy: Policy, cal: Calibration,
           events: list[CapEvent] | None = None, baseline_w: float | None = None,
           chat_busy: float | None = None, hard_deadlines: frozenset[str] = frozenset(),
-          exceed_cap_approved: bool = False, background_w: float = 0.0) -> Schedule:
+          exceed_cap_approved: bool = False, background_w: float = 0.0,
+          chat_degrade_approved: bool = False) -> Schedule:
     """If the model is infeasible, two honest options go to the negotiator (shortfalls): slip deadlines
     under the cap, or exceed the cap (`hard_deadlines` = owners refused a slip). What RUNS meanwhile holds
     the utility's cap and lets deadlines slip, unless the operator approved going over the cap for these
     events (`exceed_cap_approved`); the cap bends without approval only if nothing at all fits under it.
-    `background_w`: measured load outside the plan, which counts against the cap in every slot."""
+    `background_w`: measured load outside the plan, which counts against the cap in every slot.
+    Chat keeps full concurrency unless `chat_degrade_approved` (the operator's call); while it is not, a cap that
+    only degrading chat could approach is a cap shortfall, with what degrading would save as an "sla" shortfall."""
     background_w = max(0.0, background_w)
     t0 = time.time()
     slots = [s for s, _ in sig.price_curve]
@@ -212,7 +235,7 @@ def solve(sig: GridSignal, jobs: list[Job], policy: Policy, cal: Calibration,
     inp = Inputs(jobs=jobs, cal=cal, policy=policy, prices=prices, carbons=carbons,
                  cap_w=cap_per_slot(slots, policy.slot_minutes, policy, events or [], baseline_w),
                  deadline_slot=dl, remaining_work=remaining(jobs, policy.slot_minutes), chat_busy=chat_busy,
-                 background_w=background_w)
+                 background_w=background_w, chat_degrade_approved=chat_degrade_approved)
     if background_w and any(c is not None for c in inp.cap_w):
         notes = notes + [f"measured load outside the plan: {background_w:.2f} W (meter minus the calibrated plan), "
                          f"counted against the cap"]
@@ -230,6 +253,9 @@ def solve(sig: GridSignal, jobs: list[Job], policy: Policy, cal: Calibration,
         hard = frozenset(hard_deadlines)
         shortfalls = (_relaxation(inp, Relax(deadlines=True, fixed=hard), policy.solver_time_limit_s, slots, policy.slot_minutes)
                       + _relaxation(inp, Relax(cap=True), policy.solver_time_limit_s, slots, policy.slot_minutes))
+        chat = _chat_degrade(inp) if any(sf.kind == "cap" for sf in shortfalls) else None
+        if chat:
+            shortfalls.append(chat)
         cap_mode = "over the cap: approved by the operator"
         rb, rs, rst = None, None, None
         if not exceed_cap_approved:                      # the safe default: hold the cap, deadlines slip
@@ -237,7 +263,8 @@ def solve(sig: GridSignal, jobs: list[Job], policy: Policy, cal: Calibration,
             rs, rst = _run(rb, policy.solver_time_limit_s)
             cap_mode = "cap held; deadlines slip until an approval says otherwise"
         if rst not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
-            rb = build(inp, Relax(deadlines=True, cap=True, fixed=hard))
+            # without the operator's approval a refused slip does not push the plan further over the cap
+            rb = build(inp, Relax(deadlines=True, cap=True, fixed=hard if exceed_cap_approved else frozenset()))
             rs, rst = _run(rb, policy.solver_time_limit_s)
             if not exceed_cap_approved:
                 cap_mode = "over the cap without approval: nothing fits under it (minimum load exceeds the cap)"

@@ -241,6 +241,7 @@ class DevicePower(BaseModel):
     delta_w: float
     rate: float | None = Field(default=None, description="work units/s (train steps, batch items)")
     concurrency: int | None = Field(default=None, description="chat: concurrency the delta was measured at")
+    streams_w: dict[int, float] = Field(default_factory=dict, description="chat: delta W by busy streams, measured")
     samples: int = 0
 
 

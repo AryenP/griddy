@@ -10,7 +10,7 @@ import workloads.base as base
 from api.agent_bridge import CAP_JOB, AgentBridge
 from controller.knobs import Knobs
 from core.timeline import Timeline
-from core.types import PowerReading
+from core.types import CapEvent, PowerReading
 from tests.test_dispatcher import CAL, POLICY, SLOTS, jobs, signal
 
 
@@ -109,3 +109,23 @@ async def test_operator_refusal_keeps_the_cap_and_is_not_asked_again(rig):
     await e.resolve("re-check")
     assert not agent.pending()                                   # same caps: the operator is not asked again
     assert all(w <= c + 1e-6 for w, c in zip(e.schedule.planned_w, e.schedule.caps_w) if c is not None)
+
+
+async def test_operator_refusal_lets_busy_chat_degrade_toward_the_cap(rig, monkeypatch):
+    """A no to going over the cap is the operator's call on chat too (approvals.chat_degrade): before it chat
+    keeps full concurrency over the cap, after it the plan may degrade chat for exactly these caps."""
+    e, agent, _, _ = rig
+    monkeypatch.setattr(type(e), "chat_busy", staticmethod(lambda: 4.0))
+    await e.on_signal(signal([50.0] * 96))
+    await e.add_event(CapEvent(source="ui", start=SLOTS[0], duration_s=3600, target_w=6.0))
+    assert all(a.concurrency == 4 for a in e.schedule.assignments["chat"])
+    assert max(e.schedule.planned_w[:4]) == pytest.approx(9.0)   # 1 W idle + 8 W of busy chat: over, and asked
+    for a in [a for a in agent.pending() if a.job_id == "train"]:     # the owner is asked first, if a slip helps
+        await agent.reply(a.id, "no, it has to finish on time", "owner")
+    op = next(a for a in agent.pending() if a.job_id == "power_cap")
+    assert "after a no, chat is degraded" in op.message
+    _, sched = await agent.reply(op.id, "no, hold the limit", "judge")
+    assert sched is not None and e.cap_key() in e.cap_held
+    assert [a.concurrency for a in sched.assignments["chat"][:4]] == [2] * 4
+    assert all(w <= 6.0 + 1e-6 for w in sched.planned_w[:4])
+
