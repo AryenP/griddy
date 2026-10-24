@@ -98,7 +98,7 @@ def test_deterministic():
     assert a.assignments == b.assignments
 
 
-def test_idle_chat_keeps_full_concurrency_under_cap_busy_chat_does_not():
+def test_busy_chat_keeps_full_concurrency_under_cap_and_training_moves_instead():
     # cap 16 W: 1 W idle + train 12 W fits only if chat draws little. Chat is 2 W per stream (8 W at 4).
     capped = POLICY.model_copy(update={"power_cap_w": 16.0})
     quiet = solve(signal([50.0] * 96), jobs(), capped, CAL, chat_busy=0.2)
@@ -108,9 +108,41 @@ def test_idle_chat_keeps_full_concurrency_under_cap_busy_chat_does_not():
     assert quiet.chat_busy_streams == 0.2
     busy = solve(signal([50.0] * 96), jobs(), capped, CAL, chat_busy=4.0)
     assert all(w <= 16.0 + 1e-6 for w in busy.planned_w)
-    # with 4 busy streams chat alone is 8 W: train (12 W GPU / 6 W CPU) can only fit by squeezing chat
+    # with 4 busy streams chat alone is 8 W; degrading chat is the operator's call, so training moves to the CPU
+    assert all(a.concurrency == 4 for a in busy.assignments["chat"])
     on = [i for i, a in enumerate(busy.assignments["train"]) if a.run]
-    assert all(busy.assignments["chat"][i].concurrency < 4 or busy.assignments["train"][i].device == "cpu" for i in on)
+    assert on and all(busy.assignments["train"][i].device == "cpu" for i in on)
+
+
+def test_chat_is_degraded_only_with_the_operators_approval():
+    # regression (evidence-chat, Sat 09:49): under a cap the plan cut chat to 1 stream on its own, requests
+    # queued and time to first token reached 4.5 s. 1 W idle + 8 W of busy chat cannot fit 6 W; 2 streams would.
+    cap = [CapEvent(source="ui", start=SLOTS[0], duration_s=3600, target_w=6.0)]
+    held = solve(signal([50.0] * 96), jobs(), POLICY, CAL, events=cap, chat_busy=4.0)
+    assert all(a.concurrency == 4 for a in held.assignments["chat"])
+    assert any(f.kind == "cap" for f in held.shortfalls)
+    sla = next(f for f in held.shortfalls if f.kind == "sla")
+    assert sla.job_id == "chat" and sla.amount == pytest.approx(6.0)
+    assert "from 4 streams at a time to 1" in sla.message and "queue" in sla.message
+    ok = solve(signal([50.0] * 96), jobs(), POLICY, CAL, events=cap, chat_busy=4.0, chat_degrade_approved=True)
+    assert not ok.relaxed and not ok.shortfalls
+    conc = [a.concurrency for a in ok.assignments["chat"]]
+    assert conc[:4] == [2] * 4 and set(conc[4:]) == {4}          # only as far as the cap needs, only while it lasts
+    assert all(w <= 6.0 + 1e-6 for w in ok.planned_w[:4])
+
+
+def test_chat_watts_follow_the_measured_curve():
+    from dispatcher.model import chat_w
+    curve = CAL.model_copy(update={"jobs": {**CAL.jobs, "chat": {"gpu": DevicePower(
+        delta_w=8.0, concurrency=4, streams_w={1: 6.0, 2: 7.0, 4: 8.0})}}})
+    chat = jobs()[0]
+    assert [chat_w(chat, curve, n) for n in (0, 0.5, 1, 2, 3, 4, 5)] == pytest.approx([0, 3, 6, 7, 7.5, 8, 8.5])
+    assert chat_w(chat, CAL, 2) == pytest.approx(4.0)          # one measured point: a straight line through it
+    s = solve(signal([50.0] * 96), [chat], POLICY, curve, chat_busy=2.0)
+    assert s.planned_w[0] == pytest.approx(1.0 + 7.0)          # idle + two busy streams, not half of four
+    # degrading from 4 to 1 at 2 busy streams saves only the 2-to-1 step of the curve
+    held = solve(signal([50.0] * 96), [chat], POLICY.model_copy(update={"power_cap_w": 7.5}), curve, chat_busy=2.0)
+    assert next(f for f in held.shortfalls if f.kind == "sla").amount == pytest.approx(1.0)
 
 
 @pytest.mark.skipif(__import__("sys").platform == "win32", reason="asyncio signal handlers are POSIX-only")

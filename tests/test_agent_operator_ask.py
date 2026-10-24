@@ -59,7 +59,7 @@ async def test_offline_below_floor_says_no_slip_helps(below_floor):
     capped = [i for i, c in enumerate(s.caps_w) if c is not None]
     floor = min(s.planned_w[i] for i in capped)   # chat protected, everything else off
     assert f"The lowest the plan goes while the cap holds is {floor:.1f} W" in ask.message
-    assert not ungrounded(ask.message, [_cap(s).message, f"{floor:.1f}", f"{max(s.planned_w):.1f}", "2.0"]
+    assert not ungrounded(ask.message, [sf.message for sf in s.shortfalls] + [f"{floor:.1f}", f"{max(s.planned_w):.1f}", "2.0"]
                           + [f"{t:%H:%M}" for t in s.slots] + [str(a.concurrency) for a in s.assignments["chat"]])
 
 
@@ -101,3 +101,16 @@ async def test_needs_a_cap_shortfall(refused_slip):
 
 def test_numbers_helper_sees_clock_times():
     assert numbers("from 14:15, 4.20 W") == {"14:15", "4.20"}
+
+
+async def test_operator_ask_says_what_a_no_does_to_chat():
+    """Busy chat over the cap: chat keeps full concurrency until the operator answers, and the ask says what
+    degrading it would save, so a no is informed consent (policy approvals.chat_degrade)."""
+    s = solve(signal([50.0] * 96), jobs(), POLICY.model_copy(update={"power_cap_w": 6.0}), CAL, chat_busy=4.0)
+    req = await draft_operator_ask(s.shortfalls, s, ScriptedLLM(), "ops")
+    assert "Chat keeps full concurrency until you say otherwise" in req.message
+    assert "6.00 W" in req.message and "after a no, chat is degraded" in req.message
+    dropped = ScriptedLLM(f"ops: the cap cannot be held; approve going over by up to {_cap(s).amount:.2f} W?")
+    req = await draft_operator_ask(s.shortfalls, s, dropped, "ops")
+    assert "Chat keeps full concurrency" in req.message            # a rewrite that drops the chat consequence is not used
+

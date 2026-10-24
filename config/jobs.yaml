@@ -56,3 +56,6 @@ workloads:
     window_s: 20
     warmup_s: 6
     cooldown_s: 5
+    # chat watts by busy streams: inference is not linear in streams (evidence-chat, Sat 09:49: the plan priced
+    # 2 busy streams at half the 4-stream delta; they drew nearly all of it)
+    chat_streams: [1, 2, 4]

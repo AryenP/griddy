@@ -32,6 +32,7 @@ class Inputs:
     remaining_work: dict[str, int]   # job id -> milli-slots of GPU-speed work still to do
     chat_busy: float | None = None   # measured avg busy chat streams; None = plan for full concurrency
     background_w: float = 0.0        # measured load outside the plan (meter minus calibrated plan), held flat
+    chat_degrade_approved: bool = False   # the operator allowed chat below full concurrency (approvals.chat_degrade)
 
 
 @dataclass
@@ -79,9 +80,29 @@ def speed(job: Job, cal: Calibration, dev: str) -> int:
     return max(1, round(SCALE * m[dev].rate / ref.rate))
 
 
-def chat_w_per_conc(job: Job, cal: Calibration) -> float:
+def chat_curve(job: Job, cal: Calibration) -> list[tuple[int, float]]:
+    """Measured chat watts above idle by streams in service, from (0, 0). Inference is far from linear in
+    streams (evidence-chat, Sat 09:49: one busy stream drew most of what four did); a calibration that measured
+    one concurrency only gives a straight line through that point."""
     p = cal.jobs[job.id]["gpu"]
-    return p.delta_w / max(1, p.concurrency or 1)
+    pts = {n: w for n, w in p.streams_w.items() if n > 0} or {max(1, p.concurrency or 1): p.delta_w}
+    return [(0, 0.0)] + sorted(pts.items())
+
+
+def chat_w(job: Job, cal: Calibration, streams: float) -> float:
+    """Chat watts at `streams` busy streams: linear between measured points, the last segment's slope past them."""
+    pts = chat_curve(job, cal)
+    for (n0, w0), (n1, w1) in zip(pts, pts[1:]):
+        if streams <= n1:
+            break
+    return w0 + (w1 - w0) * (streams - n0) / (n1 - n0)
+
+
+def chat_floor(job: Job, policy: Policy, degrade_approved: bool) -> int:
+    """Lowest chat concurrency a plan may use. Below full concurrency is the operator's call (approvals.chat_degrade)."""
+    if not degrade_approved:
+        return job.max_concurrency
+    return max(job.min_concurrency, 1 if job.id in policy.never_pause else 0)
 
 
 def build(inp: Inputs, relax: Relax = Relax()) -> Built:
@@ -106,26 +127,26 @@ def build(inp: Inputs, relax: Relax = Relax()) -> Built:
 
         if job.kind == "interactive":
             b.chat_id = job.id
-            per_w = chat_w_per_conc(job, inp.cal)
-            lo = max(job.min_concurrency, 1 if job.id in inp.policy.never_pause else 0)
+            lo = chat_floor(job, inp.policy, inp.chat_degrade_approved)
+            top = job.max_concurrency
             degrade = inp.policy.weights.get("chat_degrade", 10.0)
-            penalty = round(degrade * max(unit) * max(per_w, 1.0))
+            penalty = round(degrade * max(unit) * max(chat_w(job, inp.cal, top) / top, 1.0))
+            # chat draws power for the streams actually in service: min(concurrency, measured traffic), or every
+            # slot of concurrency when traffic is unmeasured. A table over concurrency keeps the curve exact.
+            busy = top if inp.chat_busy is None else min(max(0.0, inp.chat_busy), top)
+            watts = [chat_w(job, inp.cal, min(c, busy)) for c in range(top + 1)]
+            mw = [round(w * 1000) for w in watts]
             for s in range(S):
-                c = m.NewIntVar(lo, job.max_concurrency, f"conc_{job.id}_{s}")
+                c = m.NewIntVar(lo, top, f"conc_{job.id}_{s}")
                 b.conc[s] = c
-                if inp.chat_busy is None:
-                    streams = c                      # worst case: every slot of concurrency busy
-                    per_unit = per_w                 # W per stream
-                else:
-                    # chat draws power for the streams actually in service: min(concurrency, measured
-                    # traffic). Centi-streams keep the integer model precise for fractional traffic.
-                    busy = round(min(inp.chat_busy, job.max_concurrency) * 100)
-                    streams = m.NewIntVar(0, job.max_concurrency * 100, f"busy_{job.id}_{s}")
-                    m.AddMinEquality(streams, [c * 100, busy])
-                    per_unit = per_w / 100
-                power[s].append(round(per_unit * 1000) * streams)
-                obj.append(round(per_unit * unit[s]) * streams)
-                obj.append(penalty * (job.max_concurrency - c))  # below max costs more than it saves
+                p = m.NewIntVar(min(mw), max(mw), f"chat_mw_{s}")
+                m.AddElement(c, mw, p)
+                costs = [round(w * unit[s]) for w in watts]
+                cost = m.NewIntVar(min(costs), max(costs), f"chat_cost_{s}")
+                m.AddElement(c, costs, cost)
+                power[s].append(p)
+                obj.append(cost)
+                obj.append(penalty * (top - c))  # below max costs more than it saves
             continue
 
         last = min(inp.deadline_slot[job.id], S)
