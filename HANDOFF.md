@@ -97,7 +97,7 @@ make setup                      # uv + Python 3.11 + deps (torch is large: fast 
 make test
 ```
 If it is an Apple-silicon Mac you can run the full stack for development: `brew install ollama`,
-`OLLAMA_NUM_PARALLEL=4 ollama serve`, `ollama pull qwen3:4b`, then `sudo -v && make probe && make calibrate`.
+`OLLAMA_NUM_PARALLEL=4 ollama serve`, `ollama pull qwen3:4b-instruct` (not plain `qwen3:4b`: that build always thinks), then `sudo -v && make probe && make calibrate`.
 That calibration describes YOUR Mac: it lives in `runs/` (gitignored) and is never used for demo numbers.
 Not a Mac: skip the meter; work on `web/` against the contract and `agent/` with unit tests.
 

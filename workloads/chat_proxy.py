@@ -7,6 +7,7 @@ latency is recorded; p95 over the last 60 s is in /status and the status file.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import os
 import signal
@@ -66,7 +67,6 @@ class ChatError(Exception):
 
 
 def make_app(max_concurrency: int, transport: httpx.AsyncBaseTransport | None = None) -> FastAPI:
-    app = FastAPI(title="brownout chat proxy")
     lim = Limiter(max_concurrency)
     lat: deque[tuple[float, float, float]] = deque(maxlen=5000)   # (t, total_s, ttft_s)
     state = {"max_tokens": CFG.get("max_tokens", 256), "served": 0, "errors": 0}
@@ -95,9 +95,13 @@ def make_app(max_concurrency: int, transport: httpx.AsyncBaseTransport | None = 
             write_json(status_path("chat"), snapshot())
             await asyncio.sleep(0.25)
 
-    @app.on_event("startup")
-    async def _start():
-        asyncio.create_task(follow_control())
+    @contextlib.asynccontextmanager
+    async def lifespan(_app):
+        task = asyncio.create_task(follow_control())
+        yield
+        task.cancel()
+
+    app = FastAPI(title="brownout chat proxy", lifespan=lifespan)
 
     async def generate(body: ChatIn):
         """Yields {"delta": text} as Ollama produces it, then one {"done": true, ...stats}. Holds a
