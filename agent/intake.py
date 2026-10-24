@@ -146,6 +146,8 @@ _RULES = [
                       + _W + r"{0,3}?\s+(?:approvals?|sign-?offs?|consent|confirmation|owners?)\b"),
     _rule("approval", r"\b(?:already|pre-?)\s*(?:approved|agreed|signed\s+off|ok'?d|authori[sz]ed|cleared)\b|"
                       r"\bauto-?approv\w*|\bon\s+behalf\s+of\b|\bI\s+(?:hereby\s+)?approve\b|"
+                      r"\b(?:approvals?|consent|sign-?offs?|permission|authori[sz]ation)\s+(?:is\s+|was\s+|has\s+been\s+|"
+                      r"been\s+)?(?:granted|given|received|obtained|confirmed|in\s+place)\b|"
                       r"\b(?:consider|treat|mark|count)\b" + _W + r"{0,3}?\s+(?:as\s+)?approved\b|"
                       r"\b(?:owners?|[\w]+-team|team|they|management|manager|boss)\s+(?:has\s+|have\s+)?"
                       r"(?:said\s+(?:yes|ok|okay|fine|go)|approved|agreed|signed\s+off|ok'?d|authori[sz]ed)\b|"

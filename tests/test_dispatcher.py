@@ -113,6 +113,7 @@ def test_idle_chat_keeps_full_concurrency_under_cap_busy_chat_does_not():
     assert all(busy.assignments["chat"][i].concurrency < 4 or busy.assignments["train"][i].device == "cpu" for i in on)
 
 
+@pytest.mark.skipif(__import__("sys").platform == "win32", reason="asyncio signal handlers are POSIX-only")
 async def test_solve_in_a_thread_keeps_the_runtimes_sigint_handler():
     """Regression (Sat 01:35): CP-SAT's own Ctrl-C catching, from a worker thread, left SIGINT at the
     default action, so Ctrl-C killed the runtime without its shutdown. If this regresses, pytest itself
