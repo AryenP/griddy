@@ -129,3 +129,15 @@ async def test_solve_in_a_thread_keeps_the_runtimes_sigint_handler():
         await asyncio.wait_for(got.wait(), 2)
     finally:
         loop.remove_signal_handler(sg.SIGINT)
+def test_refused_slip_keeps_deadline_and_bends_the_cap():
+    # train needs 90 min of GPU before 2 h; under a 10 W cap only CPU training fits (1 W idle + 6 W), too slow
+    dl = SLOTS[8]
+    capped = POLICY.model_copy(update={"power_cap_w": 10.0})
+    free = solve(signal([50.0] * 96), jobs(train_deadline=dl), capped, CAL, chat_busy=0.0)
+    assert free.relaxed and any(f.kind == "deadline" and f.job_id == "train" for f in free.shortfalls)
+    kept = solve(signal([50.0] * 96), jobs(train_deadline=dl), capped, CAL, chat_busy=0.0,
+                 hard_deadlines=frozenset({"train"}))
+    assert not any(f.kind == "deadline" and f.job_id == "train" for f in kept.shortfalls)
+    assert any(f.kind == "cap" for f in kept.shortfalls)
+    assert not kept.deadline_misses                       # the refused deadline holds
+    assert max(kept.planned_w) > 10.0                      # by going over the cap, which needs approval

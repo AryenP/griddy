@@ -26,18 +26,11 @@ from dispatcher.solve import load_calibration, load_policy
 from grid.watcher import GridWatcher
 from meter.powermetrics import PowerMeter
 
+from .agent_bridge import AgentBridge
 from .routes import WEB, make_router
 from .ws import Broadcaster
 
 log = logging.getLogger("api.app")
-
-
-def agent_status() -> str:
-    try:
-        import agent.llm  # noqa: F401  (built on the second machine; absent until then)
-    except ImportError:
-        return "offline"
-    return "online" if (settings.anthropic_api_key or settings.use_azure_agent) else "offline"
 
 
 class Runtime:
@@ -48,6 +41,7 @@ class Runtime:
         self.knobs = Knobs(self.tl)
         self.executor = Executor(self.tl, self.knobs, self.cal, load_policy(), dispatcher_enabled)
         self.meter.subscribers.append(self.executor.on_power)
+        self.agent = AgentBridge(self.tl, self.executor)
         self.watcher: GridWatcher | None = None
         self.watcher_task: asyncio.Task | None = None
         self.broadcaster: Broadcaster | None = None
@@ -80,7 +74,8 @@ class Runtime:
     async def start(self):
         self.broadcaster = Broadcaster(self.tl, asyncio.get_running_loop())
         self.tl.log("note", msg="runtime start", dispatcher_enabled=self.executor.dispatcher_enabled,
-                    calibration_measured_at=self.cal.measured_at, machine=self.cal.machine)
+                    calibration_measured_at=self.cal.measured_at, machine=self.cal.machine,
+                    agent=self.agent.status, agent_model=self.agent.llm.name)
         await self.meter.start()
         self.knobs.set_concurrency("chat", next(j["max_concurrency"] for j in config.jobs["jobs"] if j["id"] == "chat"))
         for j in ("chat", "train", "batch"):
@@ -104,7 +99,9 @@ class Runtime:
                 "power": dump(self.meter.latest), "jobs": {j: Knobs.status(j) for j in ("chat", "train", "batch")},
                 "calibration": dump(self.cal), "policy": dump(ex.policy), "iso_options": available_isos(),
                 "iso": self.watcher.iso if self.watcher else settings.iso,
-                "dispatcher_enabled": ex.dispatcher_enabled, "agent": agent_status(), "run_id": self.tl.run_id,
+                "dispatcher_enabled": ex.dispatcher_enabled, "agent": self.agent.status, "agent_model": self.agent.llm.name,
+                "approvals": [dump(x) for x in self.agent.pending(status=None)],
+                "explanation": dump(self.agent.explanation), "run_id": self.tl.run_id,
                 "job_specs": {j.id: j.model_dump(mode="json") for j in ex.jobs()},
                 "quote": config.site.get("quote")}
 

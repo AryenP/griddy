@@ -35,9 +35,14 @@ class Inputs:
 
 @dataclass
 class Relax:
-    """Which hard constraints may bend, to find the minimal relaxation when infeasible."""
+    """Which hard constraints may bend, to find the minimal relaxation when infeasible.
+    `fixed`: jobs whose deadline may not bend even when deadlines are relaxed (the owner refused)."""
     deadlines: bool = False
     cap: bool = False
+    fixed: frozenset[str] = frozenset()
+
+    def may_slip(self, job_id: str) -> bool:
+        return self.deadlines and job_id not in self.fixed
 
 
 @dataclass
@@ -137,12 +142,12 @@ def build(inp: Inputs, relax: Relax = Relax()) -> Built:
             m.Add(sum(run) <= 1)
             if job.id in inp.policy.never_pause:
                 m.Add(sum(run) == 1)
-            if s >= last and not relax.deadlines:
+            if s >= last and not relax.may_slip(job.id):
                 m.Add(sum(run) == 0)
 
         need = inp.remaining_work[job.id]
         on_time = sum(speed(job, inp.cal, d) * b.x[(job.id, s, d)] for s in range(last) for d in devs)
-        if relax.deadlines:
+        if relax.may_slip(job.id):
             miss = m.NewIntVar(0, need, f"miss_{job.id}")
             b.miss[job.id] = miss
             m.Add(on_time + miss >= need)

@@ -37,6 +37,9 @@ class Executor:
         self.plan: SlotPlan | None = None
         self.events: list[CapEvent] = []
         self.job_changes: dict[str, dict] = {}
+        self.hard_deadlines: set[str] = set()    # owner refused a slip: the deadline may not bend
+        self.needs_approval: list[str] = []      # approval request ids the current plan is waiting on
+        self.schedule_listeners: list = []       # async callbacks(schedule), e.g. the agent bridge
         self.finished: set[str] = set()
         self.power: deque[tuple[float, float]] = deque(maxlen=3600)
         self.baseline_window_s = baseline_window_s
@@ -93,6 +96,12 @@ class Executor:
                     changes={k: (v.isoformat() if isinstance(v, datetime) else v) for k, v in changes.items()})
         return await self.resolve("job change")
 
+    async def keep_deadline(self, job_id: str, reason: str) -> Schedule | None:
+        """The owner refused to let this job's deadline slip; re-solve with it hard."""
+        self.hard_deadlines.add(job_id)
+        self.tl.log("policy", reason="deadline kept by owner", job=job_id, owner_reason=reason)
+        return await self.resolve("deadline kept")
+
     def set_dispatcher(self, enabled: bool) -> None:
         self.dispatcher_enabled = enabled
         self.tl.log("policy", reason="dispatcher toggle", dispatcher_enabled=enabled)
@@ -115,13 +124,19 @@ class Executor:
         async with self._lock:
             sig, jobs, events = self.signal, self.jobs(), self.active_events()
             sched = await asyncio.to_thread(solve, sig, jobs, self.policy, self.cal, events, self.baseline_w(),
-                                            self.chat_busy())
+                                            self.chat_busy(), frozenset(self.hard_deadlines))
             self.schedule = sched
             self._last_solve_t = time.time()
             self.tl.log("schedule", reason=reason, **sched.model_dump(mode="json"))
             for sf in sched.shortfalls:
-                d = sf.model_dump(mode="json")          # Shortfall.kind would collide with the event kind
+                d = sf.model_dump(mode="json")
                 self.tl.log("shortfall", schedule_id=sched.id, shortfall_kind=d.pop("kind"), **d)
+        for cb in list(self.schedule_listeners):
+            try:
+                await cb(sched)
+            except Exception as e:      # a listener (e.g. the agent) failing never stops execution
+                log.exception("schedule listener failed")
+                self.tl.log("note", level="error", msg=f"schedule listener failed: {e!r}"[:300])
         self.tick()
         return sched
 
@@ -151,7 +166,8 @@ class Executor:
                 actions.append(PlanAction(job=j.id, state="run" if a.run else "pause", device=a.device))
         stale = bool(self.signal and self.signal.stale) or s.on_stale_data
         return SlotPlan(mode="dispatcher", schedule_id=s.id, slot_index=i, slot_start=s.slots[i], actions=actions,
-                        planned_w=s.planned_w[i], cap_w=s.caps_w[i], on_last_known_data=stale)
+                        planned_w=s.planned_w[i], cap_w=s.caps_w[i], on_last_known_data=stale,
+                        needs_approval=list(self.needs_approval))
 
     def apply(self, plan: SlotPlan) -> None:
         for a in plan.actions:
