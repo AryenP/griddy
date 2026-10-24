@@ -1,4 +1,4 @@
-# Brownout — the judge demo (one judge, ~4 minutes, one Mac, no slides)
+# Griddy — the judge demo (one judge, ~4 minutes, one Mac, no slides)
 
 ## On the table
 - The Mac with the dashboard full-screen, lid open, on its charger. A phone (or the judge's) on the operator
@@ -37,7 +37,7 @@ chat during the cut, show that: "chat is serving 1 request at full speed (slowin
 **2:20 A real emergency, replayed live (the judge picks).** Three cards: Winter Storm Uri (Texas, 2021),
 California's rotating outages (2020), California's record heat wave (2022). They press **Replay it live**. In two
 minutes the operator's own hourly data plays: for Uri, the forecast pulls away from the demand Texas could serve
-and the gap fills red. The warnings issued days before fire first, and Brownout's own flag (the day-ahead forecast
+and the gap fills red. The warnings issued days before fire first, and Griddy's own flag (the day-ahead forecast
 above the record before the event); the Mac shifts its work. At 1:20 a.m. ERCOT's EEA 3 reaches the real
 dispatcher and the Mac cuts deeper, measured. Read the panel: "More than 4.5 million people lost power; 210 died"
 (the report's page is on the line), this Mac's measured cut, and the cut the grid asked applied to the 4.1 GW of
@@ -45,7 +45,7 @@ large loads ERCOT sees running today: the megawatts and the people that is, from
 
 **3:10 Receipts.** Open the proof page: the same utility call measured under three policies (DECISIONS 09:46):
 ignore the call 20.85 W and 0 % of seconds under the cap; pause everything 0.80 W, 99 %, 19 training steps;
-Brownout 14.34 W, 93 %, compliant in 12 s, 1575 steps (over the same 315 s), about 83 times the work of pausing everything. Then one
+Griddy 14.34 W, 93 %, compliant in 12 s, 1575 steps (over the same 315 s), about 83 times the work of pausing everything. Then one
 decision's trace (Application Insights, or `/api/trace` while Azure lags).
 
 **3:45 Close.** "This is tens of watts on a laptop. The feeds, the solver, the approvals and the audit trail are

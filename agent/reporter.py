@@ -612,7 +612,7 @@ def render_markdown(run: Run, rep: Report, chart_name: str | None) -> str:
     ev = run.cap if run.event_window() is not None else None
     sla = run.sla_s()
     tot_before, tot_during = chat_p95(run, rep.window_start, rep.window_end, key="p95_60s")
-    lines = [f"# Brownout report: run {rep.run_id}", "",
+    lines = [f"# Griddy report: run {rep.run_id}", "",
              f"Window {_fmt(rep.window_start)} to {_fmt(rep.window_end)} "
              f"({rep.window_end - rep.window_start:.0f} s). Computed from `{shown(run.path)}` only: "
              "watts are powermetrics samples (SoC: CPU + GPU + ANE), $ and gCO2 use the live price and fuel "

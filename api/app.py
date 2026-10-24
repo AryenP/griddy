@@ -1,4 +1,4 @@
-"""Brownout runtime: grid watcher + powermetrics + workloads + executor + API/WebSocket.
+"""Griddy runtime (built as Brownout): grid watcher + powermetrics + workloads + executor + API/WebSocket.
 
     sudo -v && make demo                         # live, dashboard on HOST:PORT
     sudo -v && POLICY=baseline make baseline      # dispatcher off, headless, fixed duration
@@ -157,7 +157,7 @@ class Runtime:
 
 
 def make_app(rt: Runtime) -> FastAPI:
-    app = FastAPI(title="Brownout")
+    app = FastAPI(title="Griddy")
     app.include_router(make_router(rt))
     if Path(WEB).is_dir():
         app.mount("/", StaticFiles(directory=WEB, html=True), name="web")

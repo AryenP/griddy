@@ -1,8 +1,10 @@
-# Brownout
+# Griddy
+
+*Built at Cal Hacks 13 under the working name Brownout; the code, the repository and some identifiers keep it.*
 
 When the grid runs short, the plan for AI data centers is diesel generators. This is the alternative.
 
-Brownout is a grid-aware compute dispatcher. It watches the live grid (real ISO prices, day-ahead
+Griddy is a grid-aware compute dispatcher. It watches the live grid (real ISO prices, day-ahead
 curve, load forecast, fuel mix, alerts), schedules every AI job over the next 24 hours with a CP-SAT
 solver, executes the current slot on real hardware, asks job owners before breaking their deadlines,
 and proves the result with measured power. Built at Cal Hacks 13.0 for the Microsoft Challenge.
@@ -12,14 +14,14 @@ and age; the grid emergencies a judge can replay through the live software are t
 (U.S. EIA Form EIA-930), with every alert and impact cited to the official report's page; estimates at grid scale are
 labelled "estimate". Every published measured number recomputes from the raw timelines: `make verify`.
 
-### Diesel and "pause everything" are the naive answers. Brownout is the intelligent one.
+### Diesel and "pause everything" are the naive answers. Griddy is the intelligent one.
 
 When a utility asks a data center to cut load, the options today are blunt: start backup generators,
-ignore the request, or switch off everything that can be switched off. Brownout decides per job and per
+ignore the request, or switch off everything that can be switched off. Griddy decides per job and per
 15-minute slot instead, keeps the service people are using fast, asks before it breaks anyone's deadline,
 and proves what it did with measured watts.
 
-| | Backup diesel | Ignore the call | Pause everything | **Brownout** |
+| | Backup diesel | Ignore the call | Pause everything | **Griddy** |
 |---|:---:|:---:|:---:|:---:|
 | Grid draw under the utility's cap | ✅ | ❌ | ✅ | ✅ in seconds |
 | No on-site combustion | ❌ | ✅ | ✅ | ✅ |
@@ -49,9 +51,9 @@ from each cap start, cap 15.10 W):
 |---|:---:|:---:|:---:|:---:|
 | [Ignore the call](docs/evidence/compare-20261024-093434-vs-20261024-091909-baseline.md) | 20.85 W | 0 % | never | 5899 |
 | [Pause everything](docs/evidence/compare-20261024-093434-vs-20261024-092650-pause_all.md) | 0.80 W | 99 % | 4 s | 19 |
-| **Brownout** | **14.34 W** | **93 %** | **12 s** | **1575** (315 s; 1625 over ignore's 327 s) |
+| **Griddy** | **14.34 W** | **93 %** | **12 s** | **1575** (315 s; 1625 over ignore's 327 s) |
 
-Brownout keeps the training job moving on the CPU under the cap, about 83 times the work of pausing
+Griddy keeps the training job moving on the CPU under the cap, about 83 times the work of pausing
 everything, and asks the owner about the ~19-minute slip instead of breaking the cap.
 
 > Read this as a signal, not a guarantee: two short runs on a laptop, not a fleet, and the comparison here is
@@ -70,7 +72,7 @@ everything, and asks the owner about the ~19-minute slip instead of breaking the
 - **The operator** decides when the cap and a refused deadline conflict. Until they approve going over the
   cap, the running plan holds it.
 - **The controller** is the only code path to a knob. The LLM explains and negotiates; it cannot touch one.
-- **The kill switch** is DISPATCHER OFF on the dashboard: every job runs as if Brownout weren't there.
+- **The kill switch** is DISPATCHER OFF on the dashboard: every job runs as if Griddy weren't there.
 
 ## Run it (Apple-silicon Mac)
 ```bash
@@ -83,7 +85,7 @@ make calibrate        # measure idle and each job's watts with powermetrics
 make demo             # grid feeds + meter + workloads + dispatcher + dashboard on :8080
 make baseline         # same jobs, dispatcher off, headless for 10 minutes, for the comparison
 make evidence         # unattended: calibrate, then dispatcher-off and dispatched runs with the same scripted cap, compare
-make evidence3        # unattended (~30 min): calibrate, then ignore the call, pause everything and Brownout, compare
+make evidence3        # unattended (~30 min): calibrate, then ignore the call, pause everything and Griddy, compare
 make evidence-chat    # unattended (~12 min): calibrate (chat at 1, 2, 4 streams), then a capped run with 2 chat streams
 make evidence-chat-judge  # unattended (~8 min): one person chatting during the cap, 15 s to read each reply
 make report RUN=<id>  # reports/<id>.md + power chart, from that run's timeline only (default: latest)
@@ -102,7 +104,7 @@ Storm Uri, Texas 2021; California's rotating outages, 2020; California's record 
 hourly demand and forecast play on screen, each alert reaches the real dispatcher at the moment it was issued, and
 this Mac's measured response is set against what the event cost (replay/engine.py, config/events.yaml).
 
-![How Brownout fits together](docs/judging/architecture.svg)
+![How Griddy fits together](docs/judging/architecture.svg)
 
 More: [docs/architecture.md](docs/architecture.md). Interfaces: [SPEC.md](SPEC.md).
 API contract: [HANDOFF.md](HANDOFF.md). Every decision taken during the build: [DECISIONS.md](DECISIONS.md).
