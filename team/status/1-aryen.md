@@ -161,3 +161,10 @@ battery probe says GOOD. 305 tests pass. Not verified on a real laptop yet: no W
 Next: switch the running demo back from ERCOT after 05:15 and record the two-grid run; stop heavy work by 06:30.
 Blockers / needs Aryen: battery probe results from the Windows laptops (fleet/battery_probe.ps1, run by a
 person at each laptop); who has which laptop; the .env command for Azure.
+
+## 2026-10-24 05:16 PT — tick: two grids live
+Done: ERCOT end to end in run 20261024-045659 (DECISIONS 05:17): CAISO, then ERCOT HB_HOUSTON for the whole
+05:00-05:15 slot, then CAISO, re-solving OPTIMAL in each grid's local time; idle re-measured live; demo stopped.
+No new teammate commits, PRs or [supervisor] issues; both queues deep.
+Next: 06:40 final evidence run (the Mac stays idle from 06:30), then the three-way proof table and the morning brief.
+Blockers / needs Aryen: laptop battery test output; the .env command for Azure.
