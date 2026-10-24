@@ -77,3 +77,11 @@ evals on current main: 74 pass, 0 fail, 16 need a model, injections 12/12 (docs/
 PR "2 Anuraag: judging docs".
 Next: 10 proof page; 16 load outside the plan after PR #10 merges.
 Blockers / needs: the operator/FDE quote (Aryen).
+
+## 2026-10-24 06:05 PT — task 17 old dashboard rules out of style.css
+Done: removed .numbers, .jobs, .jobs .tile, .tile, .numbers .tile, .big .value (both), .job, .toggle,
+.toggle.off. Kept .top, .claim p, .row, .bottom (proof.html uses them) and .job-head (owner.js). Pixel-identical
+screenshots of chat/owner/operator/proof at 1440 and 375 px; on the dashboard every HTML element's computed
+style is identical (only the clock-driven SVG hour labels move between runs). PR "2 Anuraag: style cleanup".
+Next: 11 evals for tonight's agent changes.
+Blockers / needs: none.
