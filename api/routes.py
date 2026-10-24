@@ -49,6 +49,7 @@ class SiteBeat(BaseModel):
     t: float | None = None
     watts: float | None = Field(default=None, ge=0)
     meter_t: float | None = None
+    meter_changed_t: float | None = None
     meter_note: str = ""
     plugged: bool | None = None
     running: bool | None = None

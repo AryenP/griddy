@@ -4,7 +4,11 @@
 # Brownout is one site and nothing changes.
 sites: []
 #  - {id: surface1, name: "Surface Pro 11", owner: "<teammate>"}
-stale_s: 5                 # a laptop's watts count only while its last battery reading is this fresh
+stale_s: 5                 # a laptop counts as online only while its heartbeats (1 a second) keep arriving
+# How long a laptop's battery reading takes to follow a change in its load. Measured Sat 05:19-05:22 on a team
+# laptop: the reading changed 5 s and then about 60 s apart, and rose 8.3 -> 11.4 W once every core was busy.
+# The Mac waits this long, on top of policy.replan.settle_s, before judging measured watts against the plan.
+meter_lag_s: 75
 job:                       # what every laptop runs: lzma-compress its own Python standard library (real CPU work)
   kind: droppable
   owner: data-eng
