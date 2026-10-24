@@ -8,7 +8,7 @@
 const POLICIES = [
   { id: "baseline", label: "Ignore the call", color: "var(--muted)" },
   { id: "pause_all", label: "Pause everything", color: "var(--job-train)" },
-  { id: "dispatcher", label: "Brownout", color: "var(--ok)" },
+  { id: "dispatcher", label: "Brownout", color: "var(--current)" },
 ];
 const P = { runs: [], series: {}, loadedT: null };
 

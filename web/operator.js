@@ -44,12 +44,29 @@ function meanAt(t) {
   return n ? sum / n : null;
 }
 
+const powerNow = readout($("power-now"), { unit: "W", decimals: 1 });
+const powerMean = readout($("power-mean"), { unit: "W", decimals: 1 });
+const powerGauge = capGauge($("power-gauge"));
+
+// The cap in force right now, in watts: the active event with a resolved target. null when there is none.
+function capNow() {
+  const t = nowS();
+  const ev = [...P.events.values()].find((e) => {
+    const start = Date.parse(e.start) / 1000;
+    return e.target_w != null && t >= start && t < start + e.duration_s;
+  });
+  return ev ? ev.target_w : null;
+}
+
 function renderPower() {
   const last = P.power[P.power.length - 1];
   if (!last) { $("power-src").textContent = "waiting for powermetrics"; return; }
-  $("power-now").textContent = fixed(last.w, 1);
-  $("power-mean").textContent = fixed(meanAt(last.t), 1);
-  $("power-src").textContent = `SoC power, measured by macOS powermetrics, last reading ${age(last.t)}`;
+  const mean = meanAt(last.t), cap = capNow(), stale = nowS() - last.t > 10;
+  powerNow.set(last.w, { tone: stale ? "stale" : "live" });
+  powerMean.set(mean, { tone: stale ? "stale" : cap != null && mean > cap ? "over" : null });
+  powerGauge.set(mean, cap);
+  $("power-panel").dataset.state = stale ? "stale" : cap != null && mean > cap ? "over" : "live";
+  $("power-src").textContent = `SoC power, measured by macOS powermetrics, last reading ${age(last.t)}${stale ? ": STALE" : ""}`;
 }
 
 // ---------- cap events: countdown and time to compliance ----------
@@ -326,7 +343,7 @@ function handle(msg) {
       renderBadges(); renderPower(); renderSlot(); renderEvents(); renderNeighbourhood(); loadPending();
       break;
     case "plan": P.plan = d; renderSlot(); break;
-    case "power": addPower(d); renderPower(); break;
+    case "power": addPower(d); renderPower(); pulsePanel($("power-panel")); break;
     case "event":   // a CapEvent (parsed requests arrive as `intake` since Sat 03:15; the id check skips older ones)
       if (d.id && d.start && d.duration_s != null) { P.events.set(d.id, d); renderEvents(); }
       break;

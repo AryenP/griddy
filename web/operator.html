@@ -6,7 +6,7 @@
   <title>Brownout operator</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Saira:wdth,wght@75..100,300..700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body class="phone operator">
@@ -18,8 +18,12 @@
   </header>
 
   <main>
-    <section class="panel power-strip">
-      <div class="power-now"><span id="power-now">—</span><small> W now</small> <span class="sep">·</span> <span id="power-mean">—</span><small> W 10-s mean</small></div>
+    <section class="panel power-strip" id="power-panel">
+      <div class="power-now">
+        <div class="pw"><span class="label">Measured now</span><span id="power-now" class="pw-now">—</span></div>
+        <div class="pw"><span class="label">10-s mean, the compliance test</span><span id="power-mean" class="pw-mean">—</span></div>
+      </div>
+      <div id="power-gauge" class="power-gauge"></div>
       <div class="src" id="power-src">waiting for powermetrics</div>
     </section>
 
