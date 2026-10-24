@@ -140,6 +140,10 @@ $("w-play-btn").addEventListener("click", async () => {
 });
 
 World.mount($("world"));
+const keepClear = () => World.safeArea($("conn").closest("header").getBoundingClientRect().bottom + 8,
+  innerHeight - document.querySelector(".w-dock").getBoundingClientRect().top + 8);
+new ResizeObserver(keepClear).observe(document.querySelector(".w-dock"));
+addEventListener("resize", keepClear);
 getJSON("/api/replay/events").then((r) => { if (r.ok) { D.cat = r.data; render(); } });
 setInterval(render, 1000);
 connectWS(handle, $("conn"));
