@@ -104,7 +104,9 @@ the Mac was also in use (counted as outside load; DECISIONS 14:16, not in the re
 - The solver decides, the LLM explains and negotiates, the controller executes. The LLM has no code
   path to any knob.
 - Nothing is simulated. Every price, watt and dollar about the real sites is live or measured, with source and age;
-  replayed grid emergencies are the operators' recorded data (EIA-930) with each alert and impact cited by page;
+  replayed grid emergencies are the operators' recorded data (EIA-930), fetched live from the EIA's API when a replay
+  starts and seen one hour at a time, never a later one, with each alert and impact cited by page; a judge's what-if
+  faults are labelled what-if and sized from the grid's real numbers at that moment;
   grid-scale figures are labelled "estimate".
 - A human owner approves any deadline slip; refusals are respected and logged with name and time.
 - Reviewed with Microsoft's HVE Core reviewers (Responsible AI, System Architecture) at the Saturday workshop.

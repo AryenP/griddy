@@ -301,3 +301,9 @@ Done: click the city (or "Open the ... map" on its card) and the 3D world opens 
 homes dark by the grid's real unserved share, blocks relit by Griddy's freed MW, feeders labelled illustrative.
 GET /api/cities (HANDOFF). Teammates still quiet; CI green before this push.
 Next: technician dispatch when Aryen decides. Blockers / needs Aryen: that decision.
+
+## 2026-10-24 18:16 PT — judge-facing docs match today's software
+Done: README, DEMO and the Devpost draft now say the replay's hours are fetched live from the EIA's API and seen one
+hour at a time (never a later one), and describe what-if faults (click or words) and the city map with what is real and
+what is illustrative. make verify: 74 of 74. Teammates still quiet; CI green.
+Next: technician dispatch when Aryen decides. Blockers / needs Aryen: that decision.
