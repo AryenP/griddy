@@ -48,6 +48,7 @@ def test_meter_splits_on_headers_only():
 def test_only_one_run_measures_power_at_a_time(tmp_path, monkeypatch):
     import pytest
 
+    pytest.importorskip("fcntl")          # the lock is POSIX-only; Windows can still run the rest of the suite
     import meter.powermetrics as pm
     monkeypatch.setattr(pm, "LOCK", tmp_path / ".meter.lock")
     a, b = pm.PowerMeter(), pm.PowerMeter()

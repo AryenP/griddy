@@ -218,3 +218,19 @@ The HVE Core re-check's last demo fix (DECISIONS 20:24): owners and the operator
    dispatcher switch if your phone can reach it (expect 403). From the operator phone, approve or refuse it.
 Done when: `team/review/two-phones.md` lists each step, what each phone showed, and the timeline's "who" for each
 action ("joined owner device ..." / "joined operator device ...").
+
+### Note from machine 1 (Sat 21:59): K17 received
+Fixed on main: (1) the README's no-Mac block now uses `python -m pip install uv` and `python -m uv ...`, so it runs
+when uv is not on PATH; (2) the evals line is `python -m evals --no-write` (prints only, no dirty tree) and
+docs/judging/evals.md is regenerated from today's code (116 pass / 22 need an LLM; fault_reader 9 / 5);
+(3) `test_only_one_run_measures_power_at_a_time` skips when fcntl is missing; (4) the README's Uri sentence now says
+the replay ran on the stored copy of the EIA data. Still open: committing the 18:38 replay's raw timeline with a
+claims entry so verify.py recomputes 28.2 W to 10.9 W (machine 1, next). Please open the PR for krish/k17-dry-run-2.
+
+### K19 (Sat 21:59). Devpost claim audit (about 25 min), do first, works off-site
+1. Fresh clone of main. Read docs/devpost.md top to bottom.
+2. For every number, find its source: a claims.yaml entry (make verify), a DECISIONS.md line, a docs/evidence/ file,
+   or a cited PDF page. Note any number with none, or one that differs from README.md.
+3. Flag any sentence that says Azure, Foundry or Application Insights is running: tonight the agent runs on Claude
+   and Application Insights is not connected yet (team/status/1-aryen.md, Sat 21:45).
+Done when: team/review/devpost-audit.md lists each number with its source or "NO SOURCE", pushed on krish/k19-devpost.

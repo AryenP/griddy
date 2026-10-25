@@ -1,6 +1,6 @@
 # Agent-layer evals
 
-Run 2026-10-24 20:35 PDT, mode offline, 138 cases from `evals/cases.yaml` (`uv run python -m evals`).
+Run 2026-10-24 21:57 PDT, mode offline, 138 cases from `evals/cases.yaml` (`uv run python -m evals`).
 
 Pass rate = pass / (pass + fail). *Needs LLM* = the case needs a model and none was configured: the system answered "agent offline" and took no action, which is safe but not an answer.
 
@@ -16,14 +16,14 @@ Pass rate = pass / (pass + fail). *Needs LLM* = the case needs a model and none 
 | openadr | 9 | 0 | 0 | 100% |
 | owner_reply | 23 | 0 | 7 | 100% |
 | explainer | 11 | 0 | 0 | 100% |
-| fault_reader | 8 | 0 | 6 | 100% |
+| fault_reader | 9 | 0 | 5 | 100% |
 | operator_ask | 15 | 0 | 0 | 100% |
-| total | 115 | 0 | 23 | 100% |
+| total | 116 | 0 | 22 | 100% |
 
 ## Failures (0)
 
 None.
 
-## Needs an LLM (23)
+## Needs an LLM (22)
 
-`policy-messy-cost`, `policy-messy-carbon`, `messy-thirty-lasting`, `messy-fifteen-watts`, `messy-quarter`, `ambig-little-while`, `ambig-halve-45`, `oos-weather`, `oos-poem`, `oos-spend`, `counter-no-but`, `change-of-mind`, `unclear-manager`, `unclear-question`, `unclear-later`, `hour-in-the-morning`, `hour-24h`, `wellheads`, `smoke-farms`, `reactor-scram`, `too-much`, `joke`, `weather`
+`policy-messy-cost`, `policy-messy-carbon`, `messy-thirty-lasting`, `messy-fifteen-watts`, `messy-quarter`, `ambig-little-while`, `ambig-halve-45`, `oos-weather`, `oos-poem`, `oos-spend`, `counter-no-but`, `change-of-mind`, `unclear-manager`, `unclear-question`, `unclear-later`, `hour-in-the-morning`, `hour-24h`, `wellheads`, `smoke-farms`, `reactor-scram`, `joke`, `weather`

@@ -19,7 +19,7 @@ labelled "what-if" and sized from the grid's real numbers at that moment; estima
 
 This is an estimate, and the screen labels it as one. Winter Storm Uri left more than 4.5 million people
 without power and at least 210 dead, with 20,000 MW of load shed (FERC-NERC report, PDF pp. 10, 15). Replayed through
-the live software on Sat 24 Oct, this Mac cut from 28.2 W to 10.9 W, measured, when ERCOT's EEA 3 arrived. Credited only
+the live software on Sat 24 Oct (on the stored copy of the EIA data: the public API key was rate-limited), this Mac cut from 28.2 W to 10.9 W, measured, when ERCOT's EEA 3 arrived. Credited only
 as far as the grid asked (40 %) and applied to ERCOT's large loads (up to 4.1 GW, the sum of each one's own monthly
 peak), that frees up to 1,653 MW: about 8 % of what Uri shed, about 372,000 people kept on at the event's own ratio
 of people per MW shed (DECISIONS 18:38).
@@ -86,11 +86,11 @@ everything, and asks the owner about the ~19-minute slip instead of breaking the
 ## Check it without a Mac (Windows, Linux or macOS; no network, no keys)
 
 ```
-pip install uv                    # or the installer at https://docs.astral.sh/uv/
-uv sync --extra dev
-uv run python scripts/verify.py   # = make verify: every published measured number, recomputed from raw timelines
-uv run pytest -q                  # the whole test suite
-uv run python -m evals            # the agent-layer evals, offline (add --live with an ANTHROPIC_API_KEY)
+python -m pip install uv                      # python3 on macOS and Linux; "python -m uv" works even when uv is not on PATH
+python -m uv sync --extra dev
+python -m uv run python scripts/verify.py     # = make verify: every published measured number, recomputed from raw timelines
+python -m uv run pytest -q                    # the whole test suite
+python -m uv run python -m evals --no-write   # the agent-layer evals, offline, printed only (add --live with an ANTHROPIC_API_KEY)
 ```
 
 ## Run it (Apple-silicon Mac)
