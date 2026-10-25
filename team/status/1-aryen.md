@@ -339,3 +339,10 @@ are gone; web/operator* now machine 1's). The city view is one real square of ea
 send one chat message first: the first reply after a cold start takes ~3 s). Tagged demo-stable-4 (493 tests pass).
 Next: Microsoft's second HVE Core review once Aryen saves it to Downloads (the artifact can't be read from here).
 Blockers / needs Aryen: review 2 as a PDF or pasted; the technician-dispatch decision.
+
+## 2026-10-24 20:39 PT — Microsoft HVE Core re-check (rev 3): its open rows fixed
+Done: owners and the operator join with separate tokens and act only in their role (the re-check's "one fix left for
+the demo"); make qr's owner and operator codes now carry their join links (task 23); fault-reader evals (17 cases);
+live evals 135/138, injections 19/19 (docs/evidence/evals-live-20261024-2033.md); "AM or PM?" asked by rule; pending
+approvals and refusals survive a restart; PR #24 ruled on and closed. Tagged the next demo-stable.
+Still open in the review, not ours to close alone: Prompt Shields (Azure, Aryen's call), an operator or FDE quote.
