@@ -14,6 +14,7 @@ from pathlib import Path
 
 import yaml
 
+from agent import faults
 from agent.explainer import REFUSAL, answer, explain, grid_facts, state_facts, ungrounded
 from agent.intake import parse_openadr, parse_request
 from agent.llm import LLM, OFFLINE, get_llm
@@ -23,7 +24,7 @@ from core.types import ApprovalRequest, GridSignal, Schedule, Shortfall
 ROOT = Path(__file__).resolve().parents[1]
 CASES = Path(__file__).with_name("cases.yaml")
 CATEGORY_ORDER = ["plain", "policy", "lookalike", "messy", "ambiguous", "out_of_scope", "injection",
-                  "openadr", "owner_reply", "explainer"]
+                  "openadr", "owner_reply", "explainer", "fault_reader"]
 
 
 @dataclass
@@ -262,6 +263,31 @@ async def _run_operator_ask(cases: dict, llm: LLM, mode: str) -> list[Row]:
     return rows
 
 
+async def _run_faults(cases: dict, llm: LLM, mode: str) -> list[Row]:
+    """agent/faults.py: a judge's words read into a part and a share (or refused). Never an action, in any case."""
+    spec = cases.get("fault_reader") or {}
+    parts, rows = spec.get("parts", {}), []
+    for case in spec.get("cases", []):
+        try:
+            got = await faults.read(case["text"], case.get("clicked"), parts, llm)
+        except ValueError as e:
+            got, outcome = None, f"refused: {e}"
+        else:
+            outcome = f"{got['target']} {got['share_pct']:.0f}% ({got['how']})"
+        if case["expect"] == "refused":
+            ok, expected = got is None, "refused"
+        else:
+            ok = got is not None and got["target"] == case["expect"] and \
+                (case.get("share") is None or abs(got["share_pct"] - case["share"]) < 0.5) and \
+                got["share_pct"] <= case.get("share_max", 100)
+            expected = case["expect"] + (f" {case['share']}%" if "share" in case else "")
+        offline = got is None and OFFLINE in outcome
+        status = "needs_llm" if (case["path"] == "llm" and offline) else "pass" if ok and not offline else "fail"
+        rows.append(Row("fault_reader", case.get("category", "fault_reader"), case["id"], case["path"], status, mode,
+                        expected, outcome, case["text"], bool(got and "pattern" not in got["how"])))
+    return rows
+
+
 async def run(live: bool = False, path: Path = CASES) -> Result:
     llm = get_llm() if live else LLM()
     mode = llm.name if llm.available else "offline"
@@ -272,6 +298,7 @@ async def run(live: bool = False, path: Path = CASES) -> Result:
     result.rows += await _run_replies(cases, llm, mode)
     result.rows += await _run_explainer(cases, llm, mode)
     result.rows += await _run_operator_ask(cases, llm, mode)
+    result.rows += await _run_faults(cases, llm, mode)
     return result
 
 

@@ -27,6 +27,7 @@ executes**. Numbers below cite `DECISIONS.md` (**D hh:mm**) or the eval reports.
 | run | mode | pass | fail | needs a model | injections |
 |---|---|---|---|---|---|
 | [docs/judging/evals.md](evals.md) (current main, offline) | rules only, no model | 74 | 0 | 16 | **12/12 rejected** |
+| `docs/evidence/evals-live-20261024-2033.md` (Sat 20:33, 138 cases with the fault reader) | claude-sonnet-5-5 | 135 | 3 | 0 | **19/19 rejected** |
 | `docs/evidence/evals-live-20261024.md` (D 02:45) | claude-sonnet-5-5 | 86 | 4 | 0 | **12/12 rejected** |
 
 The four live misses are judgment calls, and none is unsafe:

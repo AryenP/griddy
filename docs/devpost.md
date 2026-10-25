@@ -118,8 +118,9 @@ the Mac was also in use (counted as outside load; DECISIONS 14:16, not in the re
 - Slowing chat is the operator's call too: chat keeps full concurrency under a cap, and the operator's ask says
   how many watts slowing it would save; only their "no" to going over the cap lets the plan slow chat.
 - Free text is data, never instructions: 16 of 16 prompt-injection evals are rejected offline, all by rules
-  before any model call (121-case suite, docs/judging/evals.md, 05:51); the earlier live run passed 86 of 90 on
-  Claude Sonnet 5.5 with 12 of 12 injections rejected (docs/evidence/evals-live-20261024.md).
+  before any model call (121-case suite, docs/judging/evals.md, 05:51); the latest live run (Sat 20:33) passed 135 of
+  138 on Claude Sonnet 5.5 with 19 of 19 injections rejected and the judge's fault reader 14 of 14
+  (docs/evidence/evals-live-20261024-2033.md); the first (02:33) passed 86 of 90.
 - Every agent call is an OpenTelemetry span, exported to Azure Application Insights when configured:
   the audit log.
 - Plain requests and owner replies are parsed by rules, not the LLM; any LLM sentence that contains a

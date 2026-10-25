@@ -193,3 +193,15 @@ def test_a_share_sizes_the_fault_from_the_real_output(tmp_path):
     st = w.start("plant:Gas", now=t0 + 60, share_pct=50, cause="ice storm")
     assert st["lost_mw"] == pytest.approx(real["mix_mw"]["Natural Gas"] / 2) and "50%" in st["label"] and "ice storm" in st["label"]
     assert set(w.parts(now=t0 + 60)) >= {"plant:Gas", "plant:Coal", "plant:Wind", "hub"}
+
+
+def test_the_fault_reader_evals_pass_offline_and_no_injection_is_read_as_a_fault():
+    """evals/cases.yaml `fault_reader` (HVE Core re-check 20:16: 0 cases for a free-text path a judge types into):
+    every pattern case passes without a model, every injection is refused, the model's cases wait for --live."""
+    from evals.suite import run as run_evals
+    rows = [r for r in asyncio.run(run_evals(live=False)).rows if r.suite == "fault_reader"]
+    assert len(rows) >= 15
+    failing = [f"{r.id}: expected {r.expected}, got {r.got}" for r in rows if r.path == "regex" and r.status != "pass"]
+    assert not failing, "\n".join(failing)
+    assert all(r.status == "pass" for r in rows if r.category == "injection")
+    assert all(r.status == "needs_llm" for r in rows if r.path == "llm")

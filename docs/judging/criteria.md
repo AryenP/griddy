@@ -42,7 +42,7 @@ See [responsible.md](responsible.md):
 - The solver decides, the LLM words things and the controller executes. The LLM has no code path to a knob.
 - Approvals gate the risky action (D 02:55).
 - Invented numbers are rejected (D 15:00, the agent layer entry).
-- **12 of 12 prompt injections rejected live**, and 86 of 90 eval cases pass live (D 02:45; `docs/evidence/evals-live-20261024.md`).
+- **19 of 19 prompt injections rejected live**, and 135 of 138 eval cases pass live, the judge's fault reader 14 of 14 (Sat 20:33; `docs/evidence/evals-live-20261024-2033.md`; the first live run at 02:33 passed 86 of 90).
 - The offline mode keeps the plain forms working.
 - Every decision is in the timeline and as a span.
 
