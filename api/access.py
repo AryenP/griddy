@@ -1,14 +1,17 @@
-"""Who may act (Microsoft HVE Core review, Sat 13:55, fix 1): the venue network has judges' phones on it, so a
-route that moves a knob, a cap or an approval needs this machine or a device that joined.
+"""Who may act (Microsoft HVE Core review, Sat 13:55, fix 1; re-check 20:16: "give the operator its own token, so an
+owner's phone cannot answer as the operator"): the venue network has judges' phones on it, so a route that moves a
+knob, a cap or an approval needs this machine or a device that joined, and what it may do depends on how it joined.
 
-  - this Mac (a loopback client, or a client on this machine's own address) is the operator console: trusted;
-  - any other device joins once through `GET /join?t=<token>&next=/operator.html` (the QR codes carry it), which
-    sets an HttpOnly cookie; scripts may send the token in `X-Brownout-Token` instead;
+  - this Mac (a loopback client, or a client on this machine's own address) is the console: trusted for everything;
+  - a phone joins once through `GET /join?t=<token>&next=...` (the QR codes from `make qr` carry it), which sets an
+    HttpOnly cookie; scripts may send the token in `X-Brownout-Token` instead. The OPERATOR token makes it the
+    utility's device (requests, caps, replays, what-ifs, the dispatcher, the over-cap approval); the OWNER token makes
+    it a job owner's device (its own job's requests and deadlines). Neither can do the other's part;
   - reads (state, approvals, runs, the WebSocket) and chat stay open.
 
-The token is `OPERATOR_TOKEN` from .env, else a random one kept in runs/.operator_token (gitignored, 0600) so
-`make qr` and the runtime agree across restarts. It is never logged. In production each person signs in with
-Entra ID instead (docs/judging/production.md)."""
+Each token is `OPERATOR_TOKEN` / `OWNER_TOKEN` from .env, else a random one kept in runs/.operator_token /
+runs/.owner_token (gitignored, 0600) so `make qr` and the runtime agree across restarts. They are never logged. In
+production each person signs in with Entra ID instead (docs/judging/production.md)."""
 from __future__ import annotations
 
 import hmac
@@ -26,19 +29,28 @@ from core.config import settings
 COOKIE = "brownout_op"
 HEADER = "x-brownout-token"
 TOKEN_FILE = Path("runs/.operator_token")
+OWNER_TOKEN_FILE = Path("runs/.owner_token")
 
 
-def operator_token() -> str:
-    if settings.operator_token:
-        return settings.operator_token
-    if TOKEN_FILE.exists():
-        return TOKEN_FILE.read_text().strip()
-    TOKEN_FILE.parent.mkdir(parents=True, exist_ok=True)
+def _token(configured: str, path: Path) -> str:
+    if configured:
+        return configured
+    if path.exists():
+        return path.read_text().strip()
+    path.parent.mkdir(parents=True, exist_ok=True)
     tok = secrets.token_urlsafe(18)
-    fd = os.open(TOKEN_FILE, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
     with os.fdopen(fd, "w") as f:
         f.write(tok)
     return tok
+
+
+def operator_token() -> str:
+    return _token(settings.operator_token, TOKEN_FILE)
+
+
+def owner_token() -> str:
+    return _token(settings.owner_token, OWNER_TOKEN_FILE)
 
 
 def is_this_machine(request: Request) -> bool:
@@ -53,23 +65,38 @@ def is_this_machine(request: Request) -> bool:
     return bool(server[0]) and host == server[0]
 
 
-def joined(request: Request) -> bool:
-    tok = operator_token()
+def role(request: Request) -> str | None:
+    """"machine" (this Mac), "operator" or "owner" (how the device joined), or None (it has not)."""
+    if is_this_machine(request):
+        return "machine"
     given = request.headers.get(HEADER) or request.cookies.get(COOKIE) or ""
-    return hmac.compare_digest(given, tok)
+    if given and hmac.compare_digest(given, operator_token()):
+        return "operator"
+    if given and hmac.compare_digest(given, owner_token()):
+        return "owner"
+    return None
+
+
+def joined(request: Request) -> bool:
+    return role(request) in ("operator", "owner")
 
 
 def actor(request: Request) -> str:
     """Where an action came from, for the timeline: the name typed on a page is self-declared, this is not."""
-    if is_this_machine(request):
+    r = role(request)
+    if r == "machine":
         return "this Mac"
-    return f"joined device {request.client.host if request.client else 'unknown'}"
+    return f"joined {r or 'unknown'} device {request.client.host if request.client else 'unknown'}"
 
 
-def require(request: Request) -> str:
-    if is_this_machine(request) or joined(request):
+def require(request: Request, roles: tuple[str, ...] = ("operator",)) -> str:
+    """This Mac, or a device that joined in one of `roles`; 401 before joining, 403 for the other role."""
+    r = role(request)
+    if r == "machine" or r in roles:
         return actor(request)
-    raise HTTPException(401, "this device has not joined: open the operator or owner QR code (make qr) on it first")
+    if r is None:
+        raise HTTPException(401, "this device has not joined: open the operator or owner QR code (make qr) on it first")
+    raise HTTPException(403, f"this phone joined as the {r}; this is the {' or '.join(roles)}'s to do")
 
 
 class RateLimit:

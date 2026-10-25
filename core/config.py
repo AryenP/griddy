@@ -37,6 +37,7 @@ class Settings(BaseModel):
     calibration_path: str = os.getenv("CALIBRATION_PATH", "runs/calibration.json")
     fleet_token: str = os.getenv("FLEET_TOKEN", "")   # when set, laptops must send it (X-Brownout-Fleet-Token)
     operator_token: str = os.getenv("OPERATOR_TOKEN", "")   # devices that may act (api/access.py); else runs/.operator_token
+    owner_token: str = os.getenv("OWNER_TOKEN", "")         # job owners' phones (api/access.py); else runs/.owner_token
 
     @property
     def use_azure_agent(self) -> bool:

@@ -15,8 +15,10 @@ _spec.loader.exec_module(qr)
 
 def test_one_url_per_phone_page_and_the_pages_exist():
     got = qr.urls("http://192.168.1.10:8080/")
-    assert [u for _, u, _ in got] == ["http://192.168.1.10:8080/chat", "http://192.168.1.10:8080/owner.html",
-                                      "http://192.168.1.10:8080/operator.html"]
+    from api import access                  # since Sat 20:28 the owner and operator codes join the phone in its role
+    assert [u for _, u, _ in got] == ["http://192.168.1.10:8080/chat",
+                                      f"http://192.168.1.10:8080/join?t={access.owner_token()}&next=/owner.html",
+                                      f"http://192.168.1.10:8080/join?t={access.operator_token()}&next=/operator.html"]
     for _, path, _ in qr.PAGES:   # /chat is served by the API (chat.html); the others are files in web/
         assert (ROOT / "web" / (path.lstrip("/") if path.endswith(".html") else "chat.html")).exists(), path
 

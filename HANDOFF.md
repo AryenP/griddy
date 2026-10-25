@@ -104,8 +104,14 @@ LAN address) or a device that joined: the `brownout_op` cookie from `/join`, or 
 is `OPERATOR_TOKEN` (.env), else `api.access.operator_token()` (runs/.operator_token). Reads (`/api/state`, approvals,
 runs, reports, `/ws`) and chat stay open. `/request` and `/api/ask` also answer **429** past 10 calls a minute from one
 device. Every switch body takes an optional `"who"` (default "operator"); the timeline records it as
-`"<who> (this Mac | joined device <ip>)"`. The `power_cap` approval is decided by rules only: a plain yes approves, a no
-holds the cap, anything else comes back `unclear` and stays pending.
+`"<who> (this Mac | joined operator device <ip> | joined owner device <ip>)"`. The `power_cap` approval is decided by
+rules only: a plain yes approves, a no holds the cap, anything else comes back `unclear` and stays pending.
+**Roles (since Sat 20:28, HVE Core re-check 20:16).** Two join tokens: `OPERATOR_TOKEN` (runs/.operator_token) joins a phone
+as the utility, `OWNER_TOKEN` (runs/.owner_token) as a job owner; `make qr` puts each in its page's QR code. An
+operator device may use every route above except a job owner's approval; an owner device may answer its own job's
+approvals (`/api/approvals/{id}/reply` for a request whose `job_id` is not `power_cap`), set a job's deadline
+(`/api/jobs/{id}`) and `/api/ask`, and gets **403** elsewhere (the dispatcher, policy, caps, requests, replays, what-ifs,
+the `power_cap` approval). This Mac may do everything.
 
 WebSocket adds `{"kind": "approval", "data": ApprovalRequest}` whenever a request is created or changes
 status (and `{"kind": "approval", "data": {"request_id", "who", "decision": OwnerDecision}}` for each reply),
