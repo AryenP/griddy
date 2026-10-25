@@ -37,6 +37,7 @@ const World = (() => {
     if (S.cxTo != null) S.cx = ease(S.cx, S.cxTo, dt, 2);           // the scene slides aside for the alert cards
     if (S.fitTo != null) S.fit = ease(S.fit || 1, S.fitTo, dt, 2);
     if (S.cyTo != null) S.cy = ease(S.cy, S.cyTo, dt, 2);
+    S.zoom = ease(S.zoom || 1, S.zoomTo || 1, dt, 1.6);              // a pick's own distance (glide)
     v.served = ease(v.served, d.served || 0, dt);
     v.needed = ease(v.needed, d.needed || 0, dt);
     const lit = d.needed ? Math.max(0, Math.min(1, (d.served || 0) / d.needed)) : 1;
@@ -69,7 +70,7 @@ const World = (() => {
     const depth = zr * cp + y * sp;
     const city = S.cam === "city";                                    // the city square is 50 units wide: pull the camera back
     const fitCity = city && S.cityMap ? 24 / Math.max(24, S.cityMap.half) : 1;   // a wider square (SF, 2.4 km) fits the same frame
-    const k = (city ? S.scale * 0.66 * fitCity : S.scale) * (S.fit || 1) / (1 - depth / 120);
+    const k = (city ? S.scale * 0.66 * fitCity : S.scale * (S.zoom || 1)) * (S.fit || 1) / (1 - depth / 120);
     return [S.cx + xr * k, (city ? S.cy + S.h * 0.02 : S.cy) - (y * cp - zr * sp) * k, depth];
   }
   const rgb = (a, al = 1) => `rgba(${a[0] | 0},${a[1] | 0},${a[2] | 0},${al})`;
@@ -771,5 +772,13 @@ const World = (() => {
   // what can be broken right now: the plants on screen, the substation, the city (for the keyboard menu)
   function targets() { return S.hits.map(({ id, title, mw }) => ({ id, title, mw })); }
   function onPick(cb) { S.onPick = cb; }
-  return { mount, set, safeArea, onPick, targets, openCity, closeCity };
+  // Switching between the four picks (Aryen, Sun 00:40: "clean animations for each of the default"): the camera glides
+  // to each one's own angle and distance, eased, then stays still. It moves only when the pick changes.
+  const GLIDE = { live: [-0.62, 1], "uri-2021": [-0.44, 1.05], "caiso-2020-08": [-0.8, 1.03], "caiso-2022-09": [-0.7, 1.04] };
+  function glide(key) {
+    const [yaw, zoom] = GLIDE[key] || GLIDE.live;
+    S.baseYaw = yaw; S.zoomTo = zoom;
+    if (!S.running) { step(1); draw(); }
+  }
+  return { mount, set, safeArea, onPick, targets, openCity, closeCity, glide };
 })();
