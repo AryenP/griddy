@@ -168,7 +168,8 @@ class Runtime:
                 "cap_events": [dump(e) for e in ex.active_events()],
                 "explanation": dump(self.agent.explanation), "run_id": self.tl.run_id,
                 "job_specs": {j.id: j.model_dump(mode="json") for j in ex.jobs()},
-                "quote": config.site.get("quote")}
+                "quote": config.site.get("quote"),
+                "iso_places": {iso: {"area": c.get("area"), "places": c.get("places") or {}} for iso, c in config.isos["isos"].items()}}
 
 
 class FreshFiles(StaticFiles):

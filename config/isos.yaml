@@ -8,6 +8,10 @@ isos:
     locations: [DLAP_PGAE-APND, TH_NP15_GEN-APND, TH_SP15_GEN-APND]   # PG&E's default load price, which San Francisco's load
                               # pays (the demo's city); the NorCal and SoCal trading hubs beside it
     poll_s: {lmp: 300, forecast: 1800, fuel_mix: 300}
+    area: California (CAISO)  # what the Grid view's city stands for live: the load CAISO serves, not one city
+    places:                   # a fuel gets a plant's name only where that plant IS the whole number (web/world.js)
+      Nuclear: {name: Diablo Canyon, note: "California's only nuclear plant",
+                source: "NRC, List of Power Reactor Units (reviewed 14 Sep 2026): Diablo Canyon 1 and 2 are the only units in CA"}
   ERCOT:
     timezone: US/Central
     lmp_market: REAL_TIME_15_MIN
@@ -15,6 +19,10 @@ isos:
     locations: [HB_HOUSTON, HB_NORTH]
     poll_s: {lmp: 900, forecast: 1800, fuel_mix: 300, system_conditions: 60}
     alert_rules: {frequency_low_hz: 59.9}
+    area: Texas (ERCOT)
+    places:
+      Nuclear: {name: Comanche Peak and South Texas, note: "Texas's two nuclear plants",
+                source: "NRC, List of Power Reactor Units (reviewed 14 Sep 2026): Comanche Peak 1-2 and South Texas 1-2 are the only units in TX"}
   PJM:                      # Data Miner needs a free API key: set PJM_API_KEY in .env or PJM is not offered
     timezone: US/Eastern
     lmp_market: REAL_TIME_5_MIN

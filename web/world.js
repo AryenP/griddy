@@ -270,7 +270,8 @@ const World = (() => {
     const out = [];
     for (const [re, title, kind] of FUELS) {
       const mw = Object.entries(S.v.mix).filter(([k, v]) => re.test(k) && v > 0).reduce((s, [, v]) => s + v, 0);
-      if (mw > 1) out.push({ title, kind, mw, tripped: S.data.tripped === title });
+      const place = ((S.data.places || {}).places || {})[title] || null;   // config/isos.yaml: named only where it is the whole number
+      if (mw > 1) out.push({ title, kind, mw, place, tripped: S.data.tripped === title });
     }
     return out.slice(0, 6);
   }
@@ -337,9 +338,11 @@ const World = (() => {
       top = 4;
     }
     S.ctx.globalAlpha = 1;
-    if (p.tripped) label(x, y + top + 2.4, z, `${p.title} · ${off ? "tripped" : `${Math.round(frac * 100)}% lost`} (what-if)`,
+    const name = p.place ? p.place.name : p.title;
+    if (p.tripped) label(x, y + top + 2.4, z, `${name} · ${off ? "tripped" : `${Math.round(frac * 100)}% lost`} (what-if)`,
       `−${(lostMw / 1000).toFixed(1)} GW`, off ? "its real output, lost" : `of its real ${(p.mw / 1000).toFixed(1)} GW`, y + top);
-    else label(x, y + top + 2.4, z, p.title, `${(p.mw / 1000).toFixed(1)} GW`, `${Math.round(share * 100)}% of supply`, y + top);
+    else label(x, y + top + 2.4, z, name, `${(p.mw / 1000).toFixed(1)} GW`, `${Math.round(share * 100)}% of supply · ${
+      p.place ? p.title.toLowerCase() : p.kind === "imports" ? "from other grids" : "many plants"}`, y + top);
   }
   // a pickable part's platform edge: red and pulsing when broken, white when the pointer is over it
   function edgeFor(id, broken) {
@@ -411,7 +414,7 @@ const World = (() => {
       route([...ROUTES.dc].reverse(), C.mint, 1.4, 0.9);
       route(ROUTES.city, C.mint, 1.4, 0.9);
     }
-    route(ROUTES.campus, v.tint.city, flow);
+    if (!(d.campus && d.campus.elsewhere)) route(ROUTES.campus, v.tint.city, flow);
 
     const ps = plants(), total = ps.reduce((s, p) => s + p.mw - (p.tripped ? Math.min(p.mw, d.tripped_mw || p.mw) : 0), 0);
     const spots = [[-23, -11], [-16, -11], [-23, -4], [-16, -4], [-23, 3], [-16, 3]];
@@ -426,9 +429,10 @@ const World = (() => {
         lathe(tx, 0.15, [[0.12, 0], [0.12, 0.6]], { y: 1.36, color: [235, 238, 240], n: 8, stripes: [[0.3, rgb(ring, 0.9)]] });
       }
       pylon(0, 1.7, 3.8);
-      label(0, 6.6, 0.4, d.fault === "hub" ? "Substation down (what-if)" : "Grid", v.served ? `${(v.served / 1000).toFixed(1)} GW` : "—", "served", 4.4);
+      label(0, 6.6, 0.4, d.fault === "hub" ? "Substation down (what-if)" : d.iso ? `${d.iso} grid` : "Grid", v.served ? `${(v.served / 1000).toFixed(1)} GW` : "—", "served", 4.4);
     } });
-    items.push({ x: 13, z: -9, hit: { id: "city", title: d.city || "City", box: [8, -13.5, 10, 9, 6] }, draw: () => {   // the city: lit windows = served / needed
+    const area = d.city || (d.places && d.places.area) || "City";
+    items.push({ x: 13, z: -9, hit: { id: "city", title: area, box: [8, -13.5, 10, 9, 6] }, draw: () => {   // the city: lit windows = served / needed
       platform(8, -13.5, 10, 9, 0.6, S.hover === "city" ? "rgba(255,255,255,0.95)" : v.lit < 0.97 ? `rgba(255,${(90 + 120 * v.lit) | 0},90,0.9)` : null);
       const blocks = [[8.6, -13, 1.6, 1.6, 4.6], [10.6, -13, 1.4, 1.4, 3.4], [12.6, -13, 1.8, 1.6, 5.4], [15, -13, 1.6, 1.8, 4],
         [8.8, -10.6, 1.5, 1.6, 2.8], [10.8, -10.4, 1.8, 1.6, 4.2], [13.2, -10.2, 1.4, 1.4, 2.6], [15.2, -10.4, 1.6, 1.6, 4.8],
@@ -436,7 +440,7 @@ const World = (() => {
       blocks.map((b, i) => ({ b, i, depth: P(b[0] + b[2] / 2, 0, b[1] + b[3] / 2)[2] })).sort((a, b) => a.depth - b.depth)
         .forEach(({ b: [bx, bz, bw, bd, bh], i }) => tower(bx, bz, bw, bd, bh, i + 11, v.lit));
       const litWith = d.with_mw && d.needed ? Math.min(1, ((d.served || 0) + d.with_mw) / d.needed) : null;
-      label(13, 8.2, -10.5, `${d.city || "City"}${d.fault === "city" ? " · demand surge (what-if)" : ""}`, d.needed ? `${Math.round(v.lit * 100)}% lit` : "—",
+      label(13, 8.2, -10.5, `${area}${d.fault === "city" ? " · demand surge (what-if)" : ""}`, d.needed ? `${Math.round(v.lit * 100)}% lit` : "—",
         litWith != null && litWith > v.lit + 0.0005 ? `${Math.round(litWith * 100)}% with Griddy's ${Math.round(d.with_mw)} MW`
           : d.needed ? `${(v.served / 1000).toFixed(1)} of ${(v.needed / 1000).toFixed(1)} GW needed` : "", 6.2);
     } });
@@ -460,7 +464,7 @@ const World = (() => {
         : cap.mean == null ? `cap ${cap.w.toFixed(1)} W · waiting for 10 s of samples`
           : cap.over ? `over the ${cap.w.toFixed(1)} W cap · ${Math.round(cap.since)} s`
             : `under the ${cap.w.toFixed(1)} W cap${cap.ttc != null ? ` in ${Math.round(cap.ttc)} s` : ""} · measured`;
-      label(-7.1, 6.2, 8, "This Mac", d.ours_w != null ? `${d.ours_w.toFixed(1)} W` : "—", sub, 3.2);
+      label(-7.1, 6.2, 8, d.stand_in ? `This Mac · stands in for ${d.stand_in}` : "This Mac", d.ours_w != null ? `${d.ours_w.toFixed(1)} W` : "—", sub, 3.2);
     } });
     items.push({ x: 9.5, z: 9, draw: () => {                         // the large loads: the grid's data centers
       platform(6.5, 6.5, 7.2, 5.2, 0.55);
@@ -630,7 +634,7 @@ const World = (() => {
     const named = M.sites.filter((x) => x.name), pge = named.filter((x) => /Pacific Gas/.test(x.operator || ""));
     const site = (pge.length ? pge : named)[0];                       // the utility's substation first (scripts/fetch_city_map.py)
     if (site) label(site.x, 4, site.z, `Power ${site.kind} · real`, site.name.length > 26 ? `${site.name.slice(0, 25)}…` : site.name, "OpenStreetMap", 0.8);
-    const dc = (M.dataCenters || []).find((x) => /365 Main/.test(x.address || "")) || (M.dataCenters || [])[0];
+    const dc = standIn(M.dataCenters);
     if (dc) label(dc.x, 5, dc.z, "A real data center building", dc.address || "data center", "this Mac stands in for it · OpenStreetMap", 1.6);
     if (st.relit) label(hf, 3.2, hf * 0.6, "From AI data centers", `${Math.round(d.with_mw)} MW freed`, "rerouted along real streets (mint)", 0.5);
     drawLabels();
@@ -780,5 +784,7 @@ const World = (() => {
     S.baseYaw = yaw; S.zoomTo = zoom;
     if (!S.running) { step(1); draw(); }
   }
-  return { mount, set, safeArea, onPick, targets, openCity, closeCity, glide };
+  // the real data center building this Mac stands in for, from a city map's OpenStreetMap data centers
+  function standIn(list) { return (list || []).find((x) => /365 Main/.test(x.address || "")) || (list || [])[0] || null; }
+  return { mount, set, safeArea, onPick, targets, openCity, closeCity, glide, standIn };
 })();
