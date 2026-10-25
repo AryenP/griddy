@@ -279,3 +279,12 @@ now marks the runs of record from docs/evidence/claims.yaml and the page picks t
 309bd80. Teammates still quiet (no new commits, no PRs to act on, no issues).
 Next: Aryen's call on technician dispatch, then the city map.
 Blockers / needs Aryen: none new.
+
+## 2026-10-24 17:46 PT — quiet tick; sources for the city map
+Teammates: nothing new (no commits, PRs to act on or issues). CI green on db75847.
+City map sources, checked from this Mac: OpenStreetMap's Overpass servers do not connect from this network (two
+mirrors); OSM's Nominatim search answers but returns at most 10 places per query; California OES publishes official
+substations (services3.arcgis.com/bWPjFyq029ChCGur/.../Substation/FeatureServer/0, reachable); HIFLD's hospital and
+transmission layers are gone (portal retired). Texas substations and lines: no official public layer found yet.
+Next: Aryen's call on technician dispatch, then the city map from these sources (hospitals from OSM, labelled ODbL).
+Blockers / needs Aryen: none new.
