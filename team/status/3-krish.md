@@ -56,3 +56,12 @@ krish/k12-k13): access guard covers every action route; owner identity is self-d
 approve going over the cap; ERCOT figure is on p. 9 and is a non-simultaneous monthly peak; replay citations all match
 their PDF pages except EEA 3 (p. 136) and "at least 210"; EIA-930 spot check 9/9 identical.
 Note: the loop did not run 14:32-20:17 (session idle). Next: K9 when the demo is up. Blockers / needs: none.
+
+## 2026-10-24 21:48 PT — K17 done; K9 step 1 not reachable from here; K18 needs two phones at the Mac
+Done: K17 on krish/k17-dry-run-2 (second Windows dry run: tests collect, 498 passed / 1 failed on Windows; verify
+74/74; `pip install uv` leaves uv off PATH; the README's evals line rewrites a stale docs/judging/evals.md).
+K9 step 1: `curl http://10.0.6.240:8080/api/state` from the Surface at 21:48 timed out (8 s). The Surface is not on
+the venue network right now (its only IPv4 is a Tailscale 100.x address), so this does not say whether the venue
+Wi-Fi blocks laptop-to-laptop traffic. Re-try when Krish is at the venue.
+K18 (two phones, two roles) needs two physical phones scanning `make qr` at the demo Mac: waiting for Krish.
+Blockers / needs: Krish at the venue for K9 and K18.
