@@ -27,8 +27,8 @@ report page (checked in K15).
    was built (D 17:11: "The optional second agent ... is not built"). Decide and write it: opted in with the one agent
    (and say so), or not opted in. TRACKS.md's condition (three agents, primary workflow in ASI:One) is not met.
 6. **devpost.md:80-81, "up to about 2 % of ERCOT's live demand".** From D 14:53's live check (1,289 MW of 62.2 GW =
-   2.1 %). The share depends on when you look: at ERCOT's night demand (~45 GW) the same 1.3 GW is ~2.9 %, so "up to"
-   is the wrong bound. Say "about 2 % of ERCOT's demand at 2:53 p.m. Saturday (the dashboard shows it live)".
+   2.1 %). The share depends on when you look: whenever ERCOT's demand is below 62.2 GW the same 1.3 GW is a larger
+   share, so "up to" is the wrong bound. Say "about 2 % of ERCOT's demand at 2:53 p.m. Saturday (the dashboard shows it live)".
 7. **devpost.md:44, 21.57 W has no written source.** It is derived (the 15.10 W cap is 30 % below it, D 03:10) and
    correct, but no DECISIONS line or report states it; 96 % / 92 % and 17.68 W are fine (D 02:28, E).
 8. **Differs from README.md:** the README's "Impact, from one replay" (Uri: 28.2 W -> 10.9 W measured, credited at the
