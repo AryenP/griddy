@@ -8,7 +8,7 @@
 const POLICIES = [
   { id: "baseline", label: "Ignore the call", color: "var(--muted)" },
   { id: "pause_all", label: "Pause everything", color: "var(--job-train)" },
-  { id: "dispatcher", label: "Brownout", color: "var(--ok)" },
+  { id: "dispatcher", label: "Griddy", color: "var(--ok)" },
 ];
 const P = { runs: [], series: {}, loadedT: null };
 
@@ -26,11 +26,15 @@ async function loadRuns() {
   for (const pol of POLICIES) {
     const sel = $(`pick-${pol.id}`), keep = sel.value;
     const mine = P.runs.filter((x) => x.policy === pol.id);
-    setHTML(sel, mine.length ? html`${mine.map((x) => html`<option value="${x.run_id}">${recorded(x)}</option>`)}`
+    setHTML(sel, mine.length ? html`${mine.map((x) => html`<option value="${x.run_id}">${recorded(x)}${x.of_record ? " · of record" : ""}</option>`)}`
       : html`<option value="">no ${pol.label.toLowerCase()} run recorded yet</option>`);
+    const record = mine.find((x) => x.of_record);
     if (mine.some((x) => x.run_id === keep)) sel.value = keep;
+    else if (record) sel.value = record.run_id;                   // the evidence of record, not whatever ran last
   }
-  $("runs-src").textContent = `${plural(P.runs.length, "recorded run")} on the demo Mac; newest of each policy picked by default`;
+  const anyRecord = P.runs.some((x) => x.of_record);
+  $("runs-src").textContent = `${plural(P.runs.length, "recorded run")} on the demo Mac; ${anyRecord
+    ? "the evidence runs of record (docs/evidence/claims.yaml) picked by default" : "newest of each policy picked by default"}`;
   return true;
 }
 
@@ -88,23 +92,23 @@ function renderCompare(box, c, otherLabel) {
     const dl = key ? delta[key] : null;
     return html`<tr><th>${label}</th><td>${cell(get(d), f)}</td><td>${cell(get(b), f)}</td>
       <td>${key == null ? html`<span class="src">each against its own baseline</span>` : dl == null ? html`<span class="src">n/a</span>`
-        : key === "deadlines_met" ? (dl > 0 ? "Brownout met it, the other did not" : dl < 0 ? "the other met it, Brownout did not" : "same") : signed(dl, f)}</td></tr>`;
+        : key === "deadlines_met" ? (dl > 0 ? "Griddy met it, the other did not" : dl < 0 ? "the other met it, Griddy did not" : "same") : signed(dl, f)}</td></tr>`;
   });
   if (delta.under_cap_pct != null) {
     rows.push(html`<tr><th>Measured seconds at or under the cap</th><td colspan="2" class="src">per run in the notes below</td>
       <td>${signed(delta.under_cap_pct, (v) => `${fixed(v, 0)} points`)}</td></tr>`);
   }
   setHTML(box, html`<table class="rtable compare">
-      <thead><tr><th></th><th>Brownout<div class="src">${d.run_id}</div></th><th>${otherLabel}<div class="src">${b.run_id}</div></th><th>Brownout minus ${otherLabel.toLowerCase()}</th></tr></thead>
+      <thead><tr><th></th><th>Griddy<div class="src">${d.run_id}</div></th><th>${otherLabel}<div class="src">${b.run_id}</div></th><th>Griddy minus ${otherLabel.toLowerCase()}</th></tr></thead>
       <tbody>${rows}</tbody></table>
     <p class="src">recorded, not live · ${dur(c.window_s)} from each run's cap start · computed by the reporter from the timelines</p>
     ${(c.notes || []).length ? html`<ul class="explanations src">${c.notes.map((n) => html`<li>${n}</li>`)}</ul>` : ""}
-    ${[...new Set(d.shortfalls || [])].length ? html`<ul class="explanations">${[...new Set(d.shortfalls)].map((s) => html`<li class="warn-line">Brownout: ${s}</li>`)}</ul>` : ""}`);
+    ${[...new Set(d.shortfalls || [])].length ? html`<ul class="explanations">${[...new Set(d.shortfalls)].map((s) => html`<li class="warn-line">Griddy: ${s}</li>`)}</ul>` : ""}`);
 }
 
 async function loadCompare(pol, otherLabel) {
   const d = $("pick-dispatcher").value, b = $(`pick-${pol}`).value, box = $(`vs-${pol}`);
-  if (!d || !b) { setHTML(box, html`<p class="empty">${!d ? "no Brownout run recorded yet" : `no ${otherLabel.toLowerCase()} run recorded yet`}</p>`); return; }
+  if (!d || !b) { setHTML(box, html`<p class="empty">${!d ? "no Griddy run recorded yet" : `no ${otherLabel.toLowerCase()} run recorded yet`}</p>`); return; }
   const r = await getJSON(`/api/compare?dispatched=${encodeURIComponent(d)}&baseline=${encodeURIComponent(b)}`);
   if (!r.ok) { setHTML(box, html`<p class="empty">${routeError("/api/compare", r)}</p>`); return; }
   renderCompare(box, r.data, otherLabel);

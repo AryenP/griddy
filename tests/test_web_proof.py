@@ -26,3 +26,13 @@ def test_says_recorded_not_live():
 def test_draws_the_three_policies_from_the_contract():
     for policy in ("baseline", "pause_all", "dispatcher"):
         assert f'id: "{policy}"' in JS and f'id="pick-{policy}"' in HTML
+
+
+def test_the_evidence_runs_of_record_are_picked_by_default():
+    """Sat 17:45: the newest run on the demo Mac is often a test session; Proof defaults to the comparisons of record
+    in docs/evidence/claims.yaml (GET /api/runs marks them `of_record`) and says so."""
+    import yaml
+    claims = yaml.safe_load(open("docs/evidence/claims.yaml"))["comparisons"]
+    record = [c for c in claims if "of record" in c["name"]]
+    assert len({c["dispatched"] for c in record}) == 1 and {c["baseline"].split("-")[-1] for c in record} == {"baseline", "pause_all"}
+    assert "x.of_record" in JS and "evidence runs of record" in JS
