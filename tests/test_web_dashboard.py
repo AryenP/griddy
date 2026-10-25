@@ -132,3 +132,13 @@ def test_the_city_map_says_what_is_real_and_what_is_drawn():
     assert "/api/cities" in DEMO_JS and "openCity" in DEMO_JS and 'id="w-back"' in WORLD_HTML
     assert "illustrative layout" in DEMO_JS and "license" in DEMO_JS
     assert "function drawCity" in WORLD_JS and "d.served" in WORLD_JS.split("function drawCity")[1][:600]
+
+
+def test_the_logo_loader_shows_while_the_page_loads_and_always_goes_away():
+    """Sat 19:40 (Aryen): a G drawn as a power line, a red node healed by a mint pulse, the wordmark in Inter. It is
+    inline SVG and CSS (nothing to download), fades after the first snapshot, and CSS fades it at 6 s if JS never runs."""
+    assert WORLD_HTML.index('id="w-load"') < WORLD_HTML.index('<header class="w-top">')     # first thing painted
+    assert 'role="status"' in WORLD_HTML and "<svg" in WORLD_HTML and 'class="g-fault"' in WORLD_HTML
+    css = (WEB / "world.css").read_text()
+    assert "w-load-out 0.4s ease 6s forwards" in css and ".w-load * { animation: none !important; }" in css
+    assert "hideLoader();" in DEMO_JS and "setTimeout(hideLoader, 4000)" in DEMO_JS
