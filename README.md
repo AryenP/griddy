@@ -8,6 +8,8 @@ Griddy is a grid-aware compute dispatcher. It watches the live grid (real ISO pr
 curve, load forecast, fuel mix, alerts), schedules every AI job over the next 24 hours with a CP-SAT
 solver, executes the current slot on real hardware, asks job owners before breaking their deadlines,
 and proves the result with measured power. Built at Cal Hacks 13.0 for the Microsoft Challenge.
+Microsoft judges: [docs/microsoft.md](docs/microsoft.md) maps each criterion and Microsoft's six Responsible AI
+principles to what runs and the file that proves it.
 
 Nothing on screen is invented. Every price, watt and dollar about the real sites is live or measured, with its source
 and age; the grid emergencies a judge can replay through the live software are the grid operators' own recorded data
