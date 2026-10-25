@@ -1,6 +1,6 @@
 # The idea on trial: Brownout
 
-Context: solo hacker, 36-hour hackathon (Cal Hacks 13.0, Oct 23–25 2026), targeting the Microsoft Challenge Grand Prize. Microsoft's criteria: (1) customer understanding, (2) measurable usefulness, (3) path from prototype to production, (4) responsible design, (5) end-to-end functionality. Judges are Microsoft forward-deployed engineers (Delta / Frontier Co.) who deploy agents into real enterprises. Judging is a live 3–4 minute table demo, Sunday morning; typically one judge per sponsor.
+Context: solo hacker, 36-hour hackathon (Cal Hacks 13.0, Oct 23 to 25 2026), targeting the Microsoft Challenge Grand Prize. Microsoft's criteria: (1) customer understanding, (2) measurable usefulness, (3) path from prototype to production, (4) responsible design, (5) end-to-end functionality. Judges are Microsoft forward-deployed engineers (Delta / Frontier Co.) who deploy agents into real enterprises. Judging is a live 3 to 4 minute table demo, Sunday morning; typically one judge per sponsor.
 
 ## One-sentence problem
 AI data centers are maxing out the grid, and when a utility asks them to cut power they either refuse or shut everything off.
@@ -9,7 +9,7 @@ AI data centers are maxing out the grid, and when a utility asks them to cut pow
 Brownout is an agent that takes a utility's power-reduction request (OpenADR 3.1 event or plain-English email/voice), plans which workloads to slow, pause or defer based on priorities, deadlines and interruption permissions, asks the affected job owners for approval, drives a deterministic controller that actuates GPU clock limits / chat concurrency / checkpoint-and-pause, and proves the reduction with an independent wall meter next to the GPU's self-reported power. When the target is infeasible it reports the shortfall and the trade-offs instead of silently failing. After the event it writes the compliance report. The LLM never touches a power knob.
 
 ## Prototype
-One NVIDIA GB10 box (ASUS Ascent GX10, ~90–120 W under load) or a laptop GPU, a Shelly/Kasa smart plug as the independent meter, three workloads: vLLM chat endpoint (interactive, protected SLA), a PyTorch training loop with checkpointing (deferrable), a batch embedding job (droppable). Knobs: nvidia-smi clock lock (power limit is likely unsupported on GB10), chat concurrency via a proxy semaphore, cooperative pause/checkpoint. Comparison against uniform throttling on: watts under cap, p95 chat latency, work completed, checkpoint recovery.
+One NVIDIA GB10 box (ASUS Ascent GX10, ~90 to 120 W under load) or a laptop GPU, a Shelly/Kasa smart plug as the independent meter, three workloads: vLLM chat endpoint (interactive, protected SLA), a PyTorch training loop with checkpointing (deferrable), a batch embedding job (droppable). Knobs: nvidia-smi clock lock (power limit is likely unsupported on GB10), chat concurrency via a proxy semaphore, cooperative pause/checkpoint. Comparison against uniform throttling on: watts under cap, p95 chat latency, work completed, checkpoint recovery.
 
 ## Judge demo (single judge plays every role)
 1. Judge chats with the model from their phone; meter on the table reads ~100 W.
@@ -21,7 +21,7 @@ One NVIDIA GB10 box (ASUS Ascent GX10, ~90–120 W under load) or a laptop GPU, 
 
 ## Evidence the builder will cite
 - Texas PUCT Docket 59220 (Jul 2026): co-located data centers must fully curtail on ERCOT instruction within 30 minutes, uncompensated. PJM (Jan 2026): new ≥50 MW loads without own generation are curtailed first in emergencies. FERC show-cause orders (Jun 2026) on flexible large loads.
-- Emerald AI (Nvidia-backed, $24.5M seed) cut a GPU cluster 25% for 3 h in Phoenix (2025). Google signed ML-workload demand-response deals (Aug 2025). Google/Nvidia/Emerald "AI Energy Management Alliance" (Sep 2026). OpenAI agreed to shed up to 1 GW in Georgia. EPRI: 10–30% peak reduction potential.
+- Emerald AI (Nvidia-backed, $24.5M seed) cut a GPU cluster 25% for 3 h in Phoenix (2025). Google signed ML-workload demand-response deals (Aug 2025). Google/Nvidia/Emerald "AI Energy Management Alliance" (Sep 2026). OpenAI agreed to shed up to 1 GW in Georgia. EPRI: 10 to 30% peak reduction potential.
 - Microsoft's Jul 2026 "least privilege for AI agents" guidance: dedicated agent identity, tool allowlists, step-up human approval, audit logs. Foundry Agent Control Specification: deterministic controls at tool checkpoints.
 
 ## Known weaknesses the builder already admits

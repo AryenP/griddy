@@ -1,7 +1,7 @@
-# Brownout — architecture and interfaces (dispatcher, Mac edition)
+# Brownout: architecture and interfaces (dispatcher, Mac edition)
 
 ## 1. One paragraph
-A **grid watcher** pulls live ISO data (prices now and day-ahead, load forecast, fuel mix, system conditions, emergency events) and turns it into a per-interval cost and carbon signal plus a power budget. A **dispatcher** (CP-SAT) schedules every job over the next 24 hours against that signal and the jobs' deadlines, priorities and interruption rules, and re-solves whenever the signal, the policy or the job set changes. The **controller** executes the current interval on this Mac: which jobs run, at what concurrency, on GPU or CPU, paused or resumed. The **agent** (LLM) handles what the solver cannot: messy requests from a human operator or a utility, negotiating with job owners when a deadline must slip, writing the explanation and the compliance report. **powermetrics** measures what actually happened. Everything lands in the **timeline**; the **dashboard** shows it live.
+A grid watcher pulls live ISO data (prices now and day-ahead, load forecast, fuel mix, system conditions, emergency events) and turns it into a per-interval cost and carbon signal plus a power budget. A dispatcher (CP-SAT) schedules every job over the next 24 hours against that signal and the jobs' deadlines, priorities and interruption rules, and re-solves whenever the signal, the policy or the job set changes. The controller executes the current interval on this Mac: which jobs run, at what concurrency, on GPU or CPU, paused or resumed. The agent (LLM) handles what the solver cannot: messy requests from a human operator or a utility, negotiating with job owners when a deadline must slip, writing the explanation and the compliance report. powermetrics measures what actually happened. Everything lands in the timeline; the dashboard shows it live.
 
 ```
  ISO feeds (gridstatus) ──▶ grid.watcher ──▶ GridSignal (price $/MWh, CO2 g/kWh, forecast, alerts, age)
@@ -40,7 +40,7 @@ brownout/
   runs/
 ```
 
-## 3. Core types (pydantic; `core/types.py` is already written — extend, don't rewrite)
+## 3. Core types (pydantic; `core/types.py` is already written: extend, don't rewrite)
 - `GridSignal`: iso, location, t, price_now ($/MWh), price_curve (list of (slot_start, $/MWh) for next 24 h: day-ahead hourly where available, else last RT), load_forecast (MW per hour), carbon_now (gCO2/kWh from fuel mix), carbon_curve, alerts (list[str]), feed_age_s, source_urls.
 - `Job`: id, kind (`interactive|deferrable|droppable`), owner, priority, energy_kwh_est (from measured W × expected runtime), min_concurrency/max_concurrency, deadline (datetime|None), interruptible, checkpoint_interval_s, device (`gpu|cpu|either`), state, progress.
 - `Policy`: objective (`cost|carbon|balanced`), weights, power_cap_w (optional), sla (chat p95 s), never_pause (list[job id]), approvals (who approves what).
@@ -51,10 +51,10 @@ brownout/
 
 ## 4. Grid watcher (`grid/`)
 - Poll cadence: RT prices every 5 min (CAISO/PJM) or 15 (ERCOT), load forecast and day-ahead hourly every 30 min, fuel mix every 5 min, ERCOT real-time conditions every 1 min when ERCOT is selected.
-- Calls (verified Fri 8:50 PM from the venue): `gridstatus.CAISO().get_lmp(date="today", market="REAL_TIME_5_MIN", locations=[...])` → columns incl. `LMP`, `Interval Start`; `get_load_forecast("today")` → 24 rows `Load Forecast`; `get_fuel_mix("today")` → MW by source; `gridstatus.Ercot().get_real_time_system_conditions()` → frequency, demand, capacity, wind, PV. PJM `get_lmp(date, market)` with `locations="hubs"`.
+- Calls (verified Fri 8:50 PM from the venue): `gridstatus.CAISO().get_lmp(date="today", market="REAL_TIME_5_MIN", locations=[...])`: columns incl. `LMP`, `Interval Start`; `get_load_forecast("today")`: 24 rows `Load Forecast`; `get_fuel_mix("today")`: MW by source; `gridstatus.Ercot().get_real_time_system_conditions()`: frequency, demand, capacity, wind, PV. PJM `get_lmp(date, market)` with `locations="hubs"`.
 - Carbon: gCO2/kWh from the fuel mix using published emission factors in `config/isos.yaml` (cite the source in the file). Day-ahead carbon curve: use the day-ahead price curve shape as a proxy only if labelled "proxy"; otherwise show carbon for now only.
-- Emergency inputs: ERCOT conditions (frequency < 59.9 Hz or reserves low → alert), plus explicit `CapEvent`s from the judge/utility.
-- Every `GridSignal` carries `feed_age_s`; the dashboard shows it; > 2× cadence → "stale", plan marked "on last known data".
+- Emergency inputs: ERCOT conditions (frequency < 59.9 Hz or reserves low: alert), plus explicit `CapEvent`s from the judge/utility.
+- Every `GridSignal` carries `feed_age_s`; the dashboard shows it; > 2× cadence: "stale", plan marked "on last known data".
 
 ## 5. Dispatcher (`dispatcher/`)
 CP-SAT model over 96 × 15-min slots:
@@ -80,8 +80,8 @@ CP-SAT model over 96 × 15-min slots:
 
 ## 9. Agent (`agent/`)
 - `llm.py`: one interface; Agent Framework + Foundry when `AZURE_AI_PROJECT_ENDPOINT` is set, else Claude. OpenTelemetry span per call.
-- `intake.py`: `POST /openadr/event` (OpenADR 3.1 event JSON) and `POST /request` (free text or voice transcript). Content Safety `shieldPrompt` on free text when configured. The LLM extracts a `CapEvent` or a `Policy` change, with ambiguity → one clarifying question to the operator.
-- `negotiator.py`: when the solver's minimal relaxation needs a deadline to slip, message the owner (free text), parse the reply ("no, Monday 9 AM is a hard customer demo" → refusal with reason; "ok if it's done by Tuesday noon" → new deadline), feed the answer back as a constraint, re-solve.
+- `intake.py`: `POST /openadr/event` (OpenADR 3.1 event JSON) and `POST /request` (free text or voice transcript). Content Safety `shieldPrompt` on free text when configured. The LLM extracts a `CapEvent` or a `Policy` change, with ambiguity: one clarifying question to the operator.
+- `negotiator.py`: when the solver's minimal relaxation needs a deadline to slip, message the owner (free text), parse the reply ("no, Monday 9 AM is a hard customer demo": refusal with reason; "ok if it's done by Tuesday noon": new deadline), feed the answer back as a constraint, re-solve.
 - `explainer.py`: turns `Schedule.explanations` + the grid signal into two sentences an operator would read. It rewords solver facts; it does not decide.
 - `reporter.py`: event-window report: baseline power vs event power, % reduction, time-to-compliance (s), cost and carbon vs baseline run, deadlines met, approvals with names and times, p95 before/during.
 
@@ -89,12 +89,12 @@ CP-SAT model over 96 × 15-min slots:
 Header: the customer quote and the claim ("When the grid runs short, the plan for AI data centers is diesel generators. This is the alternative."). Row 1: measured watts (big), $/h at the live price, gCO2/h at the live mix, chat p95. Row 2: the 24-hour price and carbon curves with the schedule painted on top (which job runs when), the current slot highlighted, feed age. Row 3: job cards (state, device, concurrency, progress, deadline, owner). Row 4: event log (grid alerts, events, plans, approvals, shortfalls) and the solver's explanation. A "DISPATCHER OFF" toggle runs the baseline policy live for the comparison.
 
 ## 11. Config (`config/`)
-- `isos.yaml`: ISO → locations (e.g. CAISO TH_SP15_GEN-APND), markets, emission factors with source.
+- `isos.yaml`: ISO: locations (e.g. CAISO TH_SP15_GEN-APND), markets, emission factors with source.
 - `jobs.yaml`: the three jobs with owners, priorities, deadlines, interruption rules, device options.
-- `policy.yaml`: objective weights, SLA, never_pause, approvals. **Replace owners/never_pause with what the FDEs say Saturday.**
+- `policy.yaml`: objective weights, SLA, never_pause, approvals. Replace owners/never_pause with what the FDEs say Saturday.
 
 ## 12. Tests (`tests/`)
-- dispatcher: deadline respected; cheap slots preferred when prices differ; cap respected; infeasible → minimal relaxation names the right job; never_pause honoured.
+- dispatcher: deadline respected; cheap slots preferred when prices differ; cap respected; infeasible: minimal relaxation names the right job; never_pause honoured.
 - grid: parsing of a saved gridstatus DataFrame fixture into `GridSignal` (fixture = a real pull saved to disk, labelled).
 - controller: knob calls are idempotent; pause/resume round-trip on `train.py` with a tiny model.
 - timeline: replay reproduces report numbers.

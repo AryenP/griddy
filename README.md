@@ -15,21 +15,23 @@ and age; the grid emergencies a judge can replay through the live software are t
 labelled "what-if" and sized from the grid's real numbers at that moment; estimates at grid scale are labelled
 "estimate". Every published measured number recomputes from the raw timelines: `make verify`.
 
-**Impact, from one replay (an estimate, labelled so on screen).** Winter Storm Uri left more than 4.5 million people
+### Impact, from one replay
+
+This is an estimate, and the screen labels it as one. Winter Storm Uri left more than 4.5 million people
 without power and at least 210 dead, with 20,000 MW of load shed (FERC-NERC report, PDF pp. 10, 15). Replayed through
 the live software on Sat 24 Oct, this Mac cut from 28.2 W to 10.9 W, measured, when ERCOT's EEA 3 arrived. Credited only
 as far as the grid asked (40 %) and applied to ERCOT's large loads (up to 4.1 GW, the sum of each one's own monthly
 peak), that frees up to 1,653 MW: about 8 % of what Uri shed, about 372,000 people kept on at the event's own ratio
 of people per MW shed (DECISIONS 18:38).
 
-### Diesel and "pause everything" are the naive answers. Griddy is the intelligent one.
+### How Griddy compares with diesel and pausing everything
 
 When a utility asks a data center to cut load, the options today are blunt: start backup generators,
 ignore the request, or switch off everything that can be switched off. Griddy decides per job and per
 15-minute slot instead, keeps the service people are using fast, asks before it breaks anyone's deadline,
 and proves what it did with measured watts.
 
-| | Backup diesel | Ignore the call | Pause everything | **Griddy** |
+| | Backup diesel | Ignore the call | Pause everything | Griddy |
 |---|:---:|:---:|:---:|:---:|
 | Grid draw under the utility's cap | ✅ | ❌ | ✅ | ✅ in seconds |
 | No on-site combustion | ❌ | ✅ | ✅ | ✅ |
@@ -40,7 +42,7 @@ and proves what it did with measured watts.
 | Says honestly when the cap can't be met | n/a | n/a | ❌ | ✅ the solver's own shortfall |
 | Compliance proven with measured power | n/a | ❌ | ❌ | ✅ every second, timestamped |
 
-## The proof: early, but pointed
+## The proof so far
 Same jobs, same live grid, same request (a cap 30 % below the measured baseline, starting 2 min in, for
 5 min; training due 2 h out), once with the dispatcher off and once with it on. Measured by macOS
 powermetrics on one M2 Pro; computed from the runs' timelines only.
@@ -48,9 +50,9 @@ powermetrics on one M2 Pro; computed from the runs' timelines only.
 | Run (code) | Mode | Mean power in the cap window | Seconds at or under the cap | Time to compliance | Deadline |
 |---|---|:---:|:---:|:---:|:---:|
 | [02:28](docs/evidence/compare-20261024-022026-vs-20261024-021247-baseline.md) (e90eef1) | dispatcher off | 18.32 W | 0 % | never | planned ✅ |
-| | **dispatched** | **0.68 W** | **99 %** | **5 s** | planned ✅ |
+| | dispatched | 0.68 W | 99 % | 5 s | planned ✅ |
 | [03:10](docs/evidence/compare-20261024-025349-vs-20261024-024609-baseline.md) (13f6b3b) | dispatcher off | 21.18 W | 0 % | never | planned ✅ |
-| | **dispatched** | **1.64 W** | **99 %** | **7 s** | planned ✅ |
+| | dispatched | 1.64 W | 99 % | 7 s | planned ✅ |
 
 Against the honest naive policy too, one run each, same call (09:15 run of record, DECISIONS 09:46; 315-327 s
 from each cap start, cap 15.10 W):
@@ -59,28 +61,27 @@ from each cap start, cap 15.10 W):
 |---|:---:|:---:|:---:|:---:|
 | [Ignore the call](docs/evidence/compare-20261024-093434-vs-20261024-091909-baseline.md) | 20.85 W | 0 % | never | 5899 |
 | [Pause everything](docs/evidence/compare-20261024-093434-vs-20261024-092650-pause_all.md) | 0.80 W | 99 % | 4 s | 19 |
-| **Griddy** | **14.34 W** | **93 %** | **12 s** | **1575** (315 s; 1625 over ignore's 327 s) |
+| Griddy | 14.34 W | 93 % | 12 s | 1575 (315 s; 1625 over ignore's 327 s) |
 
 Griddy keeps the training job moving on the CPU under the cap, about 83 times the work of pausing
 everything, and asks the owner about the ~19-minute slip instead of breaking the cap.
 
-> Read this as a signal, not a guarantee: two short runs on a laptop, not a fleet, and the comparison here is
-> against ignoring the call and, in the second table, against pausing everything. Laptop watts make the dollar figures
-> fractions of a cent; the claim is compliance in seconds with the work still delivered. The live
-> request → owner refusal → operator approval run is in
+> These are two short runs on one laptop, compared with ignoring the call and, in the second table, with pausing
+> everything. Laptop watts make the dollar figures fractions of a cent; what the runs show is compliance in seconds
+> while the work still gets done. The live run of a request, the owner's refusal and the operator's approval is in
 > [docs/evidence/demo-flow-live-20261024.md](docs/evidence/demo-flow-live-20261024.md), and the responsible-design
 > evals (135/138 live on Sat 20:33, all 19 injection attempts rejected, the judge's fault reader 14/14) in [docs/evidence/evals-live-20261024-2033.md](docs/evidence/evals-live-20261024-2033.md); the first live run (02:33) passed 86/90.
 
 ## Who controls what
-- **The utility** asks, in plain words or as an OpenADR 3.1 event. The request is parsed, read back with real
+- The utility asks, in plain words or as an OpenADR 3.1 event. The request is parsed, read back with real
   numbers, and becomes a cap. It never becomes an instruction to the system.
-- **The solver** (CP-SAT) decides every job's slots, device and concurrency from live prices, fuel mix, caps,
+- The solver (CP-SAT) decides every job's slots, device and concurrency from live prices, fuel mix, caps,
   deadlines and measured watts. It is deterministic and reproducible from its inputs.
-- **Job owners** approve or refuse a deadline slip in their own words; a refusal makes the deadline hard.
-- **The operator** decides when the cap and a refused deadline conflict. Until they approve going over the
+- Job owners approve or refuse a deadline slip in their own words; a refusal makes the deadline hard.
+- The operator decides when the cap and a refused deadline conflict. Until they approve going over the
   cap, the running plan holds it.
-- **The controller** is the only code path to a knob. The LLM explains and negotiates; it cannot touch one.
-- **The kill switch** is DISPATCHER OFF on the dashboard: every job runs as if Griddy weren't there.
+- The controller is the only code path to a knob. The LLM explains and negotiates; it cannot touch one.
+- The kill switch is DISPATCHER OFF on the dashboard: every job runs as if Griddy weren't there.
 
 ## Check it without a Mac (Windows, Linux or macOS; no network, no keys)
 
@@ -117,17 +118,20 @@ extra or the connection string, spans stay in the in-memory buffer behind `/api/
 ## How it fits together
 Grid watcher → CP-SAT dispatcher → controller on the Mac → powermetrics → timeline → dashboard,
 report and comparison. The LLM handles messy intake, owner negotiation and explanations; it never
-touches a knob. To show the loop at grid scale with nothing invented, a judge replays a real grid emergency (Winter
-Storm Uri, Texas 2021; California's rotating outages, 2020; California's record heat wave, 2022): the operator's own
-hourly demand, forecast and fuel mix are fetched live from the U.S. EIA's API when the judge presses play and reach the
-software one hour at a time, only once each hour has ended (tests/test_replay.py deletes every later hour and checks
-nothing changes; Griddy is not trained on any event); each alert reaches the real dispatcher at the moment it was
-issued, and this Mac's measured response is set against what the event cost (replay/engine.py, replay/eia.py,
-config/events.yaml). A judge can also break any part of the grid, by clicking it or by describing the failure in their
-own words: the fault is a labelled what-if, its size is the grid's real output at that moment, and the response is
-the same live dispatcher (replay/whatif.py, agent/faults.py). Clicking the city opens its map: the real hospitals
-(OpenStreetMap), homes dark by the grid's real unserved share, and the blocks Griddy's freed power relights; the
-feeders are an illustrative layout and the page says so.
+touches a knob.
+
+At grid scale, a judge replays a real emergency: Winter Storm Uri (Texas, 2021), California's rotating outages (2020)
+or California's record heat wave (2022). When they press play, the software fetches the operator's hourly demand,
+forecast and fuel mix from the U.S. EIA's API and gets each hour only once it has ended. tests/test_replay.py deletes
+every later hour and checks that nothing changes; Griddy is not trained on any event. Each alert reaches the real
+dispatcher at the moment it was issued, and the page sets this Mac's measured response against what the event cost
+(replay/engine.py, replay/eia.py, config/events.yaml).
+
+A judge can also break any part of the grid by clicking it or by describing the failure in their own words. The fault
+is labelled what-if; its size is the grid's real output at that moment, and the same live dispatcher responds
+(replay/whatif.py, agent/faults.py). Clicking the city opens its map, with the real hospitals (OpenStreetMap), homes
+dark by the grid's real unserved share, and the blocks Griddy's freed power relights. The feeders are an illustrative
+layout, and the page says so.
 
 ![How Griddy fits together](docs/judging/architecture.svg)
 

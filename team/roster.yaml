@@ -91,6 +91,9 @@ members:
   - SPEC.md
   - DEMO.md
   - KICKOFF.md
+  - RESEARCH.md
+  - TRACKS.md
+  - .court/**
   - agent/reporter.py
   - scripts/compare.py
   - telemetry/**

@@ -1,4 +1,4 @@
-# Griddy — the judge demo (one judge, ~4 minutes, one Mac, no slides)
+# Griddy: the judge demo (one judge, ~4 minutes, one Mac, no slides)
 
 ## On the table
 - The Mac with the dashboard full-screen, lid open, on its charger. A phone (or the judge's) on the operator
@@ -12,21 +12,21 @@
   something to shed when the cut comes.
 
 ## Script
-**0:00 Open.** Point at the header: *"When the grid runs short, the plan for AI data centers is diesel generators.
+0:00 Open. Point at the header: *"When the grid runs short, the plan for AI data centers is diesel generators.
 This is the alternative."* Under it, the quote from the Microsoft FDE or operator collected Saturday.
 
-**0:15 The grid and the plan.** Let them pick the objective (cost, carbon, balanced: keys 1, 2, 3) and, if they
+0:15 The grid and the plan. Let them pick the objective (cost, carbon, balanced: keys 1, 2, 3) and, if they
 like, the grid (CAISO or ERCOT). The 24-hour dispatch map repaints against the live price curve: training in the
 cheap slots, batch where it is cheapest, chat always on. Click any slot (or use the arrow keys): the inspector
 says what runs there and the solver's reason, with the slot's price and cap.
 
-**0:45 They use the service.** Chat from their phone; the reply streams; time to first token on screen against the
+0:45 They use the service. Chat from their phone; the reply streams; time to first token on screen against the
 1 s SLA. The load trace shows the Mac's measured watts live, with $/h and gCO2/h at the live price and mix.
 
-**1:10 They are the utility.** On the operator page: "grid alert, I need 30% off for the next twenty minutes."
+1:10 They are the utility. On the operator page: "grid alert, I need 30% off for the next twenty minutes."
 The agent reads it back: target watts, what will move, what needs approval. Nothing moves before the read-back.
 
-**1:30 They are the owner.** Their phone shows the training owner's request. Ask them to refuse in words: "no,
+1:30 They are the owner. Their phone shows the training owner's request. Ask them to refuse in words: "no,
 this has to finish by 9 AM Monday." The plan holds the utility's cap and asks the operator; they decide. On the
 dashboard: the red cap line appears, measured watts drop under it, "Within the cap", the seconds it took, and
 "N% below the 60 s before the cap" (the number that reads the same at 50 MW). Let their last chat reply finish
@@ -34,8 +34,8 @@ before the 1:10 request: a streaming reply draws most of the GPU, so while chat 
 a 30 % cut, and by design chat keeps full speed and the operator is asked instead (DECISIONS 10:00, 14:16). If they
 chat during the cut, show that: "chat is serving 1 request at full speed (slowing chat is the operator's call)".
 
-**2:20 A real emergency, replayed live (the judge picks).** Three cards: Winter Storm Uri (Texas, 2021),
-California's rotating outages (2020), California's record heat wave (2022). They press **Replay it live**; the
+2:20 A real emergency, replayed live (the judge picks). Three cards: Winter Storm Uri (Texas, 2021),
+California's rotating outages (2020), California's record heat wave (2022). They press Replay it live; the
 hours are fetched live from the EIA's API right then (the footer says so) and reach the software one hour at a time,
 never a later one. In two minutes the operator's own hourly data plays: for Uri, the forecast pulls away from the demand Texas could serve
 and the gap fills red. The warnings issued days before fire first, and Griddy's own flag (the day-ahead forecast
@@ -45,32 +45,32 @@ dispatcher and the Mac cuts deeper, measured. Read the panel: "More than 4.5 mil
 large loads ERCOT reports today (up to 4.1 GW, the sum of each one's own monthly peak): the megawatts and the people
 that is, from the event's own numbers.
 
-**(If asked "what if X fails?") Break it.** Click any plant, the substation or the city, or press **Break a part** and
+(If asked "what if X fails?") Break it. Click any plant, the substation or the city, or press Break a part and
 type it ("an ice storm freezes half the gas plants"). Read the reading aloud ("the gas fleet loses 50 %: -X GW of its
 real Y GW now"), confirm, and point at Without Griddy / With Griddy and the "Griddy acts" card. Click the city to open
 its map: real hospitals stay lit, dark blocks rotate, mint blocks are the ones Griddy's freed power relights.
 
-**3:10 Receipts.** Open the proof page: the same utility call measured under three policies (DECISIONS 09:46):
+3:10 Receipts. Open the proof page: the same utility call measured under three policies (DECISIONS 09:46):
 ignore the call 20.85 W and 0 % of seconds under the cap; pause everything 0.80 W, 99 %, 19 training steps;
 Griddy 14.34 W, 93 %, compliant in 12 s, 1575 steps (over the same 315 s), about 83 times the work of pausing everything. Then one
 decision's trace (Application Insights, or `/api/trace` while Azure lags).
 
-**3:45 Close.** "This is tens of watts on a laptop. The feeds, the solver, the approvals and the audit trail are
+3:45 Close. "This is tens of watts on a laptop. The feeds, the solver, the approvals and the audit trail are
 the same at 50 megawatts, and the request came in the format utilities already send. Built on Microsoft Agent
 Framework; in production the agent gets an Entra Agent ID and approvals land in Teams."
 
-Optional if time remains: **Impossible ask.** "Ask for 90%." The solver shows the floor with chat protected and
+Optional if time remains: Impossible ask. "Ask for 90%." The solver shows the floor with chat protected and
 asks the operator to approve going over the cap; the ask says what a no would do to chat (it may then be degraded,
 never without that answer). The shortfall is logged.
 
 ## Failure drills (rehearse Saturday evening)
-- Grid feed down → stale badge, plan on last known data, say it.
-- Ollama dies → chat page error; say it; the rest continues.
-- LLM API down → solver and controller continue; "agent offline" badge; nothing pretends to be the agent.
-- Solver infeasible → it shows the minimal relaxation, never a blank.
-- Judge types something odd → the agent asks one clarifying question; let it.
-- The replay says "nothing to shed" → nothing of ours was running; give training a deadline and replay.
-- Lid closed → the Mac sleeps whatever keep-awake does (DECISIONS 08:00); keep it open.
+- Grid feed down: stale badge, plan on last known data, say it.
+- Ollama dies: chat page error; say it; the rest continues.
+- LLM API down: solver and controller continue; "agent offline" badge; nothing pretends to be the agent.
+- Solver infeasible: it shows the minimal relaxation, never a blank.
+- Judge types something odd: the agent asks one clarifying question; let it.
+- The replay says "nothing to shed": nothing of ours was running; give training a deadline and replay.
+- Lid closed: the Mac sleeps whatever keep-awake does (DECISIONS 08:00); keep it open.
 
 ## Prize opt-ins on Devpost
 Microsoft Challenge · Most Technically Advanced · Best Planet-First · Hyphenate (video) · Fetch only if the

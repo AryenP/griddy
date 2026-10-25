@@ -1,20 +1,20 @@
-# Brownout — project rules for Claude Code
+# Brownout: project rules for Claude Code
 
-Brownout is a **grid-aware compute dispatcher**: it watches the electricity grid live (real ISO prices, load forecasts, fuel mix, emergency events), decides when and how each AI workload runs so power goes to what needs it, executes those decisions on real hardware, and proves the result with measured power. Built at Cal Hacks 13.0 (Fri Oct 23 – Sun Oct 25, 2026) for the **Microsoft Challenge Grand Prize** ("Built for the Real World": customer understanding, measurable usefulness, path to production, responsible design, end-to-end). Devpost due **Sun 8:50 AM PT**; live table demo Sun 10:30 AM.
+Brownout is a grid-aware compute dispatcher: it watches the electricity grid live (real ISO prices, load forecasts, fuel mix, emergency events), decides when and how each AI workload runs so power goes to what needs it, executes those decisions on real hardware, and proves the result with measured power. Built at Cal Hacks 13.0 (Fri Oct 23 to Sun Oct 25, 2026) for the Microsoft Challenge Grand Prize ("Built for the Real World": customer understanding, measurable usefulness, path to production, responsible design, end-to-end). Devpost due Sun 8:50 AM PT; live table demo Sun 10:30 AM.
 
 Read `PLAN.md` (order), `SPEC.md` (architecture), `DEMO.md` (what the judge does), `RESEARCH.md` (verified facts), `TRACKS.md` (prizes). Unwritten decisions: pick the simplest option that keeps the demo real, log one line in `DECISIONS.md`.
 
 ## The machine
-The demo runs on **this MacBook (Apple silicon)**. No external hardware. Power is measured with `sudo powermetrics` (CPU, GPU, ANE and combined watts), which is independent of our code. Knobs are concurrency, pause/resume, thread count and GPU-vs-CPU placement. There is no clock lock on a Mac; do not look for one.
+The demo runs on this MacBook (Apple silicon). No external hardware. Power is measured with `sudo powermetrics` (CPU, GPU, ANE and combined watts), which is independent of our code. Knobs are concurrency, pause/resume, thread count and GPU-vs-CPU placement. There is no clock lock on a Mac; do not look for one.
 
 ## Non-negotiables
-1. **Nothing simulated reaches a judge.** Every price, forecast, watt, latency and dollar on screen is live or measured. No synthetic grid data, no mocked meters, no canned plans. `make demo` never starts a simulator. The only fakes allowed are in `tests/` for unit-testing the solver and controller, labelled as test fixtures.
-2. **The solver decides, the LLM explains and negotiates, the controller executes.** The LLM has no code path to any knob. The optimizer is deterministic and reproducible from its inputs.
-3. **Two sources for every claim.** Grid data: the ISO feed with its timestamp and age shown. Power: `powermetrics` shown as measured, never estimated. If a feed is stale, the dashboard says so and the plan is marked "on last known data".
-4. **Every run writes a timeline** (`runs/<id>/timeline.jsonl`). Reports, comparisons and the demo video come from timelines only.
-5. **No hardcoding.** ISOs, locations, policies, SLAs, owners, models, endpoints come from `config/*.yaml` and `.env`. If the LLM is unavailable, the solver and controller keep running and the UI shows "agent offline".
-6. **No dead code.** A feature is built and working or it is absent. Stretch items live in `PLAN.md`, not as stubs or TODOs.
-7. **No secrets in the repo.** `.env` only; `.env.example` committed. Judges get source access. Plain commit messages, no AI co-author lines.
+1. Nothing simulated reaches a judge. Every price, forecast, watt, latency and dollar on screen is live or measured. No synthetic grid data, no mocked meters, no canned plans. `make demo` never starts a simulator. The only fakes allowed are in `tests/` for unit-testing the solver and controller, labelled as test fixtures.
+2. The solver decides, the LLM explains and negotiates, the controller executes. The LLM has no code path to any knob. The optimizer is deterministic and reproducible from its inputs.
+3. Two sources for every claim. Grid data: the ISO feed with its timestamp and age shown. Power: `powermetrics` shown as measured, never estimated. If a feed is stale, the dashboard says so and the plan is marked "on last known data".
+4. Every run writes a timeline (`runs/<id>/timeline.jsonl`). Reports, comparisons and the demo video come from timelines only.
+5. No hardcoding. ISOs, locations, policies, SLAs, owners, models, endpoints come from `config/*.yaml` and `.env`. If the LLM is unavailable, the solver and controller keep running and the UI shows "agent offline".
+6. No dead code. A feature is built and working or it is absent. Stretch items live in `PLAN.md`, not as stubs or TODOs.
+7. No secrets in the repo. `.env` only; `.env.example` committed. Judges get source access. Plain commit messages, no AI co-author lines.
 
 ## Stack (fixed)
 - Python 3.11, FastAPI + uvicorn, asyncio, pydantic v2, httpx, pandas. `uv`.
