@@ -131,7 +131,7 @@ function render() {
     World.set({ mix: d.mix_mw, served: d.demand_mw, needed: d.forecast_mw, ours_w: d.ours_w, baseline_w: d.baseline_w,
       cut_pct: d.measured_cut_pct, alert: d.cut_kinds.includes("emergency") ? "emergency" : d.cut_kinds.includes("warning") ? "warning" : null,
       peaks: { wind: D.peaks.wind, solar: D.peaks.solar }, with_mw: sc ? sc.freed_mw : null, city: ev ? ev.region : null,
-      campus: ev ? { title: "Data centers", value: gw(ev.flexible_mw), sub: ev.flexible_mw === 1000 ? "a 1 GW unit" : "running in ERCOT (cited)" } : null });
+      campus: ev ? { title: "Data centers", value: gw(ev.flexible_mw), sub: ev.flexible_mw === 1000 ? "a 1 GW unit" : "up to: each load's Sep peak, summed" } : null });
     $("w-clock").textContent = `${ev ? ev.title : d.title} · ${isoLabel(d.hour_ending || d.sim_time)}`;
     $("w-progress").style.width = `${(100 * d.progress).toFixed(1)}%`;
     $("w-head").textContent = "";
@@ -150,7 +150,7 @@ function render() {
         ? `${sc.people != null ? `${compact(sc.people)} ${sc.people_unit} kept on: ` : ""}${fixed(sc.freed_mw, 0)} MW freed${sc.share_of_shed_pct != null ? `, ${fixed(sc.share_of_shed_pct, 0)}% of the ${fixed(ev.shed_mw, 0)} MW it had to find` : ""}`
         : waitingText(d.asked_cut_pct, d.nothing_to_shed);
       versus(ev.impact.slice(0, 2).map((i) => i.text).join(". "), withText, ev.impact[0].source,
-        sc ? `estimate · this Mac's measured cut, as far as asked (${fixed(sc.share_pct, 0)}%), on ${gw(sc.flexible_mw)} of ${sc.flexible_source}` : "measured on this Mac, live");
+        sc ? `estimate · this Mac's measured cut, as far as asked (${fixed(sc.share_pct, 0)}%), on ${gw(sc.flexible_mw)} of ${sc.flexible_source}${sc.people != null && ev.people_basis ? `; ${ev.people_basis}` : ""}` : "measured on this Mac, live");
     }
     setHTML($("w-sources"), html`${provenance(ev, d.data)} ${ev ? html`Alerts and impact: <a href="${ev.report_url}" target="_blank" rel="noopener">official report</a>, page on each.` : html``}`);
     overlayFault();
@@ -162,7 +162,7 @@ function render() {
   const needed = liveNeeded(g);
   World.set({ mix: mixNow, served, needed, ours_w: p ? p.combined_w : null, baseline_w: null, cut_pct: null, alert: null, peaks: {},
     with_mw: null, city: null,
-    campus: D.scale ? { title: "ERCOT large loads", value: gw(D.scale.large_loads_running_mw), sub: "running, Sep 2026 (cited)" } : null });
+    campus: D.scale ? { title: "ERCOT large loads", value: `up to ${gw(D.scale.large_loads_running_mw)}`, sub: "each load's Sep 2026 peak, summed" } : null });
   if (live) {
     $("w-clock").textContent = g ? `Live · ${g.iso} · ${localClock(nowS())}` : "Live · waiting for the grid feed";
     $("w-progress").style.width = "0%";

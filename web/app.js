@@ -161,15 +161,21 @@ function renderReplay() {
   if (!ev) { $("replay-state").textContent = "Loading the events…"; return; }
   const sentence = [];
   if (running) {
-    sentence.push(`Replaying ${ev.title}, ${ev.when}, at ${eventClock(d.sim_time)} local: the grid served ${gwOf(d.demand_mw)} against a forecast of ${gwOf(d.forecast_mw)}${d.gap_mw > 1000 ? `, ${gwOf(d.gap_mw)} short` : ""}.`);
+    sentence.push(`Replaying ${ev.title}, ${ev.when}, at ${eventClock(d.sim_time)} local: the grid served ${gwOf(d.demand_mw)} against a forecast of ${gwOf(d.forecast_mw)}${d.gap_mw > 1000 ? `, ${gwOf(d.gap_mw)} short` : ""}. The chart shows only what the software has seen: no later hour.`);
     if (d.nothing_to_shed) sentence.push("Our sites had nothing running to shed, so no cut was sent: give training work and replay again.");
     else if (d.measured_cut_pct != null) sentence.push(`This Mac: ${fixed(d.measured_cut_pct, 0)}% below its baseline, measured.`);
   } else {
     sentence.push(`Pick a real emergency. The grid's data is the operator's own (EIA-930), every alert comes at the time the official report gives, and the response is this Mac, live: ${S.replay.seconds} s of replay.`);
   }
   $("replay-state").textContent = sentence.join(" ");
-  // the chart: real demand served (solid) and the operator's day-ahead forecast (dashed) over the window
-  const pts = ev.series.map(([t, dem, fc]) => ({ t: Date.parse(t) / 1000, dem, fc }));
+  // the chart: real demand served (solid) and the operator's day-ahead forecast (dashed) over the window. While it
+  // replays, only what the software has seen (Krish K16 #1: the whole curve "reads as it's just replaying"): demand to
+  // the last hour that has ended, forecasts to the end of the current day (published the day before). Before play,
+  // the full record of what happened.
+  const until = running && d ? Date.parse(d.hour_ending || d.sim_time) / 1000 : Infinity;
+  const dayEnd = running && d ? Date.parse(`${d.sim_time.slice(0, 10)}T23:59:59${d.sim_time.slice(-6)}`) / 1000 + 1 : Infinity;
+  const pts = ev.series.map(([t, dem, fc]) => ({ t: Date.parse(t) / 1000, dem, fc }))
+    .map((p) => ({ t: p.t, dem: p.t <= until ? p.dem : null, fc: p.t <= dayEnd ? p.fc : null }));
   const t0 = Date.parse(ev.window[0]) / 1000, t1 = Date.parse(ev.window[1]) / 1000;
   const vals = pts.flatMap((p) => [p.dem, p.fc]).filter((v) => v != null);
   const lo = Math.min(...vals) * 0.95, hi = Math.max(...vals, ev.record_mw || 0) * 1.03;
@@ -209,8 +215,8 @@ function renderScale() {
   if (!x) return;
   const gw = (mw) => `${fixed(mw / 1000, 1)} GW`;
   setHTML(box, html`<h3>ERCOT right now <span class="d-sim">estimate from public data</span></h3>
-    <p>ERCOT's large loads now running draw about <b>${gw(x.large_loads_running_mw)}</b>. If they cut the
-      ${fixed(x.our_cut_pct, 0)}% this Mac cut under the same call, that frees about <b>${fixed(x.freed_mw, 0)} MW</b>${x.share_of_demand_pct != null ? html`, <b>${fixed(x.share_of_demand_pct, 1)}%</b> of ERCOT's demand right now (${gw(x.demand_mw)}, live)` : ""}.
+    <p>ERCOT's large loads draw up to <b>${gw(x.large_loads_running_mw)}</b> (the sum of each one's own monthly peak, not what
+      runs at once). If they cut the ${fixed(x.our_cut_pct, 0)}% this Mac cut under the same call, that frees up to about <b>${fixed(x.freed_mw, 0)} MW</b>${x.share_of_demand_pct != null ? html`, <b>${fixed(x.share_of_demand_pct, 1)}%</b> of ERCOT's demand right now (${gw(x.demand_mw)}, live)` : ""}.
       Another ${fixed(x.queue_gw, 0)} GW of large loads, mostly data centers, are asking to connect.</p>
     <div class="src">Running and approved (${gw(x.large_loads_approved_mw)}) large loads: <a href="${x.large_loads_url}" target="_blank" rel="noopener">${x.large_loads_source}</a>.
       Queue: <a href="${x.queue_url}" target="_blank" rel="noopener">${x.queue_source}</a>. Demand: ERCOT real-time system conditions${x.demand_t ? `, ${localClock(Date.parse(x.demand_t) / 1000)}` : ""}.

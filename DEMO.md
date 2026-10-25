@@ -42,7 +42,8 @@ and the gap fills red. The warnings issued days before fire first, and Griddy's 
 above the record before the event); the Mac shifts its work. At 1:20 a.m. ERCOT's EEA 3 reaches the real
 dispatcher and the Mac cuts deeper, measured. Read the panel: "More than 4.5 million people lost power; 210 died"
 (the report's page is on the line), this Mac's measured cut, and the cut the grid asked applied to the 4.1 GW of
-large loads ERCOT sees running today: the megawatts and the people that is, from the event's own numbers.
+large loads ERCOT reports today (up to 4.1 GW, the sum of each one's own monthly peak): the megawatts and the people
+that is, from the event's own numbers.
 
 **(If asked "what if X fails?") Break it.** Click any plant, the substation or the city, or press **Break a part** and
 type it ("an ice storm freezes half the gas plants"). Read the reading aloud ("the gas fleet loses 50 %: -X GW of its

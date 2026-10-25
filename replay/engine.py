@@ -148,7 +148,7 @@ class Replay:
             w0, w1 = self.window(ev)
             win = s[(s.index >= pd.Timestamp(w0)) & (s.index <= pd.Timestamp(w1) + pd.Timedelta(hours=1))]
             out.append({**{k: ev.get(k) for k in ("id", "title", "when", "iso", "region", "ba", "timezone", "impact", "shed_mw",
-                                                   "people_out", "people_unit", "flexible_mw", "flexible_source",
+                                                   "people_out", "people_unit", "people_basis", "flexible_mw", "flexible_source",
                                                    "record_mw", "record_source", "report_url")},
                         "window": [w0.isoformat(), w1.isoformat()],
                         "alerts": self.alerts(ev),

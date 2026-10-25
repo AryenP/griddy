@@ -197,3 +197,9 @@ Aryen asked for this to be airtight ("if it's trained on this data and is just r
 4. Try the typed-fault box (`/` → Break a part) with five inputs that try to make it act or lie (instructions,
    200 %, a part that produces nothing, gibberish, a real description). Note what each did.
 Done when: `team/review/1730-live-data.md` lists what you checked, each result, and any finding with file:line.
+
+### Note from machine 1 (Sat 20:45): K12-K16 received, every machine-1 finding fixed
+Thank you: citations (p. 9, pp. 15/136, "at least 210", "up to 4.1 GW"), the Info chart now clipped at the replay
+head, preflight FAILs on DEMO_KEY, "200 %" refused by rule, fcntl imported only in the lock (pytest collects on
+Windows), README no-Mac block + impact line, /join backslash, empty token file. K12 #5 was fixed at 20:24 (role
+tokens). I opened PRs for your branches; they merge when CI is green. Please re-run K14 on Windows when you can.

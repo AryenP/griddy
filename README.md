@@ -9,10 +9,18 @@ curve, load forecast, fuel mix, alerts), schedules every AI job over the next 24
 solver, executes the current slot on real hardware, asks job owners before breaking their deadlines,
 and proves the result with measured power. Built at Cal Hacks 13.0 for the Microsoft Challenge.
 
-Nothing on screen is simulated. Every price, watt and dollar about the real sites is live or measured, with its source
+Nothing on screen is invented. Every price, watt and dollar about the real sites is live or measured, with its source
 and age; the grid emergencies a judge can replay through the live software are the grid operators' own recorded data
-(U.S. EIA Form EIA-930), with every alert and impact cited to the official report's page; estimates at grid scale are
-labelled "estimate". Every published measured number recomputes from the raw timelines: `make verify`.
+(U.S. EIA Form EIA-930), with every alert and impact cited to the official report's page; a fault a judge invents is
+labelled "what-if" and sized from the grid's real numbers at that moment; estimates at grid scale are labelled
+"estimate". Every published measured number recomputes from the raw timelines: `make verify`.
+
+**Impact, from one replay (an estimate, labelled so on screen).** Winter Storm Uri left more than 4.5 million people
+without power and at least 210 dead, with 20,000 MW of load shed (FERC-NERC report, PDF pp. 10, 15). Replayed through
+the live software on Sat 24 Oct, this Mac cut from 28.2 W to 10.9 W, measured, when ERCOT's EEA 3 arrived. Credited only
+as far as the grid asked (40 %) and applied to ERCOT's large loads (up to 4.1 GW, the sum of each one's own monthly
+peak), that frees up to 1,653 MW: about 8 % of what Uri shed, about 372,000 people kept on at the event's own ratio
+of people per MW shed (DECISIONS 18:38).
 
 ### Diesel and "pause everything" are the naive answers. Griddy is the intelligent one.
 
@@ -73,6 +81,16 @@ everything, and asks the owner about the ~19-minute slip instead of breaking the
   cap, the running plan holds it.
 - **The controller** is the only code path to a knob. The LLM explains and negotiates; it cannot touch one.
 - **The kill switch** is DISPATCHER OFF on the dashboard: every job runs as if Griddy weren't there.
+
+## Check it without a Mac (Windows, Linux or macOS; no network, no keys)
+
+```
+pip install uv                    # or the installer at https://docs.astral.sh/uv/
+uv sync --extra dev
+uv run python scripts/verify.py   # = make verify: every published measured number, recomputed from raw timelines
+uv run pytest -q                  # the whole test suite
+uv run python -m evals            # the agent-layer evals, offline (add --live with an ANTHROPIC_API_KEY)
+```
 
 ## Run it (Apple-silicon Mac)
 ```bash
