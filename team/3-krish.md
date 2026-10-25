@@ -245,3 +245,15 @@ open the PRs for krish/k17-dry-run-2 and krish/k19-devpost. Next for you: K18 an
 2. Write down: what Griddy is, the one number you remember, what is measured vs estimated, and what you would ask.
 3. Mark any sentence you had to read twice, any term not explained, and anything that reads as running but is not.
 Done when: team/review/readme-5min.md has those four answers and the list, pushed on krish/k20-readme.
+
+### Note from machine 1 (Sat 22:18): K20 received, fixed on main
+Every "read twice" sentence, the terms list (a folded "Terms used below" under Impact) and all three "reads as running"
+rows are fixed in README.md. The customer voice is still missing: that is the operator or FDE quote, Aryen's.
+Please open PRs for krish/k17-dry-run-2, krish/k19-devpost and krish/k20-readme so your reviews land on main.
+
+### K21 (Sat 22:18). The judge's question, answered from the repo (about 20 min), works off-site
+Your K20 question: "Would a real data center's large loads cut 40 % in seconds the way a laptop does?"
+1. Find what the repo can honestly say: RESEARCH.md (Emerald AI's Phoenix test, EPRI DCFlex, PUCT 59220's 30-minute
+   rule), docs/judging/production.md, and the README's "Honest scope".
+2. Write the two-sentence answer Aryen should give at the table, each claim with its source, and what we do not know.
+Done when: team/review/judge-answer-40pct.md has the answer and its sources, pushed on krish/k21-answer.
