@@ -23,10 +23,26 @@ function liveNeeded(sig) {
   return best && best[0] < 2 * 3600e3 ? best[1] : null;
 }
 
+// The logo loader (index.html #w-load) plays once, about 2 s, then fades once the page has its first data. If this
+// script never runs, world.css fades it at 6 s anyway.
+const LOAD_T0 = performance.now(), STILL = matchMedia("(prefers-reduced-motion: reduce)").matches;
+let loaderGone = false;
+function hideLoader() {
+  if (loaderGone) return;
+  loaderGone = true;
+  setTimeout(() => {
+    const el = $("w-load");
+    el.classList.add("done"); el.setAttribute("aria-hidden", "true");
+    setTimeout(() => { el.hidden = true; }, 500);
+  }, Math.max(0, (STILL ? 300 : 2100) - (performance.now() - LOAD_T0)));
+}
+setTimeout(hideLoader, 4000);                                   // the feed is slow: show the page with what it has
+
 function handle(msg) {
   const d = msg.data || {};
   switch (msg.kind) {
     case "snapshot":
+      hideLoader();
       D.grid = d.grid; D.power = d.power; D.replay = d.replay || null; D.scale = d.scale || null; D.whatif = d.whatif || null;
       D.specs = d.job_specs || {}; D.jobs = d.jobs || {};
       if (D.replay && D.replay.last) D.last = D.replay.last;

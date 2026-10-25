@@ -11,6 +11,16 @@
   <link rel="stylesheet" href="world.css">
 </head>
 <body class="w">
+  <div id="w-load" class="w-load" role="status" aria-label="Griddy is loading">
+    <svg class="w-load-mark" viewBox="0 0 120 120" aria-hidden="true">
+      <path class="g-trace" pathLength="1" d="M96 30H30V90H90V62H64"/>
+      <path class="g-pulse" pathLength="1" d="M96 30H30V90H90V62H64"/>
+      <g class="g-nodes"><circle cx="96" cy="30" r="3.6"/><circle cx="30" cy="30" r="3.6"/><circle cx="90" cy="90" r="3.6"/><circle cx="90" cy="62" r="3.6"/><circle cx="64" cy="62" r="3.6"/></g>
+      <circle class="g-fault" cx="30" cy="90" r="4.6"/>
+      <circle class="g-ring" cx="30" cy="90" r="4.6"/>
+    </svg>
+    <div class="w-load-word"><b>Griddy</b><span>the grid's shock absorber</span></div>
+  </div>
   <header class="w-top">
     <div class="w-brand"><b>Griddy</b><span>the grid's shock absorber: when any part fails, AI compute gives power back</span></div>
     <nav class="w-nav" aria-label="Pages"><a href="/" aria-current="page">Grid</a><a href="/info.html">Info</a><a href="/proof.html">Proof</a></nav>
