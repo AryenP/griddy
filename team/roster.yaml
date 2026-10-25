@@ -46,6 +46,7 @@ members:
   - replay/**
   - tests/test_replay*.py
   - tests/test_whatif*.py
+  - agent/faults.py
   - tests/test_fleet*.py
   - scripts/team.py
   - scripts/check_runtime.py
