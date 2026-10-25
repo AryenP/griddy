@@ -31,8 +31,8 @@ def rig(tmp_path, watts=20.0, signal=None):
 
 def test_tripping_a_plant_removes_its_real_output_and_asks_our_sites_for_a_cut(tmp_path):
     w, r, ex, t0 = rig(tmp_path)
-    r.start("uri-2021", now=t0)
-    real = r.tick(now=t0 + 60)                              # mid-event: ERCOT's real hour from EIA-930
+    r.start("uri-sf", now=t0)
+    real = r.tick(now=t0 + 60)                              # mid-event: the simulated hour (EIA-930, CISO with ERCO's share)
     r.pending_caps.clear()                                  # the replay's own alerts are not under test here
     st = w.start("plant:Gas", now=t0 + 60)
     assert st["lost_mw"] == pytest.approx(real["mix_mw"]["Natural Gas"]) and st["fuel"] == "Gas"
@@ -61,7 +61,7 @@ def test_the_hub_cuts_off_the_largest_fleet_and_the_city_surges_to_the_days_real
 
 def test_a_fault_ends_by_itself_or_on_clear_and_withdraws_its_cut(tmp_path):
     w, r, _, t0 = rig(tmp_path)
-    r.start("uri-2021", now=t0)
+    r.start("uri-sf", now=t0)
     r.tick(now=t0 + 60)
     r.pending_caps.clear()
     w.start("plant:Gas", now=t0 + 60)
@@ -188,7 +188,7 @@ def test_instructions_in_the_words_are_refused_and_offline_says_how_to_phrase_it
 
 def test_a_share_sizes_the_fault_from_the_real_output(tmp_path):
     w, r, _, t0 = rig(tmp_path)
-    r.start("uri-2021", now=t0)
+    r.start("uri-sf", now=t0)
     real = r.tick(now=t0 + 60)
     st = w.start("plant:Gas", now=t0 + 60, share_pct=50, cause="ice storm")
     assert st["lost_mw"] == pytest.approx(real["mix_mw"]["Natural Gas"] / 2) and "50%" in st["label"] and "ice storm" in st["label"]

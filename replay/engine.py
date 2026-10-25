@@ -21,6 +21,11 @@ that nothing changes.
   - An `end` alert withdraws the emergency cut; the end of the replay withdraws everything.
   - Scale: our sites' measured cut, as a share of their baseline, applied to the operator's flexible load (a cited
     figure, or 1 GW as a stated unit) and set against what the event shed and whom it left in the dark.
+
+One event is SIMULATED, and says so wherever it shows (Aryen, Sun 03:00: "simulate what would happen if it happened in
+sf"): an event with a `shape` replays one grid's own recorded hours with another grid's shortfall, the share of its
+forecast that grid served each hour on the local clock (simulate() below). Its shortfall and the people it leaves in
+the dark are computed from those hours (_derive), never typed in.
 """
 from __future__ import annotations
 
@@ -50,8 +55,33 @@ def _local(s: str, tz: ZoneInfo) -> datetime:
 
 
 def load_series(ev: dict) -> pd.DataFrame:
-    """The evidence copy of the event's EIA-930 hours (docs/evidence/events/<id>.csv)."""
-    return series_from(pd.read_csv(ROOT / ev["data"], comment="#"), ev)
+    """The evidence copy of the event's EIA-930 hours (docs/evidence/events/<id>.csv); a simulated event's composed."""
+    base = series_from(pd.read_csv(ROOT / ev["data"], comment="#"), ev)
+    if not ev.get("shape"):
+        return base
+    sev = shape_event(ev)
+    return simulate(base, series_from(pd.read_csv(ROOT / sev["data"], comment="#"), sev))
+
+
+def shape_event(ev: dict) -> dict:
+    """The grid whose shortfall a simulated event borrows, as an event of its own (for the fetch and its cache)."""
+    return {**ev["shape"], "id": f"{ev['id']}:shape", "window": ev["window"]}
+
+
+def simulate(base: pd.DataFrame, shape: pd.DataFrame) -> pd.DataFrame:
+    """One grid's own hours with another's shortfall: each hour, demand served is this grid's day-ahead forecast times
+    the share of its forecast the other grid served in the same hour on its own local clock (never above 1). The fuel
+    mix scales with what is served; the forecast and the carbon intensity stay this grid's own."""
+    share = (shape["demand_mw"] / shape["demand_forecast_mw"]).clip(upper=1.0)
+    share.index = share.index.tz_localize(None)
+    s = share.groupby(level=0).first().reindex(base.index.tz_localize(None)).to_numpy()
+    out = base.copy()
+    served = base["demand_forecast_mw"].to_numpy() * s
+    k = served / base["demand_mw"].to_numpy()
+    mix = [c for c in out.columns if c.startswith("mix:")]
+    out[mix] = base[mix].mul(k, axis=0)
+    out["demand_mw"] = served
+    return out
 
 
 def series_from(df: pd.DataFrame, ev: dict) -> pd.DataFrame:
@@ -80,7 +110,8 @@ class Replay:
     def __init__(self, tl: Timeline, executor, cfg: dict | None = None):
         self.tl, self.ex = tl, executor
         self.cfg = cfg if cfg is not None else (config.events or {})
-        self.events = {e["id"]: e for e in self.cfg.get("events", [])}
+        self.events = {e["id"]: dict(e) for e in self.cfg.get("events", [])}   # copies: _derive fills simulated numbers
+        self.impact0 = {k: list(e.get("impact") or []) for k, e in self.events.items()}
         self.seconds = float(self.cfg.get("replay_seconds", 120))
         self.series: dict[str, pd.DataFrame] = {}
         self.provenance: dict[str, dict] = {}         # where each event's hours came from: live, or the evidence copy
@@ -108,7 +139,31 @@ class Replay:
         if eid not in self.series:
             self.series[eid] = load_series(self.events[eid])
             self.provenance[eid] = {"source": "evidence copy", "url": self.events[eid]["data"], "why": "not fetched yet"}
+            self._derive(eid)
         return self.series[eid]
+
+    def _derive(self, eid: str) -> None:
+        """A simulated event's own numbers, from its composed hours: the worst hour's shortfall (what it had to find),
+        and the people it would leave in the dark at the real event's rate. Labelled simulated, with the arithmetic."""
+        ev = self.events[eid]
+        if not ev.get("shape"):
+            return
+        s = self.series[eid]
+        w0, w1 = self.window(ev)
+        win = s[(s.index >= pd.Timestamp(w0)) & (s.index <= pd.Timestamp(w1))]
+        gap = (win["demand_forecast_mw"] - win["demand_mw"]).dropna()
+        worst = gap.idxmax()
+        ev["shed_mw"] = round(float(gap.max()))
+        pct = 100 * float(gap.max()) / float(win.loc[worst, "demand_forecast_mw"])
+        lines = [{"text": f"California's grid falls {ev['shed_mw']:,} MW short at the worst hour, {worst:%a %H:%M}: "
+                          f"{pct:.0f}% of what it needed", "source": f"simulated: {ev['simulated']} (EIA-930, {ev['ba']} and {ev['shape']['ba']})"}]
+        pp = ev.get("people")
+        if pp:
+            n = round(pp["out"] / pp["of"] * pp["apply_to"], -3)
+            lines.append({"text": f"About {n:,.0f} {pp['unit']} lose power", "source": f"simulated: {pp['source']}"})
+            ev["people_out"], ev["people_unit"] = n, pp["unit"]          # kept on: in proportion to the gap closed
+            ev["people_basis"] = f"{pp['unit']} out per MW of the simulated shortfall ({n:,.0f}, {ev['shed_mw']:,} MW)"
+        ev["impact"] = lines + self.impact0[eid]
 
     def prepare(self, eid: str) -> dict:
         """Fetch the event's hours live from api.eia.gov (blocking: the API route runs it in a thread). If the API
@@ -120,8 +175,18 @@ class Replay:
             meta = {**meta, "max_diff_mw": eia.agreement(df, evidence)}
         except Exception as e:                       # network down, rate limit: say so, and run on the evidence copy
             df, meta = evidence, {"source": "evidence copy", "url": ev["data"], "why": eia.why(e)}
-        self.series[eid] = series_from(df, ev)
+        series = series_from(df, ev)
+        if ev.get("shape"):                          # the borrowed shortfall: fetched live too, or its evidence copy
+            sev = shape_event(ev)
+            try:
+                sdf, smeta = self.cache.get(sev)
+            except Exception as e:
+                sdf, smeta = pd.read_csv(ROOT / sev["data"], comment="#"), {"source": "evidence copy", "url": sev["data"], "why": eia.why(e)}
+            series = simulate(series, series_from(sdf, sev))
+            meta = {**meta, "simulated": ev["simulated"], "shape": {k: smeta.get(k) for k in ("source", "url", "why", "fetched_at")}}
+        self.series[eid] = series
         self.provenance[eid] = meta
+        self._derive(eid)
         self.tl.log("note", msg=f"replay data for {eid}: {meta['source']}", replay=eid, data=meta)
         return meta
 
@@ -147,13 +212,15 @@ class Replay:
             s = self.data(ev["id"])
             w0, w1 = self.window(ev)
             win = s[(s.index >= pd.Timestamp(w0)) & (s.index <= pd.Timestamp(w1) + pd.Timedelta(hours=1))]
-            out.append({**{k: ev.get(k) for k in ("id", "title", "when", "iso", "region", "ba", "timezone", "impact", "shed_mw",
+            out.append({**{k: ev.get(k) for k in ("id", "title", "when", "simulated", "iso", "region", "ba", "timezone", "impact", "shed_mw",
                                                    "people_out", "people_unit", "people_basis", "flexible_mw", "flexible_source",
                                                    "record_mw", "record_source", "report_url")},
                         "window": [w0.isoformat(), w1.isoformat()],
                         "alerts": self.alerts(ev),
                         "series": [[t.isoformat(), r.demand_mw, r.demand_forecast_mw] for t, r in win.iterrows()],
-                        "data_source": f"U.S. EIA Form EIA-930, balancing authority {ev['ba']} ({ev['data']})"})
+                        "data_source": (f"Simulated from U.S. EIA Form EIA-930: {ev['ba']}'s own hours ({ev['data']}) with "
+                                        f"{ev['shape']['ba']}'s share served each hour ({ev['shape']['data']})" if ev.get("shape")
+                                        else f"U.S. EIA Form EIA-930, balancing authority {ev['ba']} ({ev['data']})")})
         return out
 
     def alerts(self, ev: dict) -> list[dict]:
@@ -257,7 +324,7 @@ class Replay:
         xs = [w for tt, w in self.ex.power if tt > now - ROLL_S]
         ours = sum(xs) / len(xs) if xs else None
         cut = (1 - ours / self.baseline_w) if ours is not None and self.baseline_w and self.caps else None
-        state = {"t": now, "event": ev["id"], "title": ev["title"], "sim_time": t.isoformat(),
+        state = {"t": now, "event": ev["id"], "title": ev["title"], "simulated": ev.get("simulated"), "sim_time": t.isoformat(),
                  "hour_ending": grid["hour_ending"], "data": self.provenance.get(ev["id"]),
                  "progress": min(1.0, s_into / self.seconds), "demand_mw": grid["demand_mw"],
                  "forecast_mw": grid["demand_forecast_mw"],

@@ -24,20 +24,44 @@ def rig(tmp_path, watts=20.0, t0=None):
     return Replay(Timeline(run_id="r", root=tmp_path), ex), ex, t0
 
 
-def test_catalog_is_three_real_events_with_cited_alerts_and_their_hours(tmp_path):
+def test_catalog_is_two_real_events_and_uri_simulated_in_san_francisco(tmp_path):
     r, _, _ = rig(tmp_path)
     cat = {e["id"]: e for e in r.catalog()}
-    assert set(cat) == {"uri-2021", "caiso-2020-08", "caiso-2022-09"}
+    assert set(cat) == {"uri-sf", "caiso-2020-08", "caiso-2022-09"}
     for e in cat.values():
         assert e["series"] and all(len(p) == 3 for p in e["series"]) and "EIA-930" in e["data_source"]
         assert e["alerts"] and all(a["source"] for a in e["alerts"]) and e["impact"]
         assert all(i["source"] for i in e["impact"])
-    uri = cat["uri-2021"]
-    assert max(p[2] for p in uri["series"]) > 70000                     # ERCOT forecast above 70 GW
-    assert min(p[1] for p in uri["series"]) < 46000                      # served demand fell to ~44 GW: load shed
+    assert not cat["caiso-2020-08"].get("simulated") and not cat["caiso-2022-09"].get("simulated")
+    sim = cat["uri-sf"]                                                  # labelled simulated wherever it shows
+    assert sim["simulated"] and sim["data_source"].startswith("Simulated") and sim["iso"] == "CAISO"
+    assert max(p[2] for p in sim["series"]) > 25000                      # California's own forecast that night
+    worst = max(p[2] - p[1] for p in sim["series"] if p[1] is not None)
+    assert sim["shed_mw"] == round(worst) and 9000 < sim["shed_mw"] < 12000   # computed from the hours, never typed in
+    assert all(i["source"].startswith("simulated: ") for i in sim["impact"][:2]) and "FERC-NERC" in sim["impact"][2]["source"]
+    assert "135,000 San Franciscans" in sim["impact"][1]["text"]        # 4.5 M of 29,145,505 Texans, on SF's 873,965
     flags = {e: [a for a in cat[e]["alerts"] if a["kind"] == "brownout"] for e in cat}
-    assert flags["uri-2021"] and flags["caiso-2022-09"] and not flags["caiso-2020-08"]   # forecast above the prior record
-    assert "65,750 MW record" in flags["uri-2021"][0]["label"]
+    assert flags["caiso-2022-09"] and not flags["caiso-2020-08"] and not flags["uri-sf"]   # forecast above the prior record
+
+
+def test_the_simulation_is_each_hours_texas_share_on_californias_own_hours():
+    """replay.engine.simulate: served = California's forecast x the share of its forecast Texas served that same hour
+    on its own local clock (capped at 1); the forecast stays California's own; the fuel mix scales with what is served."""
+    import pandas as pd
+    from replay.engine import series_from, shape_event, simulate
+    ev = config.events["events"][0]
+    assert ev["id"] == "uri-sf"
+    base = series_from(pd.read_csv(ev["data"], comment="#"), ev)
+    sev = shape_event(ev)
+    tx = series_from(pd.read_csv(sev["data"], comment="#"), sev)
+    sim = simulate(base, tx)
+    for hour in ("2021-02-15 01:00", "2021-02-15 12:00", "2021-02-15 20:00"):
+        ca, tex = sim[sim.index.tz_localize(None) == hour].iloc[0], tx[tx.index.tz_localize(None) == hour].iloc[0]
+        share = min(1.0, tex["demand_mw"] / tex["demand_forecast_mw"])
+        assert ca["demand_mw"] == pytest.approx(ca["demand_forecast_mw"] * share)
+        b = base[base.index.tz_localize(None) == hour].iloc[0]
+        assert ca["demand_forecast_mw"] == b["demand_forecast_mw"]
+        assert ca["mix:Natural Gas"] == pytest.approx(b["mix:Natural Gas"] * ca["demand_mw"] / b["demand_mw"])
 
 
 def test_alerts_reach_the_dispatcher_at_their_real_times_and_end(tmp_path):
@@ -65,16 +89,17 @@ def test_alerts_reach_the_dispatcher_at_their_real_times_and_end(tmp_path):
 
 def test_measured_cut_scales_to_the_events_own_numbers(tmp_path):
     r, ex, t0 = rig(tmp_path)
-    r.start("uri-2021", now=t0)
+    r.start("uri-sf", now=t0)
     r.tick(now=t0 + 0.5)
     for k in range(10):                              # our sites drop to 12 W: a measured 40 % cut
         ex.power.append((t0 + 1 + k, 12.0))
     st = r.tick(now=t0 + 11)
     assert st["measured_cut_pct"] == pytest.approx(40.0) and st["asked_cut_pct"] == 20.0
-    sc = st["scale"]                                 # credited: the 20 % asked, not the 40 % this Mac happened to shed
-    assert sc["share_pct"] == pytest.approx(20.0) and sc["freed_mw"] == pytest.approx(4132 * 0.2)
-    assert sc["share_of_shed_pct"] == pytest.approx(100 * 4132 * 0.2 / 20000)
-    assert sc["people"] == round(4_500_000 / 20000 * 4132 * 0.2)
+    sc, ev = st["scale"], r.events["uri-sf"]         # credited: the 20 % asked, not the 40 % this Mac happened to shed
+    assert sc["share_pct"] == pytest.approx(20.0) and sc["freed_mw"] == pytest.approx(1000 * 0.2)
+    assert sc["share_of_shed_pct"] == pytest.approx(100 * 1000 * 0.2 / ev["shed_mw"])
+    assert sc["people"] == round(135_000 / ev["shed_mw"] * 1000 * 0.2) and sc["people_unit"] == "San Franciscans"
+    assert st["simulated"]
 
 
 def test_nothing_to_shed_sends_no_cut(tmp_path):
@@ -88,15 +113,15 @@ def test_grid_scale_estimate_is_arithmetic_on_cited_numbers():
     """grid/scale.py: an ESTIMATE, labelled so; every input is in config/site.yaml with its source."""
     from grid.scale import estimate
     cfg = config.site["scale"]
-    x = estimate(cfg, 62168.0, "2026-10-24T16:50:30-05:00")
-    assert x["estimate"] is True and x["iso"] == "ERCOT"
-    assert x["freed_mw"] == pytest.approx(cfg["large_loads_running_mw"] * cfg["our_cut_pct"] / 100)
-    assert x["share_of_demand_pct"] == pytest.approx(100 * x["freed_mw"] / 62168.0)
-    assert all(cfg[k].startswith("https://") for k in ("large_loads_url", "queue_url"))
-    assert estimate(cfg, None, None)["share_of_demand_pct"] is None
+    x = estimate(cfg, "CAISO", 19400.0, "2026-10-25T03:00:00-07:00")
+    assert x["estimate"] is True and x["iso"] == "CAISO"
+    assert x["freed_mw"] == pytest.approx(cfg["flexible_mw"] * cfg["our_cut_pct"] / 100)
+    assert x["share_of_demand_pct"] == pytest.approx(100 * x["freed_mw"] / 19400.0)
+    assert "illustrative" in x["flexible_source"] and "evidence of record" in x["our_cut_source"]
+    assert estimate(cfg, "CAISO", None, None)["share_of_demand_pct"] is None
 
 
-@pytest.mark.parametrize("eid", ["uri-2021", "caiso-2020-08", "caiso-2022-09"])
+@pytest.mark.parametrize("eid", ["uri-sf", "caiso-2020-08", "caiso-2022-09"])
 def test_the_replay_never_sees_the_future(tmp_path, eid):
     """Delete every hour after the replayed moment (keeping only the day-ahead forecasts for the rest of that day,
     which the operator had published the day before): the software sees and does exactly the same."""
@@ -123,17 +148,39 @@ def test_live_fetch_is_used_and_an_unreachable_api_falls_back_to_the_evidence_co
     import pandas as pd
     from replay import eia
     r, _, _ = rig(tmp_path)
-    ev = r.events["uri-2021"]
+    ev = r.events["caiso-2020-08"]
     evidence = pd.read_csv(ev["data"], comment="#")
     monkeypatch.setattr(eia, "fetch", lambda e, timeout=8.0: (evidence.copy(), {"source": "live", "rows": len(evidence)}))
-    meta = r.prepare("uri-2021")                     # TEST DOUBLE for the network: the API's answer is the same hours
+    meta = r.prepare("caiso-2020-08")                # TEST DOUBLE for the network: the API's answer is the same hours
     assert meta["source"] == "live" and meta["max_diff_mw"] == 0.0
     def down(e, timeout=8.0):
         raise OSError("network unreachable")
     monkeypatch.setattr(eia, "fetch", down)
     r.cache.got.clear()
-    meta = r.prepare("uri-2021")
-    assert meta["source"] == "evidence copy" and "not reached" in meta["why"] and len(r.data("uri-2021")) == len(evidence)
+    meta = r.prepare("caiso-2020-08")
+    assert meta["source"] == "evidence copy" and "not reached" in meta["why"] and len(r.data("caiso-2020-08")) == len(evidence)
+
+
+def test_the_simulation_fetches_both_grids_live_and_falls_back_to_both_evidence_copies(tmp_path, monkeypatch):
+    import pandas as pd
+    from replay import eia
+    r, _, _ = rig(tmp_path)
+    ev = r.events["uri-sf"]
+    copies = {ev["ba"]: ev["data"], ev["shape"]["ba"]: ev["shape"]["data"]}
+    asked = []
+    def live(e, timeout=8.0):                       # TEST DOUBLE for the network: each grid's own hours
+        asked.append(e["ba"])
+        return pd.read_csv(copies[e["ba"]], comment="#"), {"source": "live"}
+    monkeypatch.setattr(eia, "fetch", live)
+    meta = r.prepare("uri-sf")
+    assert sorted(asked) == ["CISO", "ERCO"] and meta["source"] == "live" and meta["shape"]["source"] == "live"
+    assert meta["simulated"] and r.events["uri-sf"]["shed_mw"] == r.catalog()[0]["shed_mw"]
+    def down(e, timeout=8.0):
+        raise OSError("network unreachable")
+    monkeypatch.setattr(eia, "fetch", down)
+    r.cache.got.clear()
+    meta = r.prepare("uri-sf")
+    assert meta["source"] == "evidence copy" and meta["shape"]["source"] == "evidence copy"
 
 
 def test_the_live_api_rows_become_the_evidence_columns(monkeypatch):

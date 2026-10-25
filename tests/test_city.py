@@ -3,6 +3,7 @@ is a named OpenStreetMap place inside its city's box, with the source and licenc
 import json
 from pathlib import Path
 
+import pytest
 import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -13,7 +14,7 @@ def test_every_city_has_its_real_hospitals_with_source_and_licence():
         d = json.loads((ROOT / "docs/evidence/city" / f"{c['id']}.json").read_text())
         w, n, e, s = c["viewbox"]
         assert "OpenStreetMap" in d["source"] and "ODbL" in d["license"] and d["fetched_at"]
-        assert len(d["hospitals"]) >= 10, c["id"]                 # San Francisco has 16 places; Houston more
+        assert len(d["hospitals"]) >= 10, c["id"]                 # San Francisco has 16 places
         for h in d["hospitals"]:
             assert h["name"] and h["osm"] and w <= h["lon"] <= e and s <= h["lat"] <= n, h
 
@@ -25,7 +26,7 @@ def test_the_route_serves_each_city_with_its_source_and_licence():
     app = FastAPI()
     app.include_router(make_router(object()))
     got = {c["id"]: c for c in TestClient(app).get("/api/cities").json()}
-    assert set(got) == {"houston", "san-francisco"} and got["houston"]["iso"] == "ERCOT" and got["san-francisco"]["iso"] == "CAISO"
+    assert set(got) == {"san-francisco"} and got["san-francisco"]["iso"] == "CAISO"
     assert all("ODbL" in c["license"] and c["hospitals"] for c in got.values())
 
 
@@ -48,7 +49,9 @@ def test_the_map_route_serves_only_named_cities():
     app = FastAPI()
     app.include_router(make_router(object()))
     c = TestClient(app)
-    assert c.get("/api/cities/houston/map").json()["area"] == "Texas Medical Center"
+    assert c.get("/api/cities/san-francisco/map").json()["area"] == "SoMa to Mission Bay"
+    assert c.get("/api/cities/san-francisco-datacenters/map").json()["kind"] == "datacenters"
+    assert c.get("/api/cities/houston/map").status_code == 404           # Texas left the demo (Sun 03:00)
     assert c.get("/api/cities/..%2F..%2F.env/map").status_code == 404 and c.get("/api/cities/nowhere/map").status_code == 404
 
 
@@ -66,3 +69,26 @@ def test_a_plant_on_the_grid_view_is_named_only_with_a_source():
             assert fuel in fuels and p["name"] and p["note"] and p["source"], (iso, fuel)
     assert '"iso_places"' in (ROOT / "api/app.py").read_text() and '"iso_places"' in (ROOT / "HANDOFF.md").read_text()
     assert "d.iso_places" in (ROOT / "web/demo.js").read_text()
+
+
+@pytest.mark.parametrize("area, at_least", [("san-francisco", 4), ("bay-area", 50)])
+def test_every_data_center_is_mapped_with_its_source_and_never_its_operator(area, at_least):
+    """scripts/fetch_datacenters.py, the data centers' view (Aryen, Sun 03:00 and 04:00): San Francisco's opens on a
+    click, the Bay Area's is kept for later. OpenStreetMap, ODbL; address and outline only, because the operators take
+    no part in this demo; each joined to a substation."""
+    d = json.loads((ROOT / f"docs/evidence/city/{area}-datacenters-map.json").read_text())
+    assert d["kind"] == "datacenters" and "OpenStreetMap" in d["source"] and "ODbL" in d["license"] and d["fetched_at"]
+    dcs = d["data_centers"]
+    assert d["counts"]["data_centers"] == len(dcs) >= at_least and d["counts"]["in_sf"] >= 4
+    assert {"365 Main Street", "360 Spear Street", "200 Paul Avenue"} <= {x["address"] for x in dcs if x["in_sf"]}
+    assert not any(k in x for x in dcs for k in ("name", "operator", "brand"))      # never the operator's name
+    assert all(abs(x["x"]) <= d["half_m"] and abs(x["z"]) <= d["half_m"] for x in dcs)
+    layers = {"substations": "substations", "place names": "places", "power lines": "lines", "shoreline": "coast", "roads": "roads",
+              "city names": "places", "transmission lines": "lines", "freeways": "roads"}           # the second three: the Bay's first file
+    missing = set(d["missing"])
+    assert missing <= set(layers)
+    for key in set(layers.values()):                                   # every layer: drawn, or said missing
+        assert d[key] or {n for n, k in layers.items() if k == key} & missing, key
+    if area == "san-francisco":                                     # what a click opens: every one joined to a named substation
+        assert 'const DC_MAP = "san-francisco-datacenters"' in (ROOT / "web/demo.js").read_text()
+        assert all(x["substation"] and x["substation"]["name"] and x["substation"]["km"] < 5 for x in dcs)

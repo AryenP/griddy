@@ -15,8 +15,8 @@
 0:00 Open. Point at the header: *"When the grid runs short, the plan for AI data centers is diesel generators.
 This is the alternative."* Under it, the quote from the Microsoft FDE or operator collected Saturday.
 
-0:15 The grid and the plan. Let them pick the objective (cost, carbon, balanced: keys 1, 2, 3) and, if they
-like, the grid (CAISO or ERCOT). The 24-hour dispatch map repaints against the live price curve: training in the
+0:15 The grid and the plan. Let them pick the objective (cost, carbon, balanced: keys 1, 2, 3). The grid is
+CAISO, live (San Francisco's load pays PG&E's price). The 24-hour dispatch map repaints against the live price curve: training in the
 cheap slots, batch where it is cheapest, chat always on. Click any slot (or use the arrow keys): the inspector
 says what runs there and the solver's reason, with the slot's price and cap.
 
@@ -34,16 +34,21 @@ before the 1:10 request: a streaming reply draws most of the GPU, so while chat 
 a 30 % cut, and by design chat keeps full speed and the operator is asked instead (DECISIONS 10:00, 14:16). If they
 chat during the cut, show that: "chat is serving 1 request at full speed (slowing chat is the operator's call)".
 
-2:20 A real emergency, replayed live (the judge picks). Three cards: Winter Storm Uri (Texas, 2021),
-California's rotating outages (2020), California's record heat wave (2022). They press Replay it live; the
-hours are fetched live from the EIA's API right then (the footer says so) and reach the software one hour at a time,
-never a later one. In two minutes the operator's own hourly data plays: for Uri, the forecast pulls away from the demand Texas could serve
-and the gap fills red. The warnings issued days before fire first, and Griddy's own flag (the day-ahead forecast
-above the record before the event); the Mac shifts its work. At 1:20 a.m. ERCOT's EEA 3 reaches the real
-dispatcher and the Mac cuts deeper, measured. Read the panel: "More than 4.5 million people lost power; 210 died"
-(the report's page is on the line), this Mac's measured cut, and the cut the grid asked applied to the 4.1 GW of
-large loads ERCOT reports today (up to 4.1 GW, the sum of each one's own monthly peak): the megawatts and the people
-that is, from the event's own numbers.
+2:20 An emergency, replayed live (the judge picks). Three cards: Winter Storm Uri in San Francisco (simulated),
+California's rotating outages (2020), California's record heat wave (2022). They press Replay it live; the hours
+are fetched live from the EIA's API right then (the footer says so) and reach the software one hour at a time, never
+a later one. Uri says "simulated" wherever it shows: California's own recorded hours from those two days, with the
+share of what it needed that Texas could serve, hour by hour, so the gap fills red through the night. The warnings
+issued days before fire first and the Mac shifts its work; at 1:20 a.m., Uri's EEA 3 moment, the real dispatcher
+cuts the Mac deeper, measured. Read Without Griddy / With Griddy: about 135,000 San Franciscans lose power
+(simulated, at Texas's own rate, 4.5 million of 29.1 million) against the San Franciscans kept on by data centers
+cutting like this Mac, per 1 GW of them (a stated unit, on screen). The two California events are real, every line
+with its report's page.
+
+(If asked "where are the data centers?") Click either data center: the camera flies into San Francisco's four, as
+OpenStreetMap maps them, by address (365 Main, 360 Spear, 630 3rd, 200 Paul), each joined to its nearest PG&E
+substation. Power pulses along each join at this Mac's measured watts, which stand in for each; under a cap it turns
+mint and flows back out. Hover one for its footprint. Back returns.
 
 (If asked "what if X fails?") Break it. Click any plant, the substation or the city, or press Break a part and
 type it ("an ice storm freezes half the gas plants"). Read the reading aloud ("the gas fleet loses 50 %: -X GW of its

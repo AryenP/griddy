@@ -168,11 +168,13 @@ function renderReplay() {
   if (!ev) { $("replay-state").textContent = "Loading the events…"; return; }
   const sentence = [];
   if (running) {
-    sentence.push(`Replaying ${ev.title}, ${ev.when}, at ${eventClock(d.sim_time)} local: the grid served ${gwOf(d.demand_mw)} against a forecast of ${gwOf(d.forecast_mw)}${d.gap_mw > 1000 ? `, ${gwOf(d.gap_mw)} short` : ""}. The chart shows only what the software has seen: no later hour.`);
+    sentence.push(`Replaying ${ev.title}${ev.simulated ? " (simulated)" : `, ${ev.when},`} at ${eventClock(d.sim_time)} local: the grid served ${gwOf(d.demand_mw)} against a forecast of ${gwOf(d.forecast_mw)}${d.gap_mw > 1000 ? `, ${gwOf(d.gap_mw)} short` : ""}. The chart shows only what the software has seen: no later hour.`);
     if (d.nothing_to_shed) sentence.push("Our sites had nothing running to shed, so no cut was sent: give training work and replay again.");
     else if (d.measured_cut_pct != null) sentence.push(`This Mac: ${fixed(d.measured_cut_pct, 0)}% below its baseline, measured.`);
   } else {
-    sentence.push(`Pick a real emergency. The grid's data is the operator's own (EIA-930), every alert comes at the time the official report gives, and the response is this Mac, live: ${S.replay.seconds} s of replay.`);
+    sentence.push(ev.simulated
+      ? `Simulated: ${ev.simulated} (EIA-930). Uri's alerts come at their real times, and the response is this Mac, live: ${S.replay.seconds} s of replay.`
+      : `Pick a real emergency. The grid's data is the operator's own (EIA-930), every alert comes at the time the official report gives, and the response is this Mac, live: ${S.replay.seconds} s of replay.`);
   }
   $("replay-state").textContent = sentence.join(" ");
   // the chart: real demand served (solid) and the operator's day-ahead forecast (dashed) over the window. While it
@@ -205,7 +207,7 @@ function renderReplay() {
       <div class="r-when">${a.before_window ? (a.day ? `${eventDay(a.day)} · days before` : "before the window") : `${eventDay(a.at)} · ${eventClock(a.at)}`}</div>
       <div class="r-what">${a.label}${a.cut_pct ? html` <span class="r-chip">our sites −${a.cut_pct}%</span>` : ""}</div>
       <div class="src">${a.source}</div></li>`)}`);
-  setHTML($("replay-impact"), html`<h3 class="r-h">What happened</h3>
+  setHTML($("replay-impact"), html`<h3 class="r-h">${ev.simulated ? html`What would happen <span class="d-sim">simulated</span>` : "What happened"}</h3>
     <div class="r-tiles">${ev.impact.map((i) => {
       const fig = leadFigure(i.text);
       return html`<div class="r-tile">${fig ? html`<div class="r-big">${fig}</div>` : ""}<p>${i.text}</p><div class="src">${i.source}</div></div>`;
@@ -228,25 +230,22 @@ function renderReplay() {
   setHTML($("replay-src"), html`Data: ${ev.data_source}. Alerts and impact: <a href="${ev.report_url}" target="_blank" rel="noopener">the official report</a> (pages cited per line).`);
 }
 
-// At grid scale, live: an ESTIMATE from public data (grid/scale.py), never shown as measured. ERCOT's demand is live;
-// the large loads and the queue are cited with their dates; the cut is this Mac's, measured under the same call.
+// At grid scale, live: an ESTIMATE (grid/scale.py), never shown as measured. The grid's demand is live; the data
+// centers are a stated 1 GW unit; the cut is this Mac's, measured under the same call.
 function renderScale() {
   const box = $("live-scale"), x = S.scale;
   box.hidden = !x;
   if (!x) return;
   const gw = (mw) => `${fixed(mw / 1000, 1)} GW`;
-  setHTML(box, html`<h3 class="r-h">ERCOT right now <span class="d-sim">estimate from public data</span></h3>
+  setHTML(box, html`<h3 class="r-h">${x.iso} right now <span class="d-sim">estimate from public data</span></h3>
     <div class="r-tiles">
-      <div class="r-tile"><div class="r-big">up to ${gw(x.large_loads_running_mw)}</div>
-        <p>drawn by ERCOT's large loads: each one's own monthly peak, summed, not what runs at once</p></div>
+      <div class="r-tile"><div class="r-big">${gw(x.demand_mw)}</div>
+        <p>${x.iso}'s demand served right now, live: its fuel mix, the total the Grid page shows</p></div>
       <div class="r-tile"><div class="r-big">about ${wholeMw(x.freed_mw)} MW</div>
-        <p>freed if they cut the ${fixed(x.our_cut_pct, 0)}% this Mac cut under the same call${x.share_of_demand_pct != null ? html`: <b>${fixed(x.share_of_demand_pct, 1)}%</b> of ERCOT's demand right now (${gw(x.demand_mw)}, live)` : ""}</p></div>
-      <div class="r-tile"><div class="r-big">${fixed(x.queue_gw, 0)} GW</div>
-        <p>more large loads, mostly data centers, asking to connect</p></div>
+        <p>freed per ${gw(x.flexible_mw)} of data centers, if they cut the ${fixed(x.our_cut_pct, 0)}% this Mac cut under the same call${x.share_of_demand_pct != null ? html`: <b>${fixed(x.share_of_demand_pct, 1)}%</b> of ${x.iso}'s demand right now` : ""}</p></div>
     </div>
-    <div class="src">Running and approved (${gw(x.large_loads_approved_mw)}) large loads: <a href="${x.large_loads_url}" target="_blank" rel="noopener">${x.large_loads_source}</a>.
-      Queue: <a href="${x.queue_url}" target="_blank" rel="noopener">${x.queue_source}</a>. Demand: ERCOT real-time system conditions${x.demand_t ? `, ${localClock(Date.parse(x.demand_t) / 1000)}` : ""}.
-      The cut: ${x.our_cut_source}. It scales one laptop's measured cut with public numbers, so read it as an estimate.</div>`);
+    <div class="src">Demand: ${x.iso}'s fuel mix via gridstatus${x.demand_t ? `, ${localClock(Date.parse(x.demand_t) / 1000)}` : ""}.
+      Data centers: ${x.flexible_source}. The cut: ${x.our_cut_source}. It scales one laptop's measured cut, so read it as an estimate.</div>`);
 }
 
 // ---------- the laptops (fleet/hub.py): each one's status, its own battery's watts, its job ----------
@@ -563,6 +562,7 @@ function renderControls() {
     iso.dataset.opts = want;
   }
   if (current) iso.value = current;
+  iso.closest("label").hidden = S.isoOptions.length < 2;            // one grid offered (Sun 03:00: no Texas): nothing to pick
   const obj = S.policy ? S.policy.objective : null;
   $("objective").querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.objective === obj)));
   const b = $("dispatcher");

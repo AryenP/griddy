@@ -59,8 +59,8 @@ events: dict = _load("events.yaml")
 
 
 def available_isos() -> list[str]:
-    """ISOs the UI may offer: every configured one, minus PJM when it has no API key."""
-    names = list(isos.get("isos", {}))
+    """ISOs the UI may offer: every configured one not marked `offered: false`, minus PJM when it has no API key."""
+    names = [n for n, c in isos.get("isos", {}).items() if c.get("offered", True)]
     if not settings.pjm_api_key:
         names = [n for n in names if n != "PJM"]
     return names

@@ -81,7 +81,7 @@ def test_replay_panel_shows_real_data_with_its_sources_and_labels_estimates():
     assert "simulated" not in HTML.lower()
     assert "Replay a real grid emergency" in HTML and "recorded grid data" in HTML
     assert "ev.data_source" in JS and "a.source" in JS and "i.source" in JS and "ev.report_url" in JS
-    assert JS.count('class="d-sim">estimate') >= 2          # the operator's-scale line and ERCOT right now
+    assert JS.count('class="d-sim">estimate') >= 2          # the operator's-scale line and the grid right now
     assert 'post("/api/replay", { action: "start", event:' in JS
 
 
@@ -89,7 +89,11 @@ def test_the_judge_page_is_the_3d_world_and_its_dock():
     """index.html (Sat 16:30): the grid as a 3D world drawn without a library, four choices and four numbers."""
     assert re.findall(r'<script src="([^"]+)"', WORLD_HTML) == ["common.js", "seen.js", "world.js", "demo.js"]
     assert '<canvas id="world"' in WORLD_HTML and 'href="/info.html"' in WORLD_HTML
-    assert "simulated" not in WORLD_HTML.lower() + DEMO_JS.lower()
+    # Aryen, Sun 03:00 ("simulate what would happen if it happened in sf"): one event is simulated, and says so. The
+    # word appears only beside that event's own `simulated` field, never on live or recorded data.
+    assert "simulated" not in WORLD_HTML.lower()
+    said = [ln for ln in DEMO_JS.splitlines() if "simulated" in ln.lower() and not ln.strip().startswith("//")]
+    assert said and all("ev.simulated" in ln or "data.simulated" in ln for ln in said), said
     assert set(re.findall(r'postJSON\(\s*[`"](/api/[\w/${}]+)', DEMO_JS)) <= {"/api/replay", "/api/jobs/${job}", "/api/whatif", "/api/whatif/read"}
     assert "prefers-reduced-motion" in WORLD_JS and "REDUCE" in WORLD_JS          # no motion for those who ask
     assert "ev.data_source" in DEMO_JS and "ev.report_url" in DEMO_JS and "estimate" in DEMO_JS

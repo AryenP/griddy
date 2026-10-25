@@ -35,7 +35,7 @@ WebSocket `GET /ws`. First message is a snapshot, then every timeline event as i
 {"kind": "snapshot", "data": {
   "grid": GridSignal | null, "schedule": Schedule | null, "plan": Plan-for-current-slot | null,
   "power": PowerReading | null, "jobs": {"chat": status, "train": status, "batch": status},
-  "calibration": Calibration | null, "policy": Policy, "iso_options": ["CAISO", "ERCOT"],
+  "calibration": Calibration | null, "policy": Policy, "iso_options": ["CAISO"] (a grid marked `offered: false` in config/isos.yaml is left out: ERCOT since Sun 03:35),
   "dispatcher_enabled": true, "agent": "online" | "offline", "run_id": str, "iso": str,
   "job_specs": {"train": Job, ...}, "quote": {"text", "who", "role"} | null,
   "iso_places": {"CAISO": {"area": str | null, "places": {"Nuclear": {"name", "note", "source"}}}, ...}}}
@@ -61,7 +61,7 @@ HTTP
 |---|---|---|---|
 | GET | `/api/state` | | the snapshot `data` above |
 | POST | `/api/policy` | `{"objective"?: "cost"\|"carbon"\|"balanced", "power_cap_w"?: number\|null}` | new Schedule (re-solved) |
-| POST | `/api/iso` | `{"iso": "CAISO"\|"ERCOT"}` | new GridSignal + Schedule |
+| POST | `/api/iso` | `{"iso": one of the snapshot's "iso_options"}` | new GridSignal + Schedule (400 for a grid not offered) |
 | POST | `/api/dispatcher` | `{"enabled": bool}` | `{"enabled": bool}`; off = baseline (run everything) |
 | POST | `/api/jobs/{id}` | `{"deadline": iso8601 \| null}` | new Schedule (owner/negotiator changed a deadline) |
 | POST | `/api/event` | `{"start": iso8601, "duration_s": int, "target_w"?: W, "target_pct"?: % of measured baseline, "reason"}` | new Schedule with the cap |
@@ -82,7 +82,7 @@ Agent and receipts routes (machine 1 wires them as machines 3 and 4 deliver; cod
 | GET | `/api/compare?dispatched=<id>&baseline=<id>` (or `baseline_policy=baseline\|pause_all` for the newest of that policy) | | `Comparison` (since Sat 23:55 it also carries `under_cap_pct`: `{dispatched, baseline}`, the share of measured seconds at or under the cap) |
 | GET | `/api/runs` | | `[{"run_id", "started", "dispatcher_enabled", "policy", "machine", "of_record"}]`, oldest first; `of_record` (since Sat 17:38) marks the evidence comparisons of record in docs/evidence/claims.yaml; `policy` is `dispatcher` \| `baseline` (ignore the call) \| `pause_all` |
 | GET | `/api/cities` | | since Sat 18:06: `[{"id", "name", "iso", "viewbox": [west, north, east, south], "hospitals": [{"name", "lat", "lon", "osm"}], "source", "license", "fetched_at"}]`: the city a judge opens from the 3D world, its hospitals REAL (OpenStreetMap, ODbL; credit it on the page). Feeders and blocks drawn around them are illustrative: say so |
-| GET | `/api/cities/{id}/map` | | since Sat 19:59: one real square of the city drawn 1:1, `{"city", "area", "center": [lat, lon], "half_m", "fetched_at", "source", "license", "heights": {"tagged", "levels", "estimated"}, "buildings": [{"p": [[x, z]] (metres from the centre, x east, z south), "h", "h0", "hospital"?, "name"?}], "roads": [{"w" (1-5, by class), "p", "name"?}], "parks": [[[x, z]]], "water": [...], "power_lines": [{"kind", "p", "voltage"?}], "power_sites": [{"kind", "x", "z", "name"?, "operator"?}], "hospitals": [{"name", "x", "z", "outline"}], "data_centers": [{"x", "z", "outline", "address"?}]}` (data centers: address and outline only, never the operator's name); OpenStreetMap (ODbL): credit it, and say which heights are estimated |
+| GET | `/api/cities/{id}/map` | | since Sat 19:59: one real square of the city drawn 1:1, `{"city", "area", "center": [lat, lon], "half_m", "fetched_at", "source", "license", "heights": {"tagged", "levels", "estimated"}, "buildings": [{"p": [[x, z]] (metres from the centre, x east, z south), "h", "h0", "hospital"?, "name"?}], "roads": [{"w" (1-5, by class), "p", "name"?}], "parks": [[[x, z]]], "water": [...], "power_lines": [{"kind", "p", "voltage"?}], "power_sites": [{"kind", "x", "z", "name"?, "operator"?}], "hospitals": [{"name", "x", "z", "outline"}], "data_centers": [{"x", "z", "outline", "address"?}]}` (data centers: address and outline only, never the operator's name); OpenStreetMap (ODbL): credit it, and say which heights are estimated Since Sun 03:35 the same route also serves the data centers' maps (scripts/fetch_datacenters.py): `san-francisco-datacenters`, which a click on a data center opens, and `bay-area-datacenters`, kept for later: `{"kind": "datacenters", "area", "center", "bbox", "half_m", "fetched_at", "source", "license", "data_centers": [{"x", "z", "outline", "address"?, "city"?, "in_sf", "area_m2"?, "levels"?, "substation": {"name"?, "operator"?, "kv", "x", "z", "km"}?, "osm"}], "substations": [{"name"?, "operator"?, "kv", "x", "z"}], "lines": [{"kv", "p"}], "roads": [{"p"}], "coast": [[[x, z]]], "places": [{"name", "x", "z", "pop"?, "city"}], "missing": [layer names the server did not give], "counts"}`, addresses only; a join to a substation is as the crow flies. |
 | GET | `/api/replay/events` | | `[{"id", "title", "when", "iso", "ba", "timezone", "window": [start, end] (local ISO), "series": [[hour-ending ISO, demand_mw, demand_forecast_mw]], "alerts": [{"kind": warning\|emergency\|outage\|end\|brownout, "label", "source", "at" (local ISO) or "day", "before_window", "replay_s", "cut_pct"?}], "impact": [{"text", "source"}], "shed_mw", "people_out", "people_unit", "flexible_mw", "flexible_source", "record_mw", "record_source", "report_url", "data_source"}]`: REAL grid emergencies (EIA-930 data, cited alerts; since Sat 16:30) |
 | POST | `/api/replay` | `{"action": "start", "event": id}` or `{"action": "stop"}` (+ optional `"who"`) | start or stop a replay through the live software; each alert reaches the real dispatcher at its real time. Since Sat 17:19 a start first fetches the event's hours live from api.eia.gov (a few seconds; the evidence copy if unreachable) and returns `"data": {"source": "live" \| "evidence copy", "fetched_at", "rows", "url", "max_diff_mw" (live vs evidence copy), "why" (if not live)}` |
 | POST | `/api/whatif/read` | `{"text": the judge's words (3-500 chars), "target": the clicked part or null}` (+ optional `"who"`) | since Sat 17:27: reads the words into `{"target", "share_pct", "cause", "how" ("read by pattern" or "read by <model>"), "size_mw", "part_mw"}`; breaks nothing. 422 with a reason the page can show (words screened as instructions, not a grid failure, agent offline, a part producing nothing); rate-limited like /api/ask |
@@ -94,10 +94,11 @@ Agent and receipts routes (machine 1 wires them as machines 3 and 4 deliver; cod
 | GET | `/join?t=<token>&next=/operator.html` | | 303 to `next` (same-site paths only) with the HttpOnly `brownout_op` cookie; wrong token 401 (since Sat 14:45) |
 
 At grid scale (since Sat 14:53, grid/scale.py). The snapshot carries `"scale"` (null until the first fetch) and every
-`poll_s` (300 s) the WebSocket sends `{"kind": "scale", "data": {"estimate": true, "iso": "ERCOT", "demand_mw" (ERCOT's live
-actual system demand), "demand_t", "large_loads_running_mw", "large_loads_approved_mw", "large_loads_source", "large_loads_url",
-"queue_gw", "queue_source", "queue_url", "our_cut_pct", "our_cut_source", "freed_mw", "share_of_demand_pct"}}`. It is an
-ESTIMATE (arithmetic on cited public numbers and this Mac's measured cut): label it so on every page; only `demand_mw` is live.
+`poll_s` (60 s) the WebSocket sends `{"kind": "scale", "data": {"estimate": true, "iso" (the live grid, CAISO), "demand_mw"
+(its demand served now: the fuel mix total the Grid page shows), "demand_t", "flexible_mw" (a stated 1 GW of data centers),
+"flexible_source", "our_cut_pct", "our_cut_source", "freed_mw", "share_of_demand_pct"}}` (since Sun 03:35; the ERCOT
+large-loads fields are gone with Texas). It is an ESTIMATE (this Mac's measured cut on a stated unit): label it so on every
+page; only `demand_mw` is live.
 
 Who may act (since Sat 14:45, Microsoft HVE Core review; api/access.py). Every POST that moves a knob, a cap or an
 approval (`/api/policy`, `/api/iso`, `/api/dispatcher`, `/api/jobs/{id}`, `/api/event`, `/api/replay`, `/request`,
