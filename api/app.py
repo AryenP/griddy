@@ -26,7 +26,6 @@ from dispatcher.solve import load_calibration, load_policy
 from fleet.hub import Fleet
 from replay.engine import Replay
 from replay.whatif import WhatIf
-from response.engine import Response
 from grid.watcher import GridWatcher
 from meter.powermetrics import PowerMeter
 
@@ -52,9 +51,6 @@ class Runtime:
         self.meter.subscribers.append(lambda r: self.executor.on_power(self.fleet.combine(r)))
         self.replay = Replay(self.tl, self.executor)         # real grid emergencies, replayed through the live software
         self.whatif = WhatIf(self.tl, self.executor, self.replay, (config.events or {}).get("whatif"))   # a judge breaks a part
-        self.response = Response(self.tl, self.executor, self.replay, self.whatif, Path(__file__).resolve().parents[1],
-                                 (config.events or {}).get("whatif"))   # Griddy's automatic emergency response
-        self._responded: set[tuple] = set()
         self.scale: dict | None = None                               # ERCOT-scale ESTIMATE (grid/scale.py)
         self.agent = AgentBridge(self.tl, self.executor, store=Path("runs/approvals.json"))   # survives a restart
         self.agent.snapshot = self.snapshot
@@ -113,8 +109,6 @@ class Runtime:
             try:
                 self.replay.tick()
                 self.whatif.tick()
-                self._auto_response()
-                self.response.tick()
                 gone, self.replay.pending_withdraw = self.replay.pending_withdraw, []
                 new, self.replay.pending_caps = self.replay.pending_caps, []
                 if gone or new:                     # a re-plan takes seconds: the replayed clock keeps ticking meanwhile
@@ -124,17 +118,6 @@ class Runtime:
                 log.exception("replay tick failed")
                 self.tl.log("note", level="error", msg=f"replay tick failed: {e!r}"[:300])
             await asyncio.sleep(1.0)
-
-    def _auto_response(self):
-        """A replayed emergency alert (EEA 3, Stage 3) starts Griddy's response on its own, once per alert."""
-        ev = self.replay.event
-        if ev is None:
-            return
-        for a in self.replay.fired:
-            key = (ev["id"], a["label"])
-            if a["kind"] == "emergency" and key not in self._responded and "emergency" in self.replay.caps:
-                self._responded.add(key)
-                self.response.start("grid_emergency", trigger="replay", label=f"{a['label']} (recorded: {a.get('source', ev['title'])})")
 
     async def _hand_over(self, gone: list[str], new: list):
         """Withdrawn cuts, then new ones, to the real dispatcher, one batch at a time and in order."""
@@ -178,7 +161,7 @@ class Runtime:
         return {"grid": dump(ex.signal), "schedule": dump(ex.schedule), "plan": dump(ex.plan),
                 "power": dump(self.meter.latest), "power_history": [[round(t, 2), round(w, 3)] for t, w in ex.power],
                 "jobs": {j: Knobs.status(j) for j in ("chat", "train", "batch")},
-                "calibration": dump(ex.cal), "fleet": self.fleet.status(), "replay": self.replay.summary(), "whatif": self.whatif.last, "response": self.response.last, "scale": self.scale, "policy": dump(ex.policy), "iso_options": available_isos(),
+                "calibration": dump(ex.cal), "fleet": self.fleet.status(), "replay": self.replay.summary(), "whatif": self.whatif.last, "scale": self.scale, "policy": dump(ex.policy), "iso_options": available_isos(),
                 "iso": self.watcher.iso if self.watcher else settings.iso,
                 "dispatcher_enabled": ex.dispatcher_enabled, "agent": self.agent.status, "agent_model": self.agent.llm.name,
                 "approvals": [dump(x) for x in self.agent.pending(status=None)],

@@ -269,3 +269,7 @@ Aryen asked tonight who the job owner is and whether that part drifts from the g
    whether the text has already said who that is (the person whose AI job runs at the data center).
 2. Write the one sentence that should come before it, and say where it goes.
 Done when: team/review/job-owner.md names each place and the sentence, pushed on krish/k22-owner.
+
+### Note from machine 1 (Sat 23:31): main reverted to 22:07
+Aryen asked to keep the 22:07 version (1040599). The README fixes from your K20 and K21 and the emergency-response
+work are undone on main (kept under tag before-revert-to-2207). Base new branches on main as it is now.
