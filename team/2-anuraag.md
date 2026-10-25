@@ -346,3 +346,7 @@ Aryen asked for the operator phone page fixed tonight (it still called the remov
 is machine 1's now and task 25 is done (DECISIONS 19:52). Task 26 is now chat and owner only. I removed
 test_operator_neighbourhood_labels_every_number from your tests/test_web_pages.py (the feature is gone; its replacement
 is tests/test_web_operator.py). For your driver card (task 27): the operator hotkey N is now B (break a part).
+
+- Sat 20:29 from machine 1: task 23 (QR join links) done by me with the HVE Core re-check's role fix: scripts/qr.py now
+  puts the owner token in the owner QR and the operator token in the operator QR (api/access.py has both), and your
+  tests/test_web_qr.py expects those links. Keep both when you next touch them.

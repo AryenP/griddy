@@ -18,6 +18,8 @@ import qrcode
 ROOT = Path(__file__).resolve().parents[1]
 PAGES = [("chat", "/chat", "use the service"), ("owner", "/owner.html", "you own a job"),
          ("operator", "/operator.html", "you are the utility")]
+# The owner and operator codes join the phone in that role (api/access.py): one scan, then the page can act.
+JOIN = {"owner": "owner_token", "operator": "operator_token"}
 
 
 def urls(public_url: str) -> list[tuple[str, str, str]]:
@@ -32,7 +34,12 @@ def urls(public_url: str) -> list[tuple[str, str, str]]:
     if loopback:
         raise ValueError(f"PUBLIC_URL {public_url!r} points at this machine's loopback, which a phone cannot open")
     base = public_url.strip().rstrip("/")
-    return [(name, base + path, role) for name, path, role in PAGES]
+    from api import access
+    out = []
+    for name, path, role in PAGES:
+        tok = getattr(access, JOIN[name])() if name in JOIN else None
+        out.append((name, f"{base}/join?t={tok}&next={path}" if tok else base + path, role))
+    return out
 
 
 def save_png(url: str, path: Path) -> Path:

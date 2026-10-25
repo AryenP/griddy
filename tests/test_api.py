@@ -172,5 +172,40 @@ def test_every_switch_records_who_and_from_where():
     """HVE Core review fix 3: the name typed on the page is self-declared; where it came from is not."""
     c, rt = client()
     c.post("/api/dispatcher", json={"enabled": False, "who": "judge"})
-    assert rt.executor.calls[-1] == ("dispatcher", False, "judge (joined device testclient)")
+    assert rt.executor.calls[-1] == ("dispatcher", False, "judge (joined operator device testclient)")
 
+
+
+OWNER = "test-owner-token"
+
+
+def test_an_owner_phone_cannot_answer_as_the_operator_or_flip_a_switch(monkeypatch):
+    """HVE Core re-check Sat 20:16, the one demo fix left: owners and the operator shared one join token, so an owner's
+    phone could answer the operator's over-cap request. Each role now has its own token and acts only in its part."""
+    from types import SimpleNamespace
+    monkeypatch.setattr(access.settings, "owner_token", OWNER)
+    c_owner, rt = client(joined=False)
+    c_owner.headers[access.HEADER] = OWNER
+    c_op = TestClient(c_owner.app, headers={access.HEADER: TOKEN})
+    calls = []
+
+    async def reply(request_id, text, who, acting_as=None):
+        calls.append((request_id, who))
+        return SimpleNamespace(model_dump=lambda **k: {"decision": "approve"}), None
+    rt.agent = SimpleNamespace(approvals={"cap": SimpleNamespace(job_id="power_cap", owner="ops"),
+                                          "job": SimpleNamespace(job_id="train", owner="ml-team")}, reply=reply)
+    assert c_owner.post("/api/approvals/cap/reply", json={"text": "yes", "who": "ops"}).status_code == 403
+    assert c_owner.post("/api/dispatcher", json={"enabled": False}).status_code == 403
+    assert c_owner.post("/api/policy", json={"objective": "cost"}).status_code == 403
+    assert c_op.post("/api/approvals/job/reply", json={"text": "yes", "who": "ml-team"}).status_code == 403
+    assert calls == []                                                   # nothing reached the agent
+    assert c_owner.post("/api/approvals/job/reply", json={"text": "no", "who": "ml-team"}).status_code == 200
+    assert c_op.post("/api/approvals/cap/reply", json={"text": "yes", "who": "ops"}).status_code == 200
+    assert [w for _, w in calls] == ["ml-team (joined owner device testclient)", "ops (joined operator device testclient)"]
+
+
+def test_the_owner_join_link_sets_an_owner_cookie(monkeypatch):
+    monkeypatch.setattr(access.settings, "owner_token", OWNER)
+    c, _ = client(joined=False)
+    r = c.get(f"/join?t={OWNER}&next=/owner.html", follow_redirects=False)
+    assert r.status_code == 303 and r.headers["location"] == "/owner.html" and access.COOKIE in r.headers.get("set-cookie", "")

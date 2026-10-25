@@ -15,6 +15,7 @@ from fastapi.responses import FileResponse, RedirectResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 from agent import faults, intake
+from agent.negotiator import CAP_JOB
 from core.config import available_isos, settings
 from core.types import CapEvent
 from workloads.base import WL
@@ -124,15 +125,15 @@ def make_router(rt) -> APIRouter:
     r = APIRouter()
     paid = access.RateLimit(n=10, per_s=60)       # /request and /api/ask each cost a model call
 
-    def by(who: str, request: Request) -> str:
-        """The name typed on the page (self-declared) and where the call came from (not)."""
-        return f"{who} ({access.require(request)})"
+    def by(who: str, request: Request, roles: tuple[str, ...] = ("operator",)) -> str:
+        """The name typed on the page (self-declared) and where the call came from (not). Operator routes by default."""
+        return f"{who} ({access.require(request, roles)})"
 
     @r.get("/join")
     async def join(t: str = "", next: str = "/operator.html"):
         """A phone joins once (the owner and operator QR codes carry this link): sets the cookie the action
         routes check, then opens the page. A wrong token joins nothing."""
-        if not hmac.compare_digest(t, access.operator_token()):
+        if not (hmac.compare_digest(t, access.operator_token()) or hmac.compare_digest(t, access.owner_token())):
             raise HTTPException(401, "wrong or missing join token: use the QR code from `make qr`")
         dest = next if next.startswith("/") and not next.startswith("//") else "/"
         resp = RedirectResponse(dest, status_code=303)
@@ -296,7 +297,7 @@ def make_router(rt) -> APIRouter:
 
     @r.post("/api/jobs/{job_id}")
     async def job(job_id: str, body: JobIn, request: Request):
-        who = by(body.who, request)
+        who = by(body.who, request, ("operator", "owner"))            # a job's deadline: its owner, or the operator
         if job_id not in {j.id for j in rt.executor.jobs()} or job_id == "chat":
             raise HTTPException(404, f"no deferrable job {job_id}")
         s = await rt.executor.set_job(job_id, who=who, **body.model_dump(exclude_unset=True, exclude={"who"}))
@@ -343,7 +344,13 @@ def make_router(rt) -> APIRouter:
 
     @r.post("/api/approvals/{request_id}/reply")
     async def reply(request_id: str, body: ReplyIn, request: Request):
-        who = by(body.who, request)
+        """The over-cap request is the operator's; a job's request is its owner's. A phone answers only its own kind
+        (HVE Core re-check 20:16); this Mac answers either."""
+        access.require(request, ("operator", "owner"))               # a stranger's phone: 401 before any lookup
+        req = rt.agent.approvals.get(request_id)
+        if req is None:
+            raise HTTPException(404, f"no approval request {request_id}")
+        who = by(body.who, request, ("operator",) if req.job_id == CAP_JOB else ("owner",))
         try:
             decision, sched = await rt.agent.reply(request_id, body.text, who, acting_as=body.owner or body.who)
         except KeyError:
@@ -356,7 +363,7 @@ def make_router(rt) -> APIRouter:
 
     @r.post("/api/ask")
     async def ask(body: AskIn, request: Request):
-        access.require(request)
+        access.require(request, ("operator", "owner"))
         paid.check(request)
         return _dump(await rt.agent.ask(body.question))
 
