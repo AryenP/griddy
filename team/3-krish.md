@@ -185,3 +185,15 @@ machine 1 already merged at 01:55 (`734ad2c` "Merge receipts", plus `2d7991e` wi
    "[supervisor] needs Anuraag: ...".
 6. Once an hour, a PR (branch `krish/review-<HHMM>`) appending a short summary to `team/review/<date>.md`:
    what you checked, what you found, what is still open. Issues are the main channel; keep the summary short.
+
+### K16 (Sat 17:30). Check that replays use live data and never see the future (about 30 min) — judge-facing, do first
+Aryen asked for this to be airtight ("if it's trained on this data and is just replaying, it defeats the purpose").
+1. Read DECISIONS 17:19 and `replay/engine.py` (`at`, `_flag`), `replay/eia.py`.
+2. Run `uv run pytest -q tests/test_replay.py -k future` and read the test: does deleting later hours really prove it?
+   Look for any other path from later hours into what the software sees (the catalog, `whatif._day_peak`, the page).
+3. Pick one claim and check it by hand against the EIA's own API: ERCOT's day-ahead forecast for 14 Feb 2021 20:00
+   (local) is 71,491 MW; demand at 15 Feb 03:00 UTC is 68,862 MW. Use
+   `https://api.eia.gov/v2/electricity/rto/region-data/data/?api_key=DEMO_KEY&frequency=hourly&data[0]=value&facets[respondent][]=ERCO&start=2021-02-15T02&end=2021-02-15T04`.
+4. Try the typed-fault box (`/` → Break a part) with five inputs that try to make it act or lie (instructions,
+   200 %, a part that produces nothing, gibberish, a real description). Note what each did.
+Done when: `team/review/1730-live-data.md` lists what you checked, each result, and any finding with file:line.

@@ -313,3 +313,22 @@ measured, amber for warnings, red only for limits; and the same pill navigation 
 (Grid · Info · Proof). Keep every source line; make it small and faint rather than removing it.
 Done when: the four pages and info.html look like one product at 375 px and 1440 px; tests pass; screenshots in the PR.
 
+
+## Sat 17:30 from machine 1: what changed today, and one new task
+- I changed one line in your `tests/test_web_pages.py`: CONTRACT_ROUTES now has `/api/whatif` and `/api/whatif/read`
+  (both in HANDOFF.md since 17:19 and 17:27). Keep it when you next touch the file.
+- For task 25 (the phone event picker): the phone can also break a part. `POST /api/whatif` with `{"target":
+  "plant:Gas" | "hub" | "city" | "clear", "share_pct", "cause"}`, and `POST /api/whatif/read` with `{"text", "target"}`
+  turns a judge's words into a reading to confirm (HANDOFF.md has both). Label it "what-if". Optional, after the picker.
+- Replays now fetch their hours live from api.eia.gov when play is pressed (a few seconds); the start response has
+  `"data": {"source": "live" | "evidence copy", ...}`. Show where the hours came from if your page starts a replay.
+
+### 27. The driver card for the new demo (Sat 17:30), do before 26, judge-facing
+`docs/judging/driver-card.md` still describes the neighbourhood (removed at 16:01) and old hotkeys. Rewrite it for
+what `/` shows now: (1) "Give training a deadline", wait about 20 s; (2) pick Winter Storm Uri, "Replay it live" (the
+hours are fetched live from the EIA; the footer says so); (3) point at Without Griddy / With Griddy; (4) "Break a part":
+click the gas plant, or type "an ice storm freezes half the gas plants", read the reading aloud, confirm; (5) Info and
+Proof pages. One truthful line for each failure (EIA unreachable: runs on the evidence copy and says so; agent
+offline: typed faults still read the plain forms; nothing to shed: the dock says so).
+Done when: the card matches index.html and demo.js as they are on main, no neighbourhood, no hotkey that does not
+exist, every number on it is one the screen shows, and it fits one printed page.
