@@ -414,3 +414,9 @@ to every page's wording, no fact changed. 502 tests pass. Next: the docs' wordin
   No open PR besides #23; no issues; Anuraag and Arumalla quiet, two tasks each.
 - Next: the Uri replay timeline with a claims entry; the Grid Desk Fetch flow only on Aryen's yes.
 - Blockers: needs-Aryen items unchanged (App Insights line, repo public, EIA key rotation, Fetch opt-in, the quote).
+
+## Sat 22:26 tick
+- Done: Krish's K21 in (sourced answer to "a real site, 40 % in seconds?"); its Emerald 25 % anchor added to the
+  README and Devpost impact lines. Krish has K22 (is "job owner" explained before it appears?). No PRs besides #23, no issues.
+- Next: answer Aryen's question about the job owner; the Uri replay timeline with a claims entry.
+- Blockers: needs-Aryen items unchanged.
