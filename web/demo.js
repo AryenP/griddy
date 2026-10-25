@@ -35,6 +35,7 @@ function handle(msg) {
     case "grid": if (d.feed === "signal") D.grid = d; break;
     case "replay": D.last = d; D.pick = d.event; onAlerts(d); break;
     case "whatif": D.whatif = d; break;
+    case "action": if (running() || faulted()) onAction(d); return;
     case "scale": D.scale = d; break;
     default: return;
   }
@@ -57,6 +58,21 @@ function toast(kind, when, text, source) {
   $("w-alerts").prepend(el);
   while ($("w-alerts").children.length > 4) $("w-alerts").lastChild.remove();
   setTimeout(() => el.classList.add("old"), 9000);
+}
+
+// How Griddy fixes it, as it happens: the solver's plan executed on this Mac (controller/knobs.py action events),
+// gathered in one card so the alerts stay readable.
+const ACTS = {};
+let actCard = null;
+function onAction(d) {
+  const st = { pause: "paused", run: "running", stop: "stopped", resume: "running" };
+  const what = d.state ? st[d.state] || d.state : d.concurrency != null ? `${d.concurrency} streams` : d.threads != null ? `${d.threads} threads` : d.device ? `on the ${String(d.device).toUpperCase()}` : null;
+  if (!what) return;
+  ACTS[d.job] = what;
+  if (!actCard) { actCard = document.createElement("div"); actCard.className = "w-toast act"; }
+  const el = actCard;
+  setHTML(el, html`<b>Griddy acts · ${localClock(nowS())}</b><span>${Object.entries(ACTS).map(([j, w]) => `${j} ${w}`).join(" · ")}</span><small>the solver's plan, executed on this Mac; chat keeps its speed promise</small>`);
+  $("w-alerts").prepend(el);
 }
 
 // Where the replayed hours came from: fetched live just now, or the evidence copy (and why).
@@ -154,9 +170,9 @@ function render() {
 
 // A judge's what-if on top of whatever the world shows: the broken part, the grid's real numbers after it, our cut.
 function overlayFault() {
-  if (!faulted()) { World.set({ tripped: null, fault: null }); return; }
+  if (!faulted()) { World.set({ tripped: null, tripped_mw: null, fault: null }); return; }
   const w = D.whatif, sc = w.scale;
-  World.set({ tripped: w.target === "city" ? null : w.fuel, fault: w.target, served: w.served_after, needed: w.needed_after,
+  World.set({ tripped: w.target === "city" ? null : w.fuel, tripped_mw: w.lost_mw, fault: w.target, served: w.served_after, needed: w.needed_after,
     alert: w.shortfall_mw > 0 ? "emergency" : null, with_mw: sc ? sc.freed_mw : null, ours_w: w.ours_w, baseline_w: w.baseline_w,
     cut_pct: w.measured_cut_pct });
   $("s-served").textContent = gw(w.served_after);
@@ -182,8 +198,10 @@ function waitingText(asked, nothing) {
 }
 
 // ---------------------------------------------------------------- breaking a part: a confirm card, then the server
-function openPop(title, text, buttons, pt) {
+function openPop(title, text, buttons, pt, words) {
   $("w-pop-t").textContent = title; $("w-pop-p").textContent = text;
+  $("w-pop-f").hidden = !words; $("w-pop-read").textContent = ""; $("w-pop-read").className = ""; $("w-pop-in").value = "";
+  POP.words = words || null;
   const box = $("w-pop-b");
   box.replaceChildren();
   for (const [label, cls, fn] of buttons) {
@@ -196,9 +214,29 @@ function openPop(title, text, buttons, pt) {
   const r = pop.getBoundingClientRect();
   pop.style.left = `${Math.max(16, Math.min(innerWidth - r.width - 16, pt.x - r.width / 2))}px`;
   pop.style.top = `${Math.max(76, Math.min(innerHeight - r.height - 16, pt.y - r.height - 14))}px`;
-  box.firstChild.focus();
+  (words ? $("w-pop-in") : box.firstChild).focus();
 }
 function closePop() { $("w-pop").hidden = true; }
+const POP = { words: null };
+// The judge's own words: read into a part, a share and a cause (POST /api/whatif/read), shown with its real size,
+// broken only on confirm.
+$("w-pop-f").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const text = $("w-pop-in").value.trim();
+  if (text.length < 3) return;
+  $("w-pop-read").className = ""; $("w-pop-read").textContent = "Reading…";
+  const r = await postJSON("/api/whatif/read", { text, target: POP.words && POP.words.target, who: "judge" });
+  if (!r.ok) { $("w-pop-read").className = "err"; $("w-pop-read").textContent = r.data && r.data.detail ? String(r.data.detail) : routeError("/api/whatif/read", r); return; }
+  const f = r.data, part = f.target === "hub" ? "the substation" : f.target === "city" ? "demand" : `the ${f.target.slice(6).toLowerCase()} fleet`;
+  $("w-pop-read").textContent = `${f.how}: “${f.cause}”. ${part[0].toUpperCase()}${part.slice(1)} ${f.target === "city" ? "rises" : "loses"} ${fixed(f.share_pct, 0)}%: ${f.target === "city" ? "+" : "−"}${gw(f.size_mw)} of its real ${gw(f.part_mw)} now.`;
+  const box = $("w-pop-b");
+  box.replaceChildren();
+  for (const [label, cls, fn] of [["Break it like that", "go", () => breakIt(f.target, f.share_pct, f.cause)], ["Cancel", "", closePop]]) {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = cls; b.textContent = label; b.addEventListener("click", fn);
+    box.append(b);
+  }
+});
 
 function confirmBreak(h, pt) {
   const ts = World.targets().filter((t) => t.id.startsWith("plant:"));
@@ -208,11 +246,11 @@ function confirmBreak(h, pt) {
     : h.id === "hub"
       ? ["Fail the main substation?", `What-if: it cuts off the largest fleet${big ? `, ${big.title.toLowerCase()} (${gw(big.mw)}, its real output)` : ""}. Griddy reacts live.`, "Fail it"]
       : [`Surge demand in ${h.title === "City" ? "the city" : h.title}?`, "What-if: demand jumps to the highest forecast for the rest of today, the operator's real published forecast. Griddy reacts live.", "Surge it"];
-  openPop(card[0], card[1], [[card[2], "go", () => breakIt(h.id)], ["Cancel", "", closePop]], pt);
+  openPop(card[0], card[1], [[card[2], "go", () => breakIt(h.id)], ["Cancel", "", closePop]], pt, { target: h.id });
 }
-async function breakIt(id) {
+async function breakIt(id, share = 100, cause = "") {
   closePop();
-  const r = await postJSON("/api/whatif", { target: id, who: "judge" });
+  const r = await postJSON("/api/whatif", { target: id, share_pct: share, cause, who: "judge" });
   if (!r.ok) { toast("emergency", "what-if", `Could not break it: ${routeError("/api/whatif", r)}`, ""); return; }
   D.whatif = r.data;
   render();
@@ -227,7 +265,7 @@ $("w-break-btn").addEventListener("click", async (e) => {
   const r = e.currentTarget.getBoundingClientRect();
   openPop("Break a part of the grid", "What-if: the fault is invented, its size is real, taken from the grid at this moment.",
     [...World.targets().map((t) => [t.mw ? `${t.title} · ${gw(t.mw)}` : t.title, "", () => confirmBreak(t, { x: r.left + r.width / 2, y: r.top })]),
-      ["Cancel", "", closePop]], { x: r.left + r.width / 2, y: r.top });
+      ["Cancel", "", closePop]], { x: r.left + r.width / 2, y: r.top }, { target: null });
 });
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") closePop(); });
 document.addEventListener("pointerdown", (e) => { if (!$("w-pop").hidden && !e.target.closest("#w-pop, #w-break-btn")) closePop(); });

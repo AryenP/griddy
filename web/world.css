@@ -76,6 +76,16 @@ button { font: inherit; color: inherit; }
 .w-pop[hidden] { display: none; }
 .w-pop b { font-size: 1rem; font-weight: 600; }
 .w-pop p { margin: 0; font-size: 0.85rem; color: var(--muted); line-height: 1.4; }
+.w-pop-f { display: grid; gap: 6px; }
+.w-pop-f[hidden] { display: none; }
+.w-pop-f label { font-size: 0.75rem; color: var(--muted); }
+.w-pop-f div { display: flex; gap: 6px; }
+.w-pop-f input { flex: 1; min-width: 0; min-height: 44px; padding: 8px 12px; border-radius: 12px; border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.05); color: var(--ink); font: inherit; font-size: 0.85rem; }
+.w-pop-f button { min-height: 44px; padding: 8px 14px; border-radius: 12px; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.08); cursor: pointer; }
+.w-pop-f small { font-size: 0.75rem; color: var(--ink); line-height: 1.35; }
+.w-pop-f small.err { color: #ffb0b0; }
+.w-toast.act { border-left-color: var(--mint); }
 .w-pop-b { display: flex; flex-wrap: wrap; gap: 6px; }
 .w-pop-b button { min-height: 44px; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.05); cursor: pointer; }
 .w-pop-b button.go { background: var(--red); border-color: var(--red); color: #1a0505; font-weight: 650; }

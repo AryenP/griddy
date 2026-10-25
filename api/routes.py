@@ -13,6 +13,7 @@ from fastapi import APIRouter, Header, HTTPException, Request, WebSocket
 from fastapi.responses import FileResponse, RedirectResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
+from agent import faults, intake
 from core.config import available_isos, settings
 from core.types import CapEvent
 from workloads.base import WL
@@ -81,6 +82,14 @@ class SiteCalibration(BaseModel):
 
 class WhatIfIn(BaseModel):
     target: str = Field(pattern=r"^(plant:[A-Za-z]+|hub|city|clear)$")
+    share_pct: float = Field(100.0, ge=1, le=100)
+    cause: str = Field("", max_length=120)
+    who: str = "operator"
+
+
+class FaultTextIn(BaseModel):
+    text: str = Field(min_length=3, max_length=500)
+    target: str | None = Field(None, pattern=r"^(plant:[A-Za-z]+|hub|city)$")
     who: str = "operator"
 
 
@@ -176,12 +185,30 @@ def make_router(rt) -> APIRouter:
         if body.target == "clear":
             rt.whatif.end()
             return {"cleared": True}
+        if body.cause and (rej := intake.guard(body.cause, {"instructions", "secrets"})):
+            raise HTTPException(400, f"cause not used: {rej.reason}")
         try:
-            return rt.whatif.start(body.target)
+            return rt.whatif.start(body.target, share_pct=body.share_pct, cause=body.cause)
         except KeyError:
             raise HTTPException(404, f"nothing called {body.target!r} to break")
         except ValueError as e:
             raise HTTPException(409, str(e))
+
+    @r.post("/api/whatif/read")
+    async def whatif_read(body: FaultTextIn, request: Request):
+        """A judge's own words for a failure, read into a part, a share and a cause (agent/faults.py: a pattern
+        first, then the model). Nothing breaks here: the page shows the reading with its real size to confirm."""
+        by(body.who, request)
+        paid.check(request)
+        parts = rt.whatif.parts()
+        if not parts:
+            raise HTTPException(409, "no grid numbers yet: the fault needs the grid's real supply and demand")
+        try:
+            got = await faults.read(body.text, body.target, parts, rt.agent.llm)
+        except ValueError as e:
+            raise HTTPException(422, str(e))
+        size = parts[got["target"]] * got["share_pct"] / 100
+        return {**got, "size_mw": size, "part_mw": parts[got["target"]]}
 
     @r.get("/api/replay/events")
     async def replay_events():
