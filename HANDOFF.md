@@ -72,6 +72,7 @@ Agent and receipts routes (machine 1 wires them as machines 3 and 4 deliver; cod
 | Method | Path | Body | Returns |
 |---|---|---|---|
 | POST | `/request` | `{"text": str, "who"?: str}` free text or a voice transcript | `{"intake": IntakeResult, "schedule": Schedule \| null}` |
+| POST | `/request` with `"source": "fetch"` | since Sun 03:10, loopback only (403 otherwise): `{"text", "who"?, "source": "fetch"}` from the Fetch.ai Facility agent | staged, never applied by the call: `{"intake", "schedule": the solver's preview with the cut \| null, "staged": bool, "approval_id", "approval": ApprovalRequest \| null, "run_id"}`. The approval has `job_id` "power_cap", owner `policy.operator`, and `cap_event` (the cut in watts from the measured baseline). The operator's plain yes on `/api/approvals/{id}/reply` applies it from that moment (`cap_event` then as applied, `run_id`); a no is logged as a refusal. A re-solve never expires it. |
 | POST | `/openadr/event` | an OpenADR 3.1 EVENT object | `{"intake": IntakeResult, "schedule": Schedule \| null}` |
 | GET | `/api/approvals?owner=&status=pending` | | `[ApprovalRequest]` |
 | POST | `/api/approvals/{id}/reply` | `{"text": str, "who": str, "owner"?: str}` (`owner`: the owner this console acts as, else `who`; any other owner gets 403) | `{"decision": OwnerDecision, "schedule": Schedule \| null}` |
@@ -114,6 +115,8 @@ approvals (`/api/approvals/{id}/reply` for a request whose `job_id` is not `powe
 (`/api/jobs/{id}`) and `/api/ask`, and gets 403 elsewhere (the dispatcher, policy, caps, requests, replays, what-ifs,
 the `power_cap` approval). This Mac may do everything.
 
+ApprovalRequest (since Sun 03:10): `shortfall` may be null (a staged Fetch request has none) and it gains `cap_event`,
+`asked_by`, `who` (who answered), `reply` (their words) and `run_id`, all optional.
 WebSocket adds `{"kind": "approval", "data": ApprovalRequest}` whenever a request is created or changes
 status (and `{"kind": "approval", "data": {"request_id", "who", "decision": OwnerDecision}}` for each reply),
 and the snapshot gains `"approvals": [ApprovalRequest]` (all statuses), `"explanation": Explanation | null`
