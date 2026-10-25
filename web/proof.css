@@ -6,7 +6,7 @@ body.proof.p {
   --text: #f0f4f2; --muted: #8f9b98; --faint: #66726f; --ok: #7df0bf; --bad: #ff5a5a; --warn: #ffbe46;
   --font: "Inter", "SF Pro Text", system-ui, -apple-system, "Segoe UI", sans-serif;
   font: 16px/1.5 var(--font); color: var(--text); letter-spacing: -0.005em;
-  max-width: 1180px; margin: 0 auto; padding: 18px 28px 72px;
+  padding: 16px 28px 72px;                                          /* full width, like Info (Aryen, Sun 00:05) */
   background:
     radial-gradient(1200px 600px at 10% -10%, rgba(125, 240, 191, 0.06), transparent 60%),
     radial-gradient(900px 500px at 100% 0%, rgba(90, 168, 255, 0.05), transparent 60%), var(--bg);

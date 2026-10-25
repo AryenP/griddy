@@ -24,9 +24,9 @@ const World = (() => {
     cv: null, ctx: null, w: 0, h: 0, dpr: 1, yaw: -0.62, pitch: 0.6, scale: 18, cx: 0, cy: 0, baseYaw: -0.62,
     drag: null, last: 0, t: 0, running: false, labels: [], smoke: [], smokeAcc: 0, safe: { top: 72, bottom: 230, right: 0 },
     data: { mix: {}, served: null, needed: null, ours_w: null, baseline_w: null, cut_pct: null, alert: null, campus: null, peaks: {},
-      tripped: null, tripped_mw: null, fault: null, with_mw: null, city: null },
+      tripped: null, tripped_mw: null, fault: null, with_mw: null, city: null, racks: [], cap: null },
     hits: [], hover: null, onPick: null, down: null, city: null, cityMap: null, cam: null, trans: null,
-    v: { served: 0, needed: 0, lit: 1, ours: 0.5, mix: {}, tint: { gen: [...C.lineOk], city: [...C.lineCity] } },
+    v: { served: 0, needed: 0, lit: 1, ours: 0.5, mix: {}, tint: { gen: [...C.lineOk], city: [...C.lineCity] }, focus: 0, capY: 1 },
   };
 
   // ------------------------------------------------------------------ easing: every value glides to its reading
@@ -48,10 +48,22 @@ const World = (() => {
     const alertColor = d.alert === "emergency" || d.alert === "outage" ? C.lineBad : d.alert === "warning" ? C.lineWarn : null;
     v.tint.gen = easeColor(v.tint.gen, alertColor || C.lineOk, dt);
     v.tint.city = easeColor(v.tint.city, alertColor || C.lineCity, dt);
+    // A cap lands: the camera moves in on the data center until its measured watts are under the cap, then pulls back;
+    // the cap bar drops from the roof to the cap's level. Both follow live state, eased; nothing runs on a timer.
+    const cap = d.cap, fighting = cap && (cap.ttc == null || cap.over);
+    v.focus = REDUCE ? (fighting ? 1 : 0) : ease(v.focus, fighting && !S.city ? 1 : 0, dt, fighting ? 1.8 : 0.9);
+    const ref = cap ? (cap.baseline || Math.max(cap.mean || 0, cap.w) * 1.3) : 1;
+    v.capY = cap ? ease(v.capY, Math.max(0.08, Math.min(1, cap.w / ref)), dt, 2.2) : 1;
   }
 
   // ------------------------------------------------------------------ projection: x right, z toward us, y up
   function P(x, y, z) {
+    const q = P0(x, y, z), f = S.cam === "city" ? 0 : S.v.focus;
+    if (f < 0.001 || !S.focusPt) return q;
+    const Z = 1.7, F = S.focusPt;                                      // the data center to the middle, 1.7x closer
+    return [q[0] + f * (S.cx + (q[0] - F[0]) * Z - q[0]), q[1] + f * (S.cy + (q[1] - F[1]) * Z - q[1]), q[2]];
+  }
+  function P0(x, y, z) {
     const c = Math.cos(S.yaw), s = Math.sin(S.yaw), cp = Math.cos(S.pitch), sp = Math.sin(S.pitch);
     const xr = x * c - z * s, zr = x * s + z * c;
     const depth = zr * cp + y * sp;
@@ -78,11 +90,28 @@ const World = (() => {
     const p = P(...a), q = P(...b), g = S.ctx;
     g.beginPath(); g.moveTo(p[0], p[1]); g.lineTo(q[0], q[1]); g.strokeStyle = color; g.lineWidth = w; g.stroke();
   }
+  // Glows are sprites drawn once per colour and stamped (Aryen, Sun 00:05: "make the city view smooth"); no canvas blur
+  // runs per frame anywhere, because this page runs on the Mac whose watts we measure.
+  const SPRITES = new Map();
+  function glowSprite(color) {
+    const key = color.map((c) => c | 0).join(",");
+    if (!SPRITES.has(key)) {
+      const c = document.createElement("canvas"); c.width = c.height = 64;
+      const g = c.getContext("2d"), grd = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+      grd.addColorStop(0, rgb(mix(color, [255, 255, 255], 0.55), 1)); grd.addColorStop(1, rgb(color, 0));
+      g.fillStyle = grd; g.fillRect(0, 0, 64, 64); SPRITES.set(key, c);
+    }
+    return SPRITES.get(key);
+  }
   function glowDot(x, y, z, r, color, alpha) {
-    const p = P(x, y, z), g = S.ctx, grd = g.createRadialGradient(p[0], p[1], 0, p[0], p[1], r);
-    grd.addColorStop(0, rgb(mix(color, [255, 255, 255], 0.55), alpha)); grd.addColorStop(1, rgb(color, 0));
-    g.globalCompositeOperation = "lighter"; g.fillStyle = grd; g.beginPath(); g.arc(p[0], p[1], r, 0, 7); g.fill();
-    g.globalCompositeOperation = "source-over";
+    const p = P(x, y, z), g = S.ctx;
+    g.save(); g.globalCompositeOperation = "lighter"; g.globalAlpha = Math.max(0, Math.min(1, alpha));
+    g.drawImage(glowSprite(color), p[0] - r, p[1] - r, 2 * r, 2 * r); g.restore();
+  }
+  // a glowing line without blur: a wide faint stroke under the line itself
+  function glowStroke(g, color, alpha, w) {
+    g.strokeStyle = rgb(color, alpha * 0.18); g.lineWidth = w * 5; g.stroke();
+    g.strokeStyle = rgb(color, alpha * 0.35); g.lineWidth = w * 2.4; g.stroke();
   }
 
   // ------------------------------------------------------------------ primitives
@@ -122,7 +151,7 @@ const World = (() => {
   function band(a, b, h, o) {                                         // a glowing stripe: our data center's watts
     const y = (o.y || 0) + h * 0.55, g = S.ctx;
     const pts = [[a[0], y, a[2]], [b[0], y, b[2]], [b[0], y + 0.22, b[2]], [a[0], y + 0.22, a[2]]].map((v) => P(...v));
-    g.save(); g.globalCompositeOperation = "lighter"; g.shadowColor = rgb(o.bandColor || C.mint, 0.9); g.shadowBlur = 12 * o.band;
+    g.save(); g.globalCompositeOperation = "lighter";
     poly(pts, rgb(o.bandColor || C.mint, 0.25 + 0.7 * o.band)); g.restore();
   }
   // A body of revolution through `profile` [[radius, height], ...]: stacks, cooling towers, tanks, domes.
@@ -150,10 +179,11 @@ const World = (() => {
   function platform(x, z, w, d, glow, edgeColor) {
     box(x, z, w, d, 0.35, { color: [24, 32, 36] });
     const pts = [[x, 0.36, z], [x + w, 0.36, z], [x + w, 0.36, z + d], [x, 0.36, z + d]].map((v) => P(...v));
-    const g = S.ctx, breathe = REDUCE ? 1 : 0.8 + 0.2 * Math.sin(S.t * 1.3 + x);
-    g.save(); g.shadowColor = edgeColor || "rgba(120,255,200,0.9)"; g.shadowBlur = 16 * breathe;
-    poly(pts, null, edgeColor || `rgba(150,255,215,${glow * breathe})`, 1.4);
+    const g = S.ctx;                                                  // steady: nothing here moves on a timer
+    g.save(); g.beginPath(); pts.forEach((p, i) => (i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]))); g.closePath();
+    g.strokeStyle = edgeColor || `rgba(150,255,215,${glow * 0.3})`; g.lineWidth = 5; g.stroke();
     g.restore();
+    poly(pts, null, edgeColor || `rgba(150,255,215,${glow})`, 1.4);
   }
 
   // ------------------------------------------------------------------ labels: glass cards with leader lines, drawn last
@@ -193,6 +223,7 @@ const World = (() => {
   }
 
   // ------------------------------------------------------------------ the routes and their flowing light
+  const RACKS = [["chat", [92, 180, 255]], ["train", [190, 140, 255]], ["batch", [150, 220, 110]]];   // the rack rows, in job colours
   const ROUTES = {
     gen: [[-14, 0.05, -9], [-10.5, 0.05, -9], [-10.5, 0.05, 0.4], [-2.2, 0.05, 0.4]],
     city: [[2.2, 0.05, -0.6], [5.5, 0.05, -0.6], [5.5, 0.05, -8.5], [8, 0.05, -8.5]],
@@ -209,12 +240,12 @@ const World = (() => {
     }
     return pts[pts.length - 1];
   }
-  function route(pts, color, flow) {
+  function route(pts, color, flow, wk = 1) {
     const g = S.ctx, pp = pts.map((v) => P(...v));
     g.save(); g.lineCap = "round"; g.lineJoin = "round";
     g.beginPath(); pp.forEach((p, i) => (i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])));
-    g.shadowColor = rgb(color, 0.9); g.shadowBlur = 18; g.strokeStyle = rgb(color, 0.3); g.lineWidth = 8; g.stroke();
-    g.shadowBlur = 0; g.strokeStyle = rgb(mix(color, [255, 255, 255], 0.5), 0.9); g.lineWidth = 1.5; g.stroke();
+    glowStroke(g, color, 1, 2.2 * wk);
+    g.strokeStyle = rgb(mix(color, [255, 255, 255], 0.5), 0.9); g.lineWidth = 1.5 * wk; g.stroke();
     g.restore();
     if (REDUCE || flow <= 0) return;
     const L = lenOf(pts), n = Math.max(2, Math.round(L / 4)), speed = (0.9 * flow) / L;  // same speed on every route
@@ -345,7 +376,7 @@ const World = (() => {
     if (S.last && now - S.last < 32) { requestAnimationFrame(frame); return; }   // 30 fps: this page runs on the Mac we measure
     const dt = Math.min(0.1, (now - (S.last || now)) / 1000);
     S.last = now; S.t += dt; S.dt = dt;
-    if (!S.drag && !S.city) S.yaw = ease(S.yaw, S.baseYaw + 0.26 * Math.sin(S.t * 0.045), dt, 1.5);   // a slow sway (not in the city: its image is cached)
+    if (!S.drag && !S.city) S.yaw = ease(S.yaw, S.baseYaw, dt, 1.5);  // settles back after a drag; no sway on a timer
     step(dt);
     draw(dt);
     requestAnimationFrame(frame);
@@ -372,7 +403,13 @@ const World = (() => {
     const flow = v.served ? Math.min(2.2, 0.4 + v.served / 40000) : 0.4;
     route(ROUTES.gen, v.tint.gen, flow);
     route(ROUTES.city, v.tint.city, flow);
-    route(ROUTES.dc, v.tint.city, 0.3 + 1.6 * v.ours);
+    S.focusPt = P0(-7.1, 1.2, 8);
+    const on = Math.min(1, v.ours), cap = d.cap, giving = cap && !cap.over && cap.ttc != null;
+    route(ROUTES.dc, v.tint.city, 0.3 + 1.6 * v.ours, 0.45 + 1.1 * on);   // thickness and pulse speed: the measured watts
+    if (giving) {                                                     // under the cap: power flows back out toward the city
+      route([...ROUTES.dc].reverse(), C.mint, 1.4, 0.9);
+      route(ROUTES.city, C.mint, 1.4, 0.9);
+    }
     route(ROUTES.campus, v.tint.city, flow);
 
     const ps = plants(), total = ps.reduce((s, p) => s + p.mw - (p.tripped ? Math.min(p.mw, d.tripped_mw || p.mw) : 0), 0);
@@ -403,18 +440,26 @@ const World = (() => {
           : d.needed ? `${(v.served / 1000).toFixed(1)} of ${(v.needed / 1000).toFixed(1)} GW needed` : "", 6.2);
     } });
     items.push({ x: -7, z: 8, draw: () => {                          // our data center: this Mac, measured
-      platform(-9.6, 5.7, 5, 4.6, 0.85);
-      const on = Math.min(1, v.ours);
-      box(-9.1, 6.2, 4.0, 3.6, 2.0, { y: 0.36, color: [222, 232, 240], band: on, edge: true });
-      for (let k = 0; k < 3; k++) {                                   // rooftop chillers with fans
-        box(-8.7 + k * 1.2, 6.7, 0.9, 0.9, 0.35, { y: 2.36, color: [170, 180, 188] });
-        const c = P(-8.25 + k * 1.2, 2.73, 7.15), rr = 5, a = REDUCE ? 0 : S.t * (2 + 8 * on);
-        S.ctx.strokeStyle = "rgba(40,50,58,0.9)"; S.ctx.lineWidth = 1.2;
-        for (let b = 0; b < 3; b++) { S.ctx.beginPath(); S.ctx.moveTo(c[0], c[1]); S.ctx.lineTo(c[0] + Math.cos(a + b * 2.1) * rr, c[1] + Math.sin(a + b * 2.1) * rr * 0.5); S.ctx.stroke(); }
+      const capEdge = cap ? (cap.over || cap.ttc == null ? "rgba(255,190,70,0.95)" : "rgba(125,240,191,0.95)") : null;
+      platform(-9.6, 5.7, 5, 4.6, 0.85, capEdge);                      // amber while over the cap, mint once under it
+      RACKS.forEach(([job, color], i) => {                            // three rack rows, each lit by its job's own state
+        const z0 = 6.2 + i * 1.3, r = (d.racks || []).find((x) => x.job === job), st = r ? r.state : "off";
+        box(-9.1, z0, 4.0, 0.7, 1.4, { y: 0.36, color: [200, 210, 218] });
+        for (let k = 0; k < 8; k++) {
+          const lit = st === "running" || (st === "slowed" && k % 2 === 0);
+          glowDot(-8.85 + k * 0.5, 1.84, z0 + 0.35, lit ? 7 : 3, lit ? color : [70, 80, 88], lit ? 0.95 : 0.6);
+        }
+      });
+      if (cap) {                                                      // the cap bar, through the building at the cap's level
+        const y = 0.36 + 2.1 * v.capY;
+        poly([[-9.6, y, 5.7], [-4.6, y, 5.7], [-4.6, y, 10.3], [-9.6, y, 10.3]].map((q) => P(...q)),
+          "rgba(255,90,90,0.16)", "rgba(255,120,120,0.95)", 1.6);
       }
-      glowDot(-7.1, 2.9, 8, 6 + 10 * on, C.mint, REDUCE ? 0.6 : 0.35 + 0.5 * on * (0.75 + 0.25 * Math.sin(S.t * (1 + 4 * on))));
-      label(-7.1, 6.2, 8, "This Mac", d.ours_w != null ? `${d.ours_w.toFixed(1)} W` : "—",
-        d.cut_pct != null ? `${Math.abs(Math.round(d.cut_pct))}% ${d.cut_pct >= 0 ? "below" : "above"} baseline · measured` : "measured by powermetrics", 3.2);
+      const sub = !cap ? (d.cut_pct != null ? `${Math.abs(Math.round(d.cut_pct))}% ${d.cut_pct >= 0 ? "below" : "above"} baseline · measured` : "measured by powermetrics")
+        : cap.mean == null ? `cap ${cap.w.toFixed(1)} W · waiting for 10 s of samples`
+          : cap.over ? `over the ${cap.w.toFixed(1)} W cap · ${Math.round(cap.since)} s`
+            : `under the ${cap.w.toFixed(1)} W cap${cap.ttc != null ? ` in ${Math.round(cap.ttc)} s` : ""} · measured`;
+      label(-7.1, 6.2, 8, "This Mac", d.ours_w != null ? `${d.ours_w.toFixed(1)} W` : "—", sub, 3.2);
     } });
     items.push({ x: 9.5, z: 9, draw: () => {                         // the large loads: the grid's data centers
       platform(6.5, 6.5, 7.2, 5.2, 0.55);
@@ -439,8 +484,8 @@ const World = (() => {
   // data from maps online ... just part of it ... some sort of zoom in when we click into the city"). One real square of
   // the event's city from OpenStreetMap (/api/cities/{id}/map): every building at its footprint and height, the streets,
   // parks and water, the mapped power lines and plants, the hospitals. 25 m to a scene unit. Which blocks go dark is
-  // illustrative: the grid's real unserved share (1 - served / needed) of sixteen feeder zones, rotating every 8 s as
-  // rotating outages do; hospitals stay on as critical loads; Griddy's freed MW relights that share of zones and its
+  // illustrative: the grid's real unserved share (1 - served / needed) of sixteen feeder zones, in a fixed order (no
+  // timer: blocks change only when the data does); hospitals stay on as critical loads; Griddy's freed MW relights that share of zones and its
   // power flows in mint along real streets. The static city is drawn once into a cached image per camera and state.
   const MU = 1 / 25, ZONES = 4;
   function prepareMap(m) {
@@ -458,16 +503,32 @@ const World = (() => {
       zone: zoneOf(r.p[Math.floor(r.p.length / 2)][0], r.p[Math.floor(r.p.length / 2)][1]) }));
     return { ...m, half: half * MU, buildings, roads,
       parks: m.parks.map((ps) => ps.map(([x, z]) => [x * MU, z * MU])), water: m.water.map((ps) => ps.map(([x, z]) => [x * MU, z * MU])),
-      lines: m.power_lines.map((l) => ({ ...l, pts: l.p.map(([x, z]) => [x * MU, l.kind === "cable" ? 0.05 : 0.9, z * MU]) })),
+      lines: inSquare(m.power_lines, half).map((l) => ({ ...l, pts: l.p.map(([x, z]) => [x * MU, l.kind === "cable" ? 0.05 : 0.9, z * MU]) })),
       sites: m.power_sites.map((s) => ({ ...s, x: s.x * MU, z: s.z * MU })),
-      hospitals: m.hospitals.map((hh) => ({ ...hh, x: hh.x * MU, z: hh.z * MU })) };
+      hospitals: m.hospitals.map((hh) => ({ ...hh, x: hh.x * MU, z: hh.z * MU })),
+      dataCenters: (m.data_centers || []).map((x) => ({ ...x, x: x.x * MU, z: x.z * MU, outline: (x.outline || []).map(([a, b]) => [a * MU, b * MU]) })),
+      ...flows(roads, inSquare(m.power_lines, half)) };
+  }
+  // Power lines are kept whole in the map file; on screen they stop at the square's edge.
+  function inSquare(lines, half) {
+    const lim = half * 1.02;
+    return lines.map((l) => ({ ...l, p: l.p.filter(([x, z]) => Math.abs(x) <= lim && Math.abs(z) <= lim) })).filter((l) => l.p.length > 1);
+  }
+  // The moving power is drawn on the longest streets and lines only: a dense city has thousands of segments, and every
+  // dot is drawn each frame on the Mac we measure.
+  function flows(roads, lines) {
+    const longest = (xs, n) => xs.map((r) => ({ ...r, L: lenOf(r.pts) })).sort((a, b) => b.L - a.L).slice(0, n);
+    const flat = (r) => ({ ...r, flat: r.pts.map(([x, , z]) => [x, 0.4, z]) });
+    return { flowMajor: longest(roads.filter((r) => r.w >= 4), 40).map(flat),
+      flowMinor: longest(roads.filter((r) => r.w >= 2 && r.w < 4), 60).map(flat),
+      flowLines: longest(lines.map((l) => ({ ...l, pts: l.p.map(([x, z]) => [x * MU, l.kind === "cable" ? 0.05 : 0.9, z * MU]) })), 30) };
   }
   // The city's state this moment: which zones are dark, which Griddy relit (from the grid's real numbers).
   function cityState() {
     const d = S.data, N = ZONES * ZONES;
     const dark = d.needed ? Math.max(0, 1 - (d.served || 0) / d.needed) : 0;
     const relit = d.with_mw && d.needed ? Math.min(dark, d.with_mw / d.needed) : 0;
-    const turn = REDUCE ? 0 : Math.floor(S.t / 8);
+    const turn = 0;                                                   // fixed order: blocks change only when the data does
     const order = [...Array(N).keys()].map((z) => [hash(z * 977 + turn * 0.137), z]).sort((a, b) => a[0] - b[0]).map((x) => x[1]);
     const nDark = Math.round(dark * N), nRelit = Math.round(relit * N), zone = new Array(N).fill("on");
     order.slice(0, nDark).forEach((z, r) => { zone[z] = r < nRelit ? "griddy" : "off"; });
@@ -508,18 +569,22 @@ const World = (() => {
     for (const r of M.roads) {
       const pp = r.pts.map(([x, y, z]) => P(x, 0.38, z)), dark = st.zone[r.zone] === "off";
       g.beginPath(); pp.forEach((p, i) => (i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])));
-      if (r.w >= 3 && !dark) { g.shadowColor = "rgba(90,190,255,0.8)"; g.shadowBlur = 6; }
+      if (r.w >= 3 && !dark) glowStroke(g, [90, 190, 255], 0.5, (0.5 + 0.55 * r.w) * px);
       g.strokeStyle = dark ? "rgba(90,110,130,0.18)" : r.w >= 4 ? "rgba(130,215,255,0.55)" : r.w >= 3 ? "rgba(110,190,240,0.4)" : "rgba(100,160,210,0.22)";
-      g.lineWidth = (0.5 + 0.55 * r.w) * px; g.stroke(); g.shadowBlur = 0;
+      g.lineWidth = (0.5 + 0.55 * r.w) * px; g.stroke();
     }
     for (const l of M.lines) {                                         // real power lines: a soft amber glow
       const pp = l.pts.map((v) => P(...v));
       g.beginPath(); pp.forEach((p, i) => (i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])));
-      g.shadowColor = "rgba(255,200,110,0.9)"; g.shadowBlur = 8; g.strokeStyle = "rgba(255,214,140,0.7)"; g.lineWidth = 1.2; g.stroke();
+      glowStroke(g, [255, 200, 110], 0.8, 1.2); g.strokeStyle = "rgba(255,214,140,0.7)"; g.lineWidth = 1.2; g.stroke();
     }
     g.restore();
     const items = M.buildings.map((b) => ({ b, depth: P(b.cx, 0, b.cz)[2] })).sort((x, y) => x.depth - y.depth);
     for (const { b } of items) prism(b, b.hospital ? LOOK.hospital : LOOK[st.zone[b.zone]]);
+    for (const dcb of M.dataCenters || []) if (dcb.outline.length > 2) {   // the real data center building, outlined in mint
+      const top = Math.max(0.4, ...M.buildings.filter((b) => Math.hypot(b.cx - dcb.x, b.cz - dcb.z) < 1.2).map((b) => b.h));
+      poly(dcb.outline.map(([x, z]) => P(x, top + 0.02, z)), "rgba(125,240,191,0.18)", "rgba(125,240,191,0.95)", 1.6);
+    }
     for (const b of M.buildings) if (b.hospital) {                    // a red cross on each hospital roof
       const c = P(b.cx, b.h + 0.02, b.cz), r = Math.max(3, 0.6 * px * 4);
       g.fillStyle = "rgba(255,70,70,0.95)"; g.fillRect(c[0] - r, c[1] - r / 3, 2 * r, (2 * r) / 3); g.fillRect(c[0] - r / 3, c[1] - r, (2 * r) / 3, 2 * r);
@@ -533,13 +598,14 @@ const World = (() => {
     const key = [S.yaw, S.pitch, S.scale, S.fit, S.cx, S.cy].map((x) => (+x || 0).toFixed(3)).join("|") + `|${S.w}x${S.h}|${st.key}`;
     if (!S.cityCache) S.cityCache = document.createElement("canvas");
     const cc = S.cityCache;
-    if (cc.width !== S.cv.width || cc.height !== S.cv.height) { cc.width = S.cv.width; cc.height = S.cv.height; S.cityKey = null; }
+    const cw = Math.round(S.cv.width / S.dpr), ch = Math.round(S.cv.height / S.dpr);   // the static city at 1x: a quarter of the pixels
+    if (cc.width !== cw || cc.height !== ch) { cc.width = cw; cc.height = ch; S.cityKey = null; }
     if (S.cityKey !== key) {                                           // redraw the static city only when it changed
       const main = S.ctx, c2 = cc.getContext("2d");
-      c2.setTransform(1, 0, 0, 1, 0, 0); c2.clearRect(0, 0, cc.width, cc.height); c2.setTransform(S.dpr, 0, 0, S.dpr, 0, 0);
+      c2.setTransform(1, 0, 0, 1, 0, 0); c2.clearRect(0, 0, cw, ch);
       S.ctx = c2; drawCityStatic(st); S.ctx = main; S.cityKey = key;
     }
-    g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(cc, 0, 0); g.restore();
+    g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(cc, 0, 0, S.cv.width, S.cv.height); g.restore();   // the moving power stays at full ratio
     if (!REDUCE) {                                                     // power moving: the only per-frame drawing
       const pulse = (pts, color, speed, gap) => {
         const L = lenOf(pts);
@@ -547,10 +613,10 @@ const World = (() => {
         for (let f = ((S.t * speed) % gap) / L; f < 1; f += gap / L) { const q = along(pts, f), p = P(...q); g.fillStyle = color; g.beginPath(); g.arc(p[0], p[1], 2.2, 0, 7); g.fill(); }
       };
       g.save(); g.globalCompositeOperation = "lighter";
-      for (const l of M.lines) pulse(l.pts, "rgba(255,220,150,0.95)", 2.2, 3);
+      for (const l of M.flowLines) pulse(l.pts, "rgba(255,220,150,0.95)", 2.2, 3);
       const tint = rgb(v.tint.city, 0.9);
-      for (const r of M.roads) if (r.w >= 4 && st.zone[r.zone] !== "off") pulse(r.pts.map(([x, , z]) => [x, 0.4, z]), st.zone[r.zone] === "griddy" ? "rgba(125,240,191,0.95)" : tint, 1.6, 4);
-      if (st.relit) for (const r of M.roads) if (r.w >= 2 && r.w < 4 && st.zone[r.zone] === "griddy") pulse(r.pts.map(([x, , z]) => [x, 0.4, z]), "rgba(125,240,191,0.95)", 1.4, 2.5);
+      for (const r of M.flowMajor) if (st.zone[r.zone] !== "off") pulse(r.flat, st.zone[r.zone] === "griddy" ? "rgba(125,240,191,0.95)" : tint, 1.6, 4);
+      if (st.relit) for (const r of M.flowMinor) if (st.zone[r.zone] === "griddy") pulse(r.flat, "rgba(125,240,191,0.95)", 1.4, 2.5);
       g.restore();
     }
     const hf = M.half, lit = 1 - st.dark;
@@ -558,8 +624,11 @@ const World = (() => {
       st.relit ? `${Math.round((lit + st.relit) * 100)}% with Griddy's ${Math.round(d.with_mw)} MW` : d.needed ? `${(d.served / 1000).toFixed(1)} of ${(d.needed / 1000).toFixed(1)} GW served` : "", 0.4);
     const hs = M.hospitals.filter((hh) => Math.abs(hh.x) < hf && Math.abs(hh.z) < hf).slice(0, 3);
     for (const hh of hs) label(hh.x, 5.5, hh.z, "Hospital · kept on", hh.name.length > 30 ? `${hh.name.slice(0, 29)}…` : hh.name, "critical load, OpenStreetMap", 1.4);
-    for (const site of M.sites.filter((x) => x.name).slice(0, 2))     // the named substations first (scripts/fetch_city_map.py)
-      label(site.x, 4, site.z, `Power ${site.kind} · real`, site.name.length > 26 ? `${site.name.slice(0, 25)}…` : site.name, "OpenStreetMap", 0.8);
+    const named = M.sites.filter((x) => x.name), pge = named.filter((x) => /Pacific Gas/.test(x.operator || ""));
+    const site = (pge.length ? pge : named)[0];                       // the utility's substation first (scripts/fetch_city_map.py)
+    if (site) label(site.x, 4, site.z, `Power ${site.kind} · real`, site.name.length > 26 ? `${site.name.slice(0, 25)}…` : site.name, "OpenStreetMap", 0.8);
+    const dc = (M.dataCenters || []).find((x) => /365 Main/.test(x.address || "")) || (M.dataCenters || [])[0];
+    if (dc) label(dc.x, 5, dc.z, "A real data center building", dc.address || "data center", "this Mac stands in for it · OpenStreetMap", 1.6);
     if (st.relit) label(hf, 3.2, hf * 0.6, "From AI data centers", `${Math.round(d.with_mw)} MW freed`, "rerouted along real streets (mint)", 0.5);
     drawLabels();
   }

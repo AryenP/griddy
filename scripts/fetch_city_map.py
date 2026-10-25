@@ -3,6 +3,7 @@ docs/evidence/city/<id>-map.json: building footprints and heights, streets, park
 and plants, and the hospitals' own outlines. The 3D city view draws these 1:1 (Aryen, Sat: "make this 1 to 1, pull
 data from maps online ... just part of it is fine").
 
+Data centers (telecom=data_center) keep their address and outline only, not the operator's name.
 Coordinates become metres from the square's centre: x east, z south. A building's height is its OSM `height`, else
 `building:levels` x 3.5 m, else an estimate from its type; the file counts which is which so the page can say so.
 Usage: uv run python scripts/fetch_city_map.py [city-id ...]   (one request per 800 m tile; OSM asks for light use)
@@ -78,7 +79,8 @@ def fetch(city: dict) -> dict:
     inside = lambda pts: any(abs(x) <= half and abs(z) <= half for x, z in pts)                          # noqa: E731
     r1 = lambda pts: [[round(x, 1), round(z, 1)] for x, z in pts]                                         # noqa: E731
 
-    out = {"buildings": [], "roads": [], "parks": [], "water": [], "power_lines": [], "power_sites": [], "hospitals": []}
+    out = {"buildings": [], "roads": [], "parks": [], "water": [], "power_lines": [], "power_sites": [], "hospitals": [],
+           "data_centers": []}
     heights = {"tagged": 0, "levels": 0, "estimated": 0}
 
     def building(pts, t):
@@ -108,7 +110,14 @@ def fetch(city: dict) -> dict:
             continue
         if t.get("power") in ("substation", "plant", "generator") and inside(pts):   # also when mapped as a building
             cx, cz = sum(x for x, _ in pts) / len(pts), sum(z for _, z in pts) / len(pts)
-            out["power_sites"].append({"kind": t["power"], "x": round(cx, 1), "z": round(cz, 1), **({"name": t["name"]} if t.get("name") else {})})
+            out["power_sites"].append({"kind": t["power"], "x": round(cx, 1), "z": round(cz, 1), **({"name": t["name"]} if t.get("name") else {}),
+                                       **({"operator": t["operator"]} if t.get("operator") else {})})
+        if (t.get("telecom") == "data_center" or t.get("building") == "data_center") and inside(pts):
+            # a real data center building: its address and outline only, never the operator's name (it takes no part)
+            cx, cz = sum(x for x, _ in pts) / len(pts), sum(z for _, z in pts) / len(pts)
+            addr = " ".join(x for x in (t.get("addr:housenumber"), t.get("addr:street")) if x)
+            out["data_centers"].append({"x": round(cx, 1), "z": round(cz, 1), "outline": r1(_simplify(pts, 1.0)),
+                                        **({"address": addr} if addr else {})})
         if "building" in t or "building:part" in t:
             building(pts, t)
         elif t.get("highway") in ROADS and inside(pts):
@@ -141,7 +150,7 @@ def fetch(city: dict) -> dict:
             out["power_sites"].append({"kind": t["power"], "x": round(x, 1), "z": round(z, 1), **({"name": t["name"]} if t.get("name") else {})})
     out["buildings"].sort(key=lambda b: -b["h"])
     rank = {"substation": 0, "plant": 1, "generator": 2}        # named substations first: the page labels the first named site
-    out["power_sites"].sort(key=lambda p: (rank.get(p["kind"], 3), "name" not in p))
+    out["power_sites"].sort(key=lambda p: (rank.get(p["kind"], 3), "name" not in p, "Pacific Gas" not in p.get("operator", "")))
     return {"city": city["name"], "area": m["name"], "center": [lat0, lon0], "half_m": half, "bbox": bbox,
             "fetched_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
             "source": f"OpenStreetMap API v0.6 map call, bbox {bbox}",

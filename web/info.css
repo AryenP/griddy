@@ -6,7 +6,7 @@ body.dash.d.i {
   --bg: #07090a; --panel: #101314; --panel2: #171b1c; --line: rgba(255, 255, 255, 0.06);
   --text: #eef3f1; --muted: #8b9794; --faint: #5f6b68; --ok: #7df0bf; --off: #1d2122; --action: #2f6fe0;
   --font: "Inter", "SF Pro Text", system-ui, -apple-system, "Segoe UI", sans-serif;
-  font: 15px/1.45 var(--font); letter-spacing: -0.005em; color: var(--text); max-width: 1440px; padding: 16px 24px 48px;
+  font: 15px/1.45 var(--font); letter-spacing: -0.005em; color: var(--text); padding: 16px 28px 48px;
   background:
     radial-gradient(1100px 520px at 12% -12%, rgba(125, 240, 191, 0.06), transparent 60%),
     radial-gradient(800px 420px at 100% 0%, rgba(90, 168, 255, 0.05), transparent 60%), var(--bg);
@@ -90,3 +90,5 @@ body.d.i .d-job-plan { font-size: 0.9rem; color: var(--muted); line-height: 1.45
   .i-kpis { grid-template-columns: 1fr; }
   .i-bar .d-knobs { margin-left: 0; }
 }
+
+html:has(body.dash.d.i) { background: #07090a; }     /* full width again (Aryen, Sat 00:05): no bands at the sides */

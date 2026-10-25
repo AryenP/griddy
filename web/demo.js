@@ -6,6 +6,7 @@
 "use strict";
 
 const D = { grid: null, power: null, replay: null, last: null, whatif: null, cat: [], pick: "live", scale: null, fetching: false,
+  capEvents: [], pts: [],
   cities: [], city: null, maps: {},
   shown: new Set(), peaks: {}, specs: {}, jobs: {} };
 
@@ -44,10 +45,18 @@ function handle(msg) {
     case "snapshot":
       hideLoader();
       D.grid = d.grid; D.power = d.power; D.replay = d.replay || null; D.scale = d.scale || null; D.whatif = d.whatif || null;
-      D.specs = d.job_specs || {}; D.jobs = d.jobs || {};
+      D.specs = d.job_specs || {}; D.jobs = d.jobs || {}; D.capEvents = d.cap_events || [];
+      D.pts = (d.power_history || []).filter((x) => x && x[1] != null).slice(-180);
       if (D.replay && D.replay.last) D.last = D.replay.last;
       break;
-    case "power": D.power = d; break;
+    case "power":
+      D.power = d;
+      if (d.combined_w != null) { D.pts.push([d.t, d.combined_w]); if (D.pts.length > 180) D.pts.shift(); }
+      break;
+    case "event":                                               // a CapEvent: the cap the data center must get under
+      if (d.intake || !d.start) return;
+      D.capEvents = [...D.capEvents.filter((e) => e.id !== d.id), d];
+      break;
     case "state": if (d.job) D.jobs[d.job] = d; break;
     case "grid": if (d.feed === "signal") D.grid = d; break;
     case "replay": D.last = d; D.pick = d.event; onAlerts(d); break;
@@ -57,6 +66,33 @@ function handle(msg) {
     default: return;
   }
   render();
+}
+
+// ---------------------------------------------------------------- the data center giving power back (world.js "This Mac")
+// Everything here comes from live state or the meter: each rack row is a job's own reported state, the cap is the
+// executor's CapEvent, and compliance is the same rule as Info's (trace.js capStatus): the trailing 10-s mean of
+// measured watts at or under the cap.
+const ROLL_S = 10;
+function capNow() {
+  const now = nowS();
+  const band = D.capEvents.filter((e) => e.target_w != null && e.start).map((e) => {
+    const s = Date.parse(e.start) / 1000;
+    return { start: s, end: s + e.duration_s, w: e.target_w };
+  }).find((b) => b.start <= now && now < b.end);
+  if (!band) return null;
+  const mean = (t) => { const xs = D.pts.filter(([u]) => u > t - ROLL_S && u <= t).map(([, w]) => w); return xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null; };
+  const last = D.pts.length ? D.pts[D.pts.length - 1] : null, m = last && now - last[0] < 5 ? mean(last[0]) : null;
+  const hit = D.pts.find(([t]) => t > band.start && mean(t) != null && mean(t) <= band.w);
+  const before = D.pts.filter(([t]) => t >= band.start - 60 && t < band.start).map(([, w]) => w);
+  return { w: band.w, start: band.start, mean: m, over: m != null && m > band.w, ttc: hit ? hit[0] - band.start : null,
+    since: now - band.start, baseline: before.length >= 10 ? before.reduce((a, b) => a + b, 0) / before.length : null };
+}
+function rackStates() {
+  return ["chat", "train", "batch"].map((job) => {
+    const st = D.jobs[job] || {}, spec = D.specs[job] || {};
+    const slowed = st.state === "running" && ((st.concurrency != null && spec.max_concurrency && st.concurrency < spec.max_concurrency) || st.device === "cpu");
+    return { job, state: st.state === "running" ? (slowed ? "slowed" : "running") : "off" };
+  });
 }
 
 function onAlerts(d) {
@@ -125,6 +161,7 @@ function render() {
   const g = D.grid, p = D.power;
   if (g) { $("w-feed").textContent = `${g.iso} · ${g.stale ? "stale" : "live"} · ${fixed(g.feed_age_s, 0)} s`; $("w-feed").className = `badge ${g.stale ? "bad" : "ok"}`; }
   $("w-versus").hidden = true;
+  World.set({ racks: rackStates(), cap: capNow() });
   if (running()) {
     const d = D.last, sc = d.scale;
     if (d.mix_mw) for (const [k, v] of Object.entries(d.mix_mw)) D.peaks[k.toLowerCase()] = Math.max(D.peaks[k.toLowerCase()] || 0, v);

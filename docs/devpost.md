@@ -136,6 +136,13 @@ the Mac was also in use (counted as outside load; DECISIONS 14:16, and stated in
   number not in the solver's facts is replaced by the facts verbatim.
 - If the LLM is down, the solver and controller keep running and the UI says "agent offline".
 
+## The city
+Click the city in the 3D world and the camera flies into one real square of it, drawn 1:1 from OpenStreetMap. For
+California that is San Francisco, where Cal Hacks is: SoMa to Mission Bay, with a real data center building at
+365 Main St (this Mac stands in for it; the building takes no part), PG&E's Embarcadero substation and UCSF Mission
+Bay. California's live price is PG&E's default load price, the one San Francisco's load pays. Which blocks go dark and
+the feeder routing are illustrative, and the page says so.
+
 ## How we built it
 Python 3.11, FastAPI, OR-Tools CP-SAT, gridstatus (CAISO, ERCOT), powermetrics, Ollama with
 qwen3:4b-instruct (chat, streamed), PyTorch MPS (training with checkpoints), sentence-transformers

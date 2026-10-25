@@ -142,9 +142,12 @@ dispatcher at the moment it was issued, and the page sets this Mac's measured re
 
 A judge can also break any part of the grid by clicking it or by describing the failure in their own words. The fault
 is labelled what-if; its size is the grid's real output at that moment, and the same live dispatcher responds
-(replay/whatif.py, agent/faults.py). Clicking the city opens its map, with the real hospitals (OpenStreetMap), homes
-dark by the grid's real unserved share, and the blocks Griddy's freed power relights. The feeders are an illustrative
-layout, and the page says so.
+(replay/whatif.py, agent/faults.py). Clicking the city opens its map, one real square drawn 1:1 from OpenStreetMap:
+Houston's Texas Medical Center for ERCOT, and for CAISO San Francisco from SoMa to Mission Bay, where Cal Hacks is.
+The San Francisco square holds a real data center building (365 Main St; this Mac stands in for it, the building takes
+no part), PG&E's Embarcadero substation and UCSF Mission Bay. Homes go dark by the grid's real unserved share and
+Griddy's freed power relights blocks; which blocks, and the feeder routing, are illustrative, and the page says so.
+California's live price is PG&E's default load price (DLAP_PGAE), the one San Francisco's load pays.
 
 ![How Griddy fits together](docs/judging/architecture.svg)
 

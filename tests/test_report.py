@@ -286,3 +286,20 @@ def test_repeated_shortfalls_show_the_worst_once_and_outside_load_is_a_caveat(tm
     assert caps == ["keeping every deadline, power exceeds the cap by up to 16.44 W"]
     assert any("load outside the plan up to 11.55 W was measured and counted against the cap (2 re-solve(s)" in s
                for s in rep.shortfalls)
+
+
+def test_a_run_from_another_branch_still_reads(tmp_path):
+    """Sun 00:20: a timeline written by the parked incident-response branch has "response" events this version does
+    not log; the reporter reads the rest instead of failing (the page asked for its report and got a 500)."""
+    import json as _json
+    from agent.reporter import _read
+    tl = tmp_path / "timeline.jsonl"
+    tl.write_text("\n".join(_json.dumps(x) for x in [
+        {"t": 1.0, "kind": "note", "data": {"msg": "start"}},
+        {"t": 2.0, "kind": "response", "data": {"msg": "incident"}},
+        {"t": 3.0, "kind": "power", "data": {"combined_w": 5.0}}]) + "\n")
+    assert [e.kind for e in _read(tl)] == ["note", "power"]
+    tl.write_text(_json.dumps({"t": 1.0, "kind": "power", "data": "not a dict"}) + "\n" + _json.dumps({"t": 2.0, "kind": "note", "data": {}}) + "\n")
+    import pytest
+    with pytest.raises(Exception):
+        _read(tl)                                   # a known kind that does not parse is still an error
