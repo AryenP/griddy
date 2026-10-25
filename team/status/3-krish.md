@@ -56,3 +56,13 @@ krish/k12-k13): access guard covers every action route; owner identity is self-d
 approve going over the cap; ERCOT figure is on p. 9 and is a non-simultaneous monthly peak; replay citations all match
 their PDF pages except EEA 3 (p. 136) and "at least 210"; EIA-930 spot check 9/9 identical.
 Note: the loop did not run 14:32-20:17 (session idle). Next: K9 when the demo is up. Blockers / needs: none.
+
+## 2026-10-25 00:33 PT — loop (every 10 min), K17-K22 done
+Done: K19-K22 reviews; K20, K21 fixed on main; main reverted to as built at 23:37 with the fixes kept. Open: verify.py
+crashes on a Windows console (in demo-stable-8); in-scene MW labels lack "estimate"; SF label shows CAISO's GW.
+Next: K9 and K18 at the venue (two phones, reachability). Blockers / needs: Krish at the venue.
+
+## 2026-10-25 02:22 PT — loop
+Done: reviewed PR #28 (Fetch three agents) before and after merge; hourly summary. Open for machine 1: source=fetch
+staging missing on main (agents would apply caps directly), verify.py Windows crash, scene labels.
+Next: K9 and K18 at the venue. Blockers / needs: Krish at the venue.
