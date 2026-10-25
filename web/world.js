@@ -6,6 +6,8 @@
 //     forecast), so when the grid sheds load (Uri) the blocks go dark in proportion;
 //   - our data center: this Mac, its light band and beacon set by its measured watts against its baseline;
 //   - the lines: light flows at a speed set by the power served; they turn amber on a warning and red in an emergency.
+//   - what-if (Aryen, Sat 17:00: "judges can break it wherever they select"): a click on a plant, the substation or the
+//     city goes to World.onPick; a tripped plant goes dark with a red edge, its real output shown as lost.
 // Every value eases toward its new reading, so nothing jumps. Motion respects prefers-reduced-motion: no sway, no
 // flowing light, no smoke, no easing; the picture still shows every number.
 "use strict";
@@ -21,7 +23,9 @@ const World = (() => {
   const S = {
     cv: null, ctx: null, w: 0, h: 0, dpr: 1, yaw: -0.62, pitch: 0.6, scale: 18, cx: 0, cy: 0, baseYaw: -0.62,
     drag: null, last: 0, t: 0, running: false, labels: [], smoke: [], smokeAcc: 0, safe: { top: 72, bottom: 230 },
-    data: { mix: {}, served: null, needed: null, ours_w: null, baseline_w: null, cut_pct: null, alert: null, campus: null, peaks: {} },
+    data: { mix: {}, served: null, needed: null, ours_w: null, baseline_w: null, cut_pct: null, alert: null, campus: null, peaks: {},
+      tripped: null, fault: null, with_mw: null, city: null },
+    hits: [], hover: null, onPick: null, down: null,
     v: { served: 0, needed: 0, lit: 1, ours: 0.5, mix: {}, tint: { gen: [...C.lineOk], city: [...C.lineCity] } },
   };
 
@@ -221,21 +225,22 @@ const World = (() => {
   }
 
   // ------------------------------------------------------------------ the plants, one per real fuel
-  const FUELS = [   // [match, title, kind]
-    [/gas/i, "Gas", "gas"], [/coal/i, "Coal", "coal"], [/nuclear/i, "Nuclear", "nuclear"], [/wind/i, "Wind", "wind"],
+  const FUELS = [   // [match, title, kind]: the same fleets as replay/whatif.py
+    [/natural gas|^gas$/i, "Gas", "gas"], [/coal/i, "Coal", "coal"], [/nuclear/i, "Nuclear", "nuclear"], [/wind/i, "Wind", "wind"],
     [/solar/i, "Solar", "solar"], [/hydro/i, "Hydro", "hydro"], [/import/i, "Imports", "imports"],
   ];
   function plants() {
     const out = [];
     for (const [re, title, kind] of FUELS) {
       const mw = Object.entries(S.v.mix).filter(([k, v]) => re.test(k) && v > 0).reduce((s, [, v]) => s + v, 0);
-      if (mw > 1) out.push({ title, kind, mw });
+      if (mw > 1) out.push({ title, kind, mw, tripped: S.data.tripped === title });
     }
     return out.slice(0, 6);
   }
   function drawPlant(p, x, z, total) {
-    const share = total ? p.mw / total : 0, y = 0.36, peaks = S.data.peaks || {};
-    platform(x - 2.2, z - 2.2, 4.4, 4.4, 0.5);
+    const off = p.tripped, share = total && !off ? p.mw / total : 0, y = 0.36, peaks = S.data.peaks || {};
+    platform(x - 2.2, z - 2.2, 4.4, 4.4, 0.5, edgeFor(`plant:${p.title}`, off));
+    if (off) S.ctx.globalAlpha = 0.34;
     let top = 3;
     if (p.kind === "gas" || p.kind === "coal") {
       const coal = p.kind === "coal", hh = 1.0 + 2.2 * share;
@@ -245,19 +250,19 @@ const World = (() => {
       for (const [sx, sz, r, sh] of stacks) {
         lathe(sx, sz, [[r * 1.15, 0], [r, sh * 0.85], [r * 0.95, sh]], { y, color: [214, 218, 222], open: true, n: 14,
           stripes: [[sh * 0.86, "rgba(220,60,60,0.85)"], [sh * 0.93, "rgba(240,240,240,0.9)"]] });
-        smokeFrom(sx, y + sh, sz, 0.3 + 1.5 * share);
+        if (!off) smokeFrom(sx, y + sh, sz, 0.3 + 1.5 * share);
         top = Math.max(top, sh);
       }
     } else if (p.kind === "nuclear") {
       const th = 2.6 + 2.4 * share;
       for (const [tx, tz, s] of [[x - 0.8, z - 0.4, 1], [x + 1.0, z + 0.6, 0.85]]) {
         lathe(tx, tz, [[1.05 * s, 0], [0.75 * s, th * 0.62 * s], [0.82 * s, th * s]], { y, color: [228, 232, 234], open: true, n: 20 });
-        smokeFrom(tx, y + th * s, tz, 0.5, true);
+        if (!off) smokeFrom(tx, y + th * s, tz, 0.5, true);
       }
       lathe(x + 1.0, z - 1.3, [[0.6, 0], [0.6, 0.8], [0.5, 1.15], [0.3, 1.35], [0.0, 1.42]], { y, color: [205, 212, 218], n: 16 });
       top = th + 0.5;
     } else if (p.kind === "wind") {
-      const speed = peaks.wind ? p.mw / peaks.wind : Math.min(1, p.mw / 8000);
+      const speed = off ? 0 : peaks.wind ? p.mw / peaks.wind : Math.min(1, p.mw / 8000);
       for (let k = 0; k < 4; k++) {
         const tx = x - 1.2 + (k % 2) * 2.3, tz = z - 1.2 + Math.floor(k / 2) * 2.2, th = 2.9;
         lathe(tx, tz, [[0.09, 0], [0.05, th]], { y, color: [235, 240, 242], n: 8 });
@@ -272,7 +277,7 @@ const World = (() => {
       }
       top = 4;
     } else if (p.kind === "solar") {
-      const glow = peaks.solar ? p.mw / peaks.solar : Math.min(1, p.mw / 15000);
+      const glow = off ? 0 : peaks.solar ? p.mw / peaks.solar : Math.min(1, p.mw / 15000);
       for (let r = 0; r < 4; r++) for (let k = 0; k < 3; k++) {
         const px = x - 1.75 + k * 1.2, pz = z - 1.6 + r * 0.9;
         const pts = [[px, y + 0.18, pz], [px + 1.05, y + 0.18, pz], [px + 1.05, y + 0.6, pz + 0.58], [px, y + 0.6, pz + 0.58]].map((v) => P(...v));
@@ -293,7 +298,14 @@ const World = (() => {
       pylon(x, z, 3.6);
       top = 4;
     }
-    label(x, y + top + 2.4, z, p.title, `${(p.mw / 1000).toFixed(1)} GW`, `${Math.round(share * 100)}% of supply`, y + top);
+    S.ctx.globalAlpha = 1;
+    if (off) label(x, y + top + 2.4, z, `${p.title} · tripped (what-if)`, `−${(p.mw / 1000).toFixed(1)} GW`, "its real output, lost", y + top);
+    else label(x, y + top + 2.4, z, p.title, `${(p.mw / 1000).toFixed(1)} GW`, `${Math.round(share * 100)}% of supply`, y + top);
+  }
+  // a pickable part's platform edge: red and pulsing when broken, white when the pointer is over it
+  function edgeFor(id, broken) {
+    if (broken) return `rgba(255,80,80,${REDUCE ? 0.9 : 0.55 + 0.45 * Math.sin(S.t * 4)})`;
+    return S.hover === id ? "rgba(255,255,255,0.95)" : null;
   }
   function pylon(x, z, h) {
     const y = 0.36, c = "rgba(205,228,232,0.8)", w = 0.7;
@@ -349,29 +361,32 @@ const World = (() => {
     route(ROUTES.dc, v.tint.city, 0.3 + 1.6 * v.ours);
     route(ROUTES.campus, v.tint.city, flow);
 
-    const ps = plants(), total = ps.reduce((s, p) => s + p.mw, 0);
+    const ps = plants(), total = ps.filter((p) => !p.tripped).reduce((s, p) => s + p.mw, 0);
     const spots = [[-23, -11], [-16, -11], [-23, -4], [-16, -4], [-23, 3], [-16, 3]];
     const items = [];
-    ps.forEach((p, i) => items.push({ x: spots[i][0], z: spots[i][1], draw: () => drawPlant(p, spots[i][0], spots[i][1], total) }));
-    items.push({ x: 0, z: 0.5, draw: () => {                         // the substation hub
-      platform(-2.4, -1.8, 4.8, 4.6, 0.6);
+    ps.forEach((p, i) => items.push({ x: spots[i][0], z: spots[i][1], draw: () => drawPlant(p, spots[i][0], spots[i][1], total),
+      hit: { id: `plant:${p.title}`, title: p.title, mw: p.mw, box: [spots[i][0] - 2.2, spots[i][1] - 2.2, 4.4, 4.4, 6] } }));
+    items.push({ x: 0, z: 0.5, hit: { id: "hub", title: "Substation", box: [-2.4, -1.8, 4.8, 4.6, 5] }, draw: () => {   // the substation hub
+      platform(-2.4, -1.8, 4.8, 4.6, 0.6, edgeFor("hub", d.fault === "hub"));
       for (const [tx, ring] of [[-1.2, C.lineCity], [0.5, C.lineOk]]) {
         box(tx - 0.5, -0.4, 1.0, 1.1, 1.0, { y: 0.36, color: C.steel });
         for (let f = 0; f < 4; f++) box(tx - 0.62, -0.3 + f * 0.26, 0.12, 0.1, 0.8, { y: 0.4, color: [150, 160, 170] });  // cooling fins
         lathe(tx, 0.15, [[0.12, 0], [0.12, 0.6]], { y: 1.36, color: [235, 238, 240], n: 8, stripes: [[0.3, rgb(ring, 0.9)]] });
       }
       pylon(0, 1.7, 3.8);
-      label(0, 6.6, 0.4, "Grid", v.served ? `${(v.served / 1000).toFixed(1)} GW` : "—", "served", 4.4);
+      label(0, 6.6, 0.4, d.fault === "hub" ? "Substation down (what-if)" : "Grid", v.served ? `${(v.served / 1000).toFixed(1)} GW` : "—", "served", 4.4);
     } });
-    items.push({ x: 13, z: -9, draw: () => {                         // the city: lit windows = served / needed
-      platform(8, -13.5, 10, 9, 0.6, v.lit < 0.97 ? `rgba(255,${(90 + 120 * v.lit) | 0},90,0.9)` : null);
+    items.push({ x: 13, z: -9, hit: { id: "city", title: d.city || "City", box: [8, -13.5, 10, 9, 6] }, draw: () => {   // the city: lit windows = served / needed
+      platform(8, -13.5, 10, 9, 0.6, S.hover === "city" ? "rgba(255,255,255,0.95)" : v.lit < 0.97 ? `rgba(255,${(90 + 120 * v.lit) | 0},90,0.9)` : null);
       const blocks = [[8.6, -13, 1.6, 1.6, 4.6], [10.6, -13, 1.4, 1.4, 3.4], [12.6, -13, 1.8, 1.6, 5.4], [15, -13, 1.6, 1.8, 4],
         [8.8, -10.6, 1.5, 1.6, 2.8], [10.8, -10.4, 1.8, 1.6, 4.2], [13.2, -10.2, 1.4, 1.4, 2.6], [15.2, -10.4, 1.6, 1.6, 4.8],
         [10, -8, 1.5, 1.4, 2.2], [12.6, -7.9, 1.8, 1.5, 3.2], [15, -7.9, 1.5, 1.4, 2]];
       blocks.map((b, i) => ({ b, i, depth: P(b[0] + b[2] / 2, 0, b[1] + b[3] / 2)[2] })).sort((a, b) => a.depth - b.depth)
         .forEach(({ b: [bx, bz, bw, bd, bh], i }) => tower(bx, bz, bw, bd, bh, i + 11, v.lit));
-      label(13, 8.2, -10.5, "City", d.needed ? `${Math.round(v.lit * 100)}% lit` : "—",
-        d.needed ? `${(v.served / 1000).toFixed(1)} of ${(v.needed / 1000).toFixed(1)} GW needed` : "", 6.2);
+      const litWith = d.with_mw && d.needed ? Math.min(1, ((d.served || 0) + d.with_mw) / d.needed) : null;
+      label(13, 8.2, -10.5, `${d.city || "City"}${d.fault === "city" ? " · demand surge (what-if)" : ""}`, d.needed ? `${Math.round(v.lit * 100)}% lit` : "—",
+        litWith != null && litWith > v.lit + 0.0005 ? `${Math.round(litWith * 100)}% with Griddy's ${Math.round(d.with_mw)} MW`
+          : d.needed ? `${(v.served / 1000).toFixed(1)} of ${(v.needed / 1000).toFixed(1)} GW needed` : "", 6.2);
     } });
     items.push({ x: -7, z: 8, draw: () => {                          // our data center: this Mac, measured
       platform(-9.6, 5.7, 5, 4.6, 0.85);
@@ -396,6 +411,12 @@ const World = (() => {
     } });
     items.sort((a, b) => P(a.x, 0, a.z)[2] - P(b.x, 0, b.z)[2]);  // far first
     items.forEach((it) => it.draw());
+    S.hits = items.filter((it) => it.hit).map(({ hit, x, z }) => {   // screen boxes for picking, nearest wins
+      const [bx, bz, bw, bd, bh] = hit.box, pts = [];
+      for (const [cx, cz] of [[bx, bz], [bx + bw, bz], [bx + bw, bz + bd], [bx, bz + bd]]) for (const cy of [0, bh]) pts.push(P(cx, cy, cz));
+      const xs = pts.map((q) => q[0]), ys = pts.map((q) => q[1]);
+      return { ...hit, x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(...ys), depth: P(x, 0, z)[2] };
+    });
     smoke(dt);
     drawLabels();
   }
@@ -434,14 +455,34 @@ const World = (() => {
     S.cv = canvas; S.ctx = canvas.getContext("2d");
     new ResizeObserver(resize).observe(canvas);
     resize();
-    canvas.addEventListener("pointerdown", (e) => { S.drag = { x: e.clientX, y: e.clientY, yaw: S.yaw, pitch: S.pitch }; canvas.setPointerCapture(e.pointerId); });
+    canvas.addEventListener("pointerdown", (e) => {
+      S.drag = { x: e.clientX, y: e.clientY, yaw: S.yaw, pitch: S.pitch, t: performance.now() };
+      canvas.setPointerCapture(e.pointerId);
+    });
     canvas.addEventListener("pointermove", (e) => {
-      if (!S.drag) return;
+      if (!S.drag) {                                                  // hover: say what a click would break
+        const h = hitAt(e);
+        if ((h && h.id) !== S.hover) { S.hover = h ? h.id : null; canvas.style.cursor = h && S.onPick ? "pointer" : ""; if (!S.running) draw(); }
+        return;
+      }
       S.yaw = S.drag.yaw + (e.clientX - S.drag.x) * 0.006;
       S.pitch = Math.max(0.3, Math.min(1.05, S.drag.pitch + (e.clientY - S.drag.y) * 0.004));
       if (!S.running) draw();
     });
-    canvas.addEventListener("pointerup", () => { if (S.drag) S.baseYaw = S.yaw; S.drag = null; });
+    canvas.addEventListener("pointerup", (e) => {
+      const d = S.drag;
+      S.drag = null;
+      if (!d) return;
+      const moved = Math.hypot(e.clientX - d.x, e.clientY - d.y);
+      if (moved < 6 && performance.now() - d.t < 600) {              // a click, not a drag
+        S.yaw = d.yaw; S.pitch = d.pitch;
+        const h = hitAt(e);
+        if (h && S.onPick) S.onPick(h, { x: e.clientX, y: e.clientY });
+        return;
+      }
+      S.baseYaw = S.yaw;
+    });
+    canvas.addEventListener("pointerleave", () => { if (S.hover) { S.hover = null; if (!S.running) draw(); } });
     canvas.addEventListener("wheel", (e) => { e.preventDefault(); S.scale = Math.max(8, Math.min(60, S.scale * (e.deltaY < 0 ? 1.08 : 0.93))); if (!S.running) draw(); }, { passive: false });
     document.addEventListener("visibilitychange", () => { if (document.hidden) S.running = false; else start(); });
     start();
@@ -458,5 +499,12 @@ const World = (() => {
   }
   // the page's bars, in CSS pixels from the top and bottom edges: labels stay between them
   function safeArea(top, bottom) { S.safe = { top, bottom }; }
-  return { mount, set, safeArea };
+  function hitAt(e) {
+    const r = S.cv.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+    return S.hits.filter((h) => x >= h.x0 && x <= h.x1 && y >= h.y0 && y <= h.y1).sort((a, b) => b.depth - a.depth)[0] || null;
+  }
+  // what can be broken right now: the plants on screen, the substation, the city (for the keyboard menu)
+  function targets() { return S.hits.map(({ id, title, mw }) => ({ id, title, mw })); }
+  function onPick(cb) { S.onPick = cb; }
+  return { mount, set, safeArea, onPick, targets };
 })();

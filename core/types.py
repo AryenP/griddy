@@ -87,7 +87,7 @@ class TimelineEvent(BaseModel):
     kind: Literal[
         # dispatcher edition (SPEC §3)
         "grid", "policy", "event", "intake", "schedule", "plan", "approval", "action", "power",
-        "latency", "state", "shortfall", "report", "note", "fleet_power", "neighbourhood", "scale", "replay",
+        "latency", "state", "shortfall", "report", "note", "fleet_power", "neighbourhood", "scale", "replay", "whatif",
         # facility-throttle edition, kept for the existing tests
         "sample", "request", "baseline",
     ]
@@ -102,7 +102,7 @@ Objective = Literal["cost", "carbon", "balanced"]
 Device = Literal["gpu", "cpu", "either"]
 RunDevice = Literal["gpu", "cpu"]
 JobState = Literal["pending", "running", "paused", "done", "dropped"]
-EventSource = Literal["openadr", "text", "ui", "replay"]
+EventSource = Literal["openadr", "text", "ui", "replay", "whatif"]
 
 Point = tuple[datetime, float]  # (slot_start, value)
 

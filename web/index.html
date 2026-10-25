@@ -19,10 +19,14 @@
 
   <canvas id="world" class="w-world" role="img" aria-label="The grid as a 3D world: power plants from the real fuel mix, the city lit by the demand served, this Mac's data center by its measured watts"></canvas>
   <div id="w-alerts" class="w-toasts" aria-live="polite"></div>
+  <div id="w-pop" class="w-pop" role="dialog" aria-labelledby="w-pop-t" hidden>
+    <b id="w-pop-t"></b><p id="w-pop-p"></p><div id="w-pop-b" class="w-pop-b"></div>
+  </div>
 
   <section class="w-dock" aria-label="The demo">
     <div class="w-row">
       <div id="w-picks" class="w-events" role="group" aria-label="Choose what the grid shows"></div>
+      <button id="w-break-btn" type="button" class="w-work w-break">Break a part</button>
       <button id="w-work-btn" type="button" class="w-work" hidden>Give training a deadline</button>
       <button id="w-play-btn" type="button" class="w-play">Replay it live</button>
     </div>
@@ -30,6 +34,10 @@
       <span id="w-clock" class="w-when">Live</span>
       <div class="w-bar" aria-hidden="true"><i id="w-progress"></i></div>
       <span id="w-head" class="w-headline"></span>
+    </div>
+    <div id="w-versus" class="w-versus" hidden>
+      <div class="w-vs w-vs-without"><b>Without Griddy</b><span id="w-without"></span><small id="w-without-src"></small></div>
+      <div class="w-vs w-vs-with"><b>With Griddy</b><span id="w-with"></span><small id="w-with-src"></small></div>
     </div>
     <div class="w-stats">
       <div class="w-stat"><b id="s-served">—</b><span>served</span><small id="s-served-src"></small></div>

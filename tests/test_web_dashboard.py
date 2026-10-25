@@ -90,7 +90,7 @@ def test_the_judge_page_is_the_3d_world_and_its_dock():
     assert re.findall(r'<script src="([^"]+)"', WORLD_HTML) == ["common.js", "world.js", "demo.js"]
     assert '<canvas id="world"' in WORLD_HTML and 'href="/info.html"' in WORLD_HTML
     assert "simulated" not in WORLD_HTML.lower() + DEMO_JS.lower()
-    assert set(re.findall(r'postJSON\(\s*[`"](/api/[\w/${}]+)', DEMO_JS)) <= {"/api/replay", "/api/jobs/${job}"}
+    assert set(re.findall(r'postJSON\(\s*[`"](/api/[\w/${}]+)', DEMO_JS)) <= {"/api/replay", "/api/jobs/${job}", "/api/whatif"}
     assert "prefers-reduced-motion" in WORLD_JS and "REDUCE" in WORLD_JS          # no motion for those who ask
     assert "ev.data_source" in DEMO_JS and "ev.report_url" in DEMO_JS and "estimate" in DEMO_JS
     assert "measured by powermetrics" in WORLD_HTML + DEMO_JS
@@ -101,3 +101,19 @@ def test_world_draws_only_what_it_is_given():
     for field in ("mix", "served", "needed", "ours_w", "baseline_w", "alert", "campus"):
         assert f"d.{field}" in WORLD_JS or f"S.data.{field}" in WORLD_JS, field
     assert not re.search(r"Math\.random\(\)\s*\*\s*\d+\s*[,)]", WORLD_JS.split("function smoke")[0].split("function drawPlant")[0])
+
+
+def test_a_judge_can_break_any_part_and_the_page_says_what_if():
+    """Sat 17:30: a click on a plant, the substation or the city opens a confirm card; the fault is labelled what-if,
+    sized from the grid at that moment, and also reachable from the keyboard (the Break a part menu)."""
+    assert "World.onPick" in DEMO_JS and "onPick" in WORLD_JS and "targets()" in WORLD_JS
+    assert 'id="w-break-btn"' in WORLD_HTML and 'id="w-pop"' in WORLD_HTML and 'role="dialog"' in WORLD_HTML
+    assert DEMO_JS.count("What-if:") >= 3 and "what-if" in WORLD_JS
+    assert "Without Griddy" in WORLD_HTML and "With Griddy" in WORLD_HTML
+
+
+def test_the_replay_says_where_its_hours_came_from():
+    """Sat 17:30 (Aryen: the data must be live, not a canned replay): fetched live from api.eia.gov, or the evidence
+    copy and why; and the software sees each hour only once it has ended."""
+    assert "api.eia.gov" in DEMO_JS and "evidence copy" in DEMO_JS and "once it has ended" in DEMO_JS
+    assert "d.hour_ending" in DEMO_JS

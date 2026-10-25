@@ -25,6 +25,7 @@ from core.timeline import Timeline
 from dispatcher.solve import load_calibration, load_policy
 from fleet.hub import Fleet
 from replay.engine import Replay
+from replay.whatif import WhatIf
 from grid.watcher import GridWatcher
 from meter.powermetrics import PowerMeter
 
@@ -49,6 +50,7 @@ class Runtime:
         self.executor.fleet = self.fleet
         self.meter.subscribers.append(lambda r: self.executor.on_power(self.fleet.combine(r)))
         self.replay = Replay(self.tl, self.executor)         # real grid emergencies, replayed through the live software
+        self.whatif = WhatIf(self.tl, self.executor, self.replay, (config.events or {}).get("whatif"))   # a judge breaks a part
         self.scale: dict | None = None                               # ERCOT-scale ESTIMATE (grid/scale.py)
         self.agent = AgentBridge(self.tl, self.executor)
         self.agent.snapshot = self.snapshot
@@ -56,6 +58,7 @@ class Runtime:
         self.watcher_task: asyncio.Task | None = None
         self.broadcaster: Broadcaster | None = None
         self._tasks: list[asyncio.Task] = []
+        self._cap_lock = asyncio.Lock()                       # cuts reach the dispatcher one batch at a time
 
     def _on_signal(self, sig):
         self._tasks.append(asyncio.get_running_loop().create_task(self.executor.on_signal(sig)))
@@ -105,16 +108,28 @@ class Runtime:
         while True:
             try:
                 self.replay.tick()
+                self.whatif.tick()
                 gone, self.replay.pending_withdraw = self.replay.pending_withdraw, []
-                for cap_id in gone:
-                    await self.executor.remove_event(cap_id, "the replayed event's alert ended or the replay stopped")
                 new, self.replay.pending_caps = self.replay.pending_caps, []
-                for ev in new:
-                    await self.executor.add_event(ev)
+                if gone or new:                     # a re-plan takes seconds: the replayed clock keeps ticking meanwhile
+                    self._tasks.append(asyncio.create_task(self._hand_over(gone, new)))
+                    self._tasks = [t for t in self._tasks if not t.done()]
             except Exception as e:                  # the replay never stops the real loop
                 log.exception("replay tick failed")
                 self.tl.log("note", level="error", msg=f"replay tick failed: {e!r}"[:300])
             await asyncio.sleep(1.0)
+
+    async def _hand_over(self, gone: list[str], new: list):
+        """Withdrawn cuts, then new ones, to the real dispatcher, one batch at a time and in order."""
+        async with self._cap_lock:
+            try:
+                for cap_id in gone:
+                    await self.executor.remove_event(cap_id, "the alert or what-if ended, or the replay stopped")
+                for ev in new:
+                    await self.executor.add_event(ev)
+            except Exception as e:
+                log.exception("handing a cut to the dispatcher failed")
+                self.tl.log("note", level="error", msg=f"cut hand-over failed: {e!r}"[:300])
 
     async def _scale_loop(self, cfg: dict):
         """Every `poll_s`: ERCOT's live demand, and what this Mac's measured cut would mean there (an estimate)."""
@@ -146,7 +161,7 @@ class Runtime:
         return {"grid": dump(ex.signal), "schedule": dump(ex.schedule), "plan": dump(ex.plan),
                 "power": dump(self.meter.latest), "power_history": [[round(t, 2), round(w, 3)] for t, w in ex.power],
                 "jobs": {j: Knobs.status(j) for j in ("chat", "train", "batch")},
-                "calibration": dump(ex.cal), "fleet": self.fleet.status(), "replay": self.replay.summary(), "scale": self.scale, "policy": dump(ex.policy), "iso_options": available_isos(),
+                "calibration": dump(ex.cal), "fleet": self.fleet.status(), "replay": self.replay.summary(), "whatif": self.whatif.last, "scale": self.scale, "policy": dump(ex.policy), "iso_options": available_isos(),
                 "iso": self.watcher.iso if self.watcher else settings.iso,
                 "dispatcher_enabled": ex.dispatcher_enabled, "agent": self.agent.status, "agent_model": self.agent.llm.name,
                 "approvals": [dump(x) for x in self.agent.pending(status=None)],

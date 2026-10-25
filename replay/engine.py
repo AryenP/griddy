@@ -1,13 +1,21 @@
 """Replay a real grid emergency through the live software (config/events.yaml; Aryen, Sat 15:40).
 
 The grid's side is REAL and recorded: hourly demand served, the operator's own day-ahead forecast and generation by
-fuel (U.S. EIA Form EIA-930, docs/evidence/events/<id>.csv), and every alert at the time the official report gives.
-Brownout's side is LIVE: the replay hands each alert to the real dispatcher as a cap on this Mac's sites at the
-moment it was issued, and the Mac's measured watts are what they are.
+fuel (U.S. EIA Form EIA-930), fetched live from api.eia.gov when the judge presses play (replay/eia.py; the evidence
+copy in docs/evidence/events/<id>.csv only if the API cannot be reached, and the page says so), and every alert at the
+time the official report gives. Brownout's side is LIVE: the replay hands each alert to the real dispatcher as a cap on
+this Mac's sites at the moment it was issued, and the Mac's measured watts are what they are.
 
-  - At start: the warnings issued days before (operator notices, Flex Alerts) and Brownout's own flag, when the
-    operator's day-ahead forecast for the window is above its record before the event. The warning's cut shifts
-    deferrable work off our sites first.
+Nothing here knows what comes next (Aryen, Sat 17:15: "if it's trained on this data and is just replaying, it defeats
+the whole purpose"). Brownout is not trained on any event: the solver is deterministic and sees only its inputs. At
+each moment of the replayed clock the software sees the hours that have ENDED (never a later hour), and day-ahead
+forecasts only for the hours of the current day (the operator published them the day before). Brownout's own flag is
+computed the same way, at the first moment it could have been. tests/test_replay.py deletes the future and checks
+that nothing changes.
+
+  - At start: the warnings issued days before (operator notices, Flex Alerts). Brownout's own flag fires at the first
+    moment a published day-ahead forecast for the rest of the day is above the operator's record before the event,
+    and asks our sites for the warning cut itself. The warning's cut shifts deferrable work off our sites first.
   - At each emergency's real time (mapped onto `replay_seconds`): a deeper cut, below the baseline measured just
     before the replay started.
   - An `end` alert withdraws the emergency cut; the end of the replay withdraws everything.
@@ -27,6 +35,7 @@ import pandas as pd
 from core import config
 from core.timeline import Timeline
 from core.types import CapEvent
+from replay import eia
 
 ROLL_S = 10.0          # our sites' response: their 10-s measured mean
 BASELINE_S = 20.0      # over the measured mean in the 20 s before the replay (a job started just before still counts)
@@ -41,8 +50,12 @@ def _local(s: str, tz: ZoneInfo) -> datetime:
 
 
 def load_series(ev: dict) -> pd.DataFrame:
-    """The event's EIA-930 hours, indexed by local hour-ending time, with carbon intensity from the fuel mix."""
-    df = pd.read_csv(ROOT / ev["data"], comment="#")
+    """The evidence copy of the event's EIA-930 hours (docs/evidence/events/<id>.csv)."""
+    return series_from(pd.read_csv(ROOT / ev["data"], comment="#"), ev)
+
+
+def series_from(df: pd.DataFrame, ev: dict) -> pd.DataFrame:
+    """EIA-930 hours, indexed by local hour-ending time, with carbon intensity from the fuel mix."""
     tz = ZoneInfo(ev["timezone"])
     df.index = pd.to_datetime(df["utc_end"], utc=True).dt.tz_convert(tz)
     factors = config.isos["emission_factors_gco2_per_kwh"]
@@ -54,18 +67,13 @@ def load_series(ev: dict) -> pd.DataFrame:
 
 
 def at(series: pd.DataFrame, t: datetime) -> dict:
-    """Linear between hour-ending points; outside the data, the nearest point."""
-    idx = series.index
-    i = idx.searchsorted(pd.Timestamp(t))
+    """What the operator had published by `t`: the last hour that has ended (hour-ending at or before t), never a later
+    one. Before the first hour, nothing."""
+    i = series.index.searchsorted(pd.Timestamp(t), side="right")
     if i <= 0:
-        row = series.iloc[0]
-    elif i >= len(idx):
-        row = series.iloc[-1]
-    else:
-        t0, t1 = idx[i - 1], idx[i]
-        f = (pd.Timestamp(t) - t0) / (t1 - t0)
-        row = series.iloc[i - 1] * (1 - f) + series.iloc[i] * f
-    return {k: (None if pd.isna(v) else float(v)) for k, v in row.items()}
+        return {k: None for k in series.columns} | {"hour_ending": None}
+    row = series.iloc[i - 1]
+    return {k: (None if pd.isna(v) else float(v)) for k, v in row.items()} | {"hour_ending": series.index[i - 1].isoformat()}
 
 
 class Replay:
@@ -75,6 +83,8 @@ class Replay:
         self.events = {e["id"]: e for e in self.cfg.get("events", [])}
         self.seconds = float(self.cfg.get("replay_seconds", 120))
         self.series: dict[str, pd.DataFrame] = {}
+        self.provenance: dict[str, dict] = {}         # where each event's hours came from: live, or the evidence copy
+        self.cache = eia.Cache(float(self.cfg.get("refetch_s", 600)))
         self.event: dict | None = None
         self.start_t: float | None = None
         self.baseline_w: float | None = None
@@ -97,7 +107,23 @@ class Replay:
     def data(self, eid: str) -> pd.DataFrame:
         if eid not in self.series:
             self.series[eid] = load_series(self.events[eid])
+            self.provenance[eid] = {"source": "evidence copy", "url": self.events[eid]["data"], "why": "not fetched yet"}
         return self.series[eid]
+
+    def prepare(self, eid: str) -> dict:
+        """Fetch the event's hours live from api.eia.gov (blocking: the API route runs it in a thread). If the API
+        cannot be reached, the evidence copy, and the reason."""
+        ev = self.events[eid]
+        evidence = pd.read_csv(ROOT / ev["data"], comment="#")
+        try:
+            df, meta = self.cache.get(ev)
+            meta = {**meta, "max_diff_mw": eia.agreement(df, evidence)}
+        except Exception as e:                       # network down, rate limit: say so, and run on the evidence copy
+            df, meta = evidence, {"source": "evidence copy", "url": ev["data"], "why": f"api.eia.gov: {e!r}"[:200]}
+        self.series[eid] = series_from(df, ev)
+        self.provenance[eid] = meta
+        self.tl.log("note", msg=f"replay data for {eid}: {meta['source']}", replay=eid, data=meta)
+        return meta
 
     # ------------------------------------------------------------------ the replayed clock
     def window(self, ev: dict) -> tuple[datetime, datetime]:
@@ -121,7 +147,7 @@ class Replay:
             s = self.data(ev["id"])
             w0, w1 = self.window(ev)
             win = s[(s.index >= pd.Timestamp(w0)) & (s.index <= pd.Timestamp(w1) + pd.Timedelta(hours=1))]
-            out.append({**{k: ev.get(k) for k in ("id", "title", "when", "iso", "ba", "timezone", "impact", "shed_mw",
+            out.append({**{k: ev.get(k) for k in ("id", "title", "when", "iso", "region", "ba", "timezone", "impact", "shed_mw",
                                                    "people_out", "people_unit", "flexible_mw", "flexible_source",
                                                    "record_mw", "record_source", "report_url")},
                         "window": [w0.isoformat(), w1.isoformat()],
@@ -143,21 +169,27 @@ class Replay:
         return {**a, "day": str(a["day"]), "replay_s": 0.0, "before_window": True}
 
     def _flag(self, ev: dict) -> list[dict]:
-        """Brownout's own warning: the operator's day-ahead forecast for the window above its record before the event."""
+        """Brownout's own warning, at the first moment it could have been raised: a published day-ahead forecast for
+        the rest of the current day (published the day before) above the operator's record before the event. Checked
+        at the window's start and at each local midnight in it, when the next day's forecasts count as published."""
         rec = ev.get("record_mw")
         if not rec:
             return []
-        s = self.data(ev["id"])
+        fc = self.data(ev["id"])["demand_forecast_mw"].dropna()
+        day = pd.Series((fc.index - pd.Timedelta(hours=1)).date, index=fc.index)   # hour-ending 00:00 belongs to the day before
         w0, w1 = self.window(ev)
-        win = s[(s.index > pd.Timestamp(w0)) & (s.index <= pd.Timestamp(w1))]
-        peak_t = win["demand_forecast_mw"].idxmax()
-        peak = float(win["demand_forecast_mw"].max())
-        if peak <= rec:
-            return []
-        return [{"kind": "brownout", "replay_s": 0.0, "before_window": True, "at": None,
-                 "label": f"Brownout's flag: the day-ahead forecast peaks at {peak:,.0f} MW ({peak_t:%a %H:%M}), above the "
-                          f"{rec:,} MW record before this event",
-                 "source": f"forecast: EIA-930 ({ev['ba']}); record: {ev['record_source']}"}]
+        moments = [w0] + [datetime.combine(d, datetime.min.time(), w0.tzinfo)
+                          for d in pd.date_range(w0.date(), w1.date())[1:].date]
+        for m in moments:
+            ahead = fc[(fc.index > pd.Timestamp(m)) & (day <= m.date())]
+            if len(ahead) and float(ahead.max()) > rec:
+                peak_t, peak = ahead.idxmax(), float(ahead.max())
+                return [{"kind": "brownout", "replay_s": self.real_s(ev, m), "before_window": m == w0,
+                         "at": None if m == w0 else m.isoformat(), "cut_pct": float(self.cfg.get("flag_cut_pct", 20)),
+                         "label": f"Brownout's flag: the day-ahead forecast for {peak_t:%a %H:%M} is {peak:,.0f} MW, above the "
+                                  f"{rec:,} MW record before this event. Our sites start shifting work now",
+                         "source": f"forecast: EIA-930 ({ev['ba']}), published the day before; record: {ev['record_source']}"}]
+        return []
 
     # ------------------------------------------------------------------ start / stop
     def start(self, eid: str, now: float | None = None) -> dict:
@@ -171,9 +203,11 @@ class Replay:
         self.baseline_w = sum(xs) / len(xs) if xs else None
         idle = getattr(getattr(self.ex, "cal", None), "idle_w", 0.0) or 0.0
         self.nothing_to_shed = self.baseline_w is not None and self.baseline_w - idle < float(self.cfg.get("min_flexible_w", 3.0))
+        self.data(eid)
         self.tl.log("note", msg=f"replay: {self.event['title']} ({self.event['when']}) started", replay=eid,
-                    baseline_w=self.baseline_w, nothing_to_shed=self.nothing_to_shed)
-        return {"event": eid, "baseline_w": self.baseline_w, "seconds": self.seconds, "nothing_to_shed": self.nothing_to_shed}
+                    baseline_w=self.baseline_w, nothing_to_shed=self.nothing_to_shed, data=self.provenance.get(eid))
+        return {"event": eid, "baseline_w": self.baseline_w, "seconds": self.seconds, "nothing_to_shed": self.nothing_to_shed,
+                "data": self.provenance.get(eid)}
 
     def stop(self, now: float | None = None, finished: bool = False) -> dict:
         if self.event is not None:
@@ -212,8 +246,8 @@ class Replay:
             key = (a["label"], a.get("at") or a.get("day"))
             if a["replay_s"] <= s_into and key not in {(f["label"], f.get("at") or f.get("day")) for f in self.fired}:
                 self.fired.append(a)
-                if a["kind"] in ("warning", "emergency"):
-                    self._cut(now, a, a["kind"])
+                if a["kind"] in ("warning", "emergency", "brownout"):
+                    self._cut(now, a, "emergency" if a["kind"] == "emergency" else "warning")
                 elif a["kind"] == "end" and "emergency" in self.caps:
                     self.pending_withdraw.append(self.caps.pop("emergency"))
                     self.asked.pop("emergency", None)
@@ -224,6 +258,7 @@ class Replay:
         ours = sum(xs) / len(xs) if xs else None
         cut = (1 - ours / self.baseline_w) if ours is not None and self.baseline_w and self.caps else None
         state = {"t": now, "event": ev["id"], "title": ev["title"], "sim_time": t.isoformat(),
+                 "hour_ending": grid["hour_ending"], "data": self.provenance.get(ev["id"]),
                  "progress": min(1.0, s_into / self.seconds), "demand_mw": grid["demand_mw"],
                  "forecast_mw": grid["demand_forecast_mw"],
                  "gap_mw": (grid["demand_forecast_mw"] - grid["demand_mw"]) if grid["demand_mw"] is not None and grid["demand_forecast_mw"] is not None else None,

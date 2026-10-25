@@ -1,6 +1,7 @@
 """HTTP routes (HANDOFF.md API contract). Thin: validate, hand to the runtime, return its result."""
 from __future__ import annotations
 
+import asyncio
 import hmac
 import json
 from datetime import datetime
@@ -76,6 +77,11 @@ class SiteCalibration(BaseModel):
     measured_at: float
     machine: str
     meter: str
+
+
+class WhatIfIn(BaseModel):
+    target: str = Field(pattern=r"^(plant:[A-Za-z]+|hub|city|clear)$")
+    who: str = "operator"
 
 
 class ReplayIn(BaseModel):
@@ -162,6 +168,21 @@ def make_router(rt) -> APIRouter:
             raise HTTPException(404, f"{site_id!r} is not a site in config/fleet.yaml")
         return rt.fleet.calibrate(site_id, body.model_dump())
 
+    @r.post("/api/whatif")
+    async def whatif(body: WhatIfIn, request: Request):
+        """A judge breaks a part of the grid: real-sized (replay/whatif.py), labelled what-if; `clear` ends it."""
+        who = by(body.who, request)
+        rt.tl.log("policy", reason=f"what-if {body.target}", who=who)
+        if body.target == "clear":
+            rt.whatif.end()
+            return {"cleared": True}
+        try:
+            return rt.whatif.start(body.target)
+        except KeyError:
+            raise HTTPException(404, f"nothing called {body.target!r} to break")
+        except ValueError as e:
+            raise HTTPException(409, str(e))
+
     @r.get("/api/replay/events")
     async def replay_events():
         """The real grid emergencies a judge can replay, with their EIA-930 hours, cited alerts and impact."""
@@ -176,6 +197,7 @@ def make_router(rt) -> APIRouter:
             return rt.replay.stop()
         if body.event not in rt.replay.events:
             raise HTTPException(404, f"no event {body.event!r}: {sorted(rt.replay.events)}")
+        await asyncio.to_thread(rt.replay.prepare, body.event)    # the event's hours, live from api.eia.gov
         return rt.replay.start(body.event)
 
     @r.get("/api/state")

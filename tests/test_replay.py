@@ -47,8 +47,11 @@ def test_alerts_reach_the_dispatcher_at_their_real_times_and_end(tmp_path):
     st = r.tick(now=t0 + 0.5)                       # the Flex Alert days before and Brownout's flag fire at once
     assert st["demand_mw"] and st["forecast_mw"] and st["carbon_g_kwh"] > 0
     assert st["mix_mw"]["Natural Gas"] > 10000 and {"Solar", "Wind", "Nuclear"} <= set(st["mix_mw"])   # EIA-930, real
-    warn = r.pending_caps.pop()
-    assert warn.source == "replay" and warn.target_w == pytest.approx(16.0) and "Flex Alert" in warn.reason
+    warn = r.pending_caps.pop()                     # Brownout's own flag asks the warning cut, replacing the Flex Alert's
+    flex = r.pending_caps.pop()
+    assert "Flex Alert" in flex.reason and r.pending_withdraw == [flex.id]
+    assert warn.source == "replay" and warn.target_w == pytest.approx(16.0) and "Brownout's flag" in warn.reason
+    r.pending_withdraw.clear()
     eea3 = next(a for a in r.catalog()[2]["alerts"] if "EEA 3" in a["label"] and a["kind"] == "emergency")
     r.tick(now=t0 + eea3["replay_s"] + 0.1)
     deep = r.pending_caps.pop()
@@ -91,3 +94,55 @@ def test_grid_scale_estimate_is_arithmetic_on_cited_numbers():
     assert x["share_of_demand_pct"] == pytest.approx(100 * x["freed_mw"] / 62168.0)
     assert all(cfg[k].startswith("https://") for k in ("large_loads_url", "queue_url"))
     assert estimate(cfg, None, None)["share_of_demand_pct"] is None
+
+
+@pytest.mark.parametrize("eid", ["uri-2021", "caiso-2020-08", "caiso-2022-09"])
+def test_the_replay_never_sees_the_future(tmp_path, eid):
+    """Delete every hour after the replayed moment (keeping only the day-ahead forecasts for the rest of that day,
+    which the operator had published the day before): the software sees and does exactly the same."""
+    import pandas as pd
+    for s_into in (0.5, 30.0, 61.0, 95.0, 119.0):
+        full, ex, t0 = rig(tmp_path)
+        blind = Replay(Timeline(run_id="b", root=tmp_path), ex)
+        full.start(eid, now=t0)
+        blind.start(eid, now=t0)
+        t = full.sim_time(t0 + s_into)
+        s = full.data(eid).copy()
+        later = s.index > pd.Timestamp(t)
+        s.loc[later, [c for c in s.columns if c != "demand_forecast_mw"]] = float("nan")
+        later_days = pd.Series((s.index - pd.Timedelta(hours=1)).date, index=s.index) > t.date()
+        s.loc[later_days, "demand_forecast_mw"] = float("nan")
+        blind.series[eid] = s
+        a, b = full.tick(now=t0 + s_into), blind.tick(now=t0 + s_into)
+        for k in ("demand_mw", "forecast_mw", "mix_mw", "hour_ending", "fired", "cut_kinds", "asked_cut_pct"):
+            assert a[k] == b[k], (eid, s_into, k)
+        assert [c.target_w for c in full.pending_caps] == [c.target_w for c in blind.pending_caps]
+
+
+def test_live_fetch_is_used_and_an_unreachable_api_falls_back_to_the_evidence_copy(tmp_path, monkeypatch):
+    import pandas as pd
+    from replay import eia
+    r, _, _ = rig(tmp_path)
+    ev = r.events["uri-2021"]
+    evidence = pd.read_csv(ev["data"], comment="#")
+    monkeypatch.setattr(eia, "fetch", lambda e, timeout=8.0: (evidence.copy(), {"source": "live", "rows": len(evidence)}))
+    meta = r.prepare("uri-2021")                     # TEST DOUBLE for the network: the API's answer is the same hours
+    assert meta["source"] == "live" and meta["max_diff_mw"] == 0.0
+    def down(e, timeout=8.0):
+        raise OSError("network unreachable")
+    monkeypatch.setattr(eia, "fetch", down)
+    r.cache.got.clear()
+    meta = r.prepare("uri-2021")
+    assert meta["source"] == "evidence copy" and "unreachable" in meta["why"] and len(r.data("uri-2021")) == len(evidence)
+
+
+def test_the_live_api_rows_become_the_evidence_columns(monkeypatch):
+    from replay import eia
+    rows = {"region-data": [{"period": "2021-02-15T03", "type": "D", "value": "68862"},     # shaped like api.eia.gov v2
+                            {"period": "2021-02-15T03", "type": "DF", "value": "70522"}],
+            "fuel-type-data": [{"period": "2021-02-15T03", "fueltype": "NG", "value": "43967"},
+                               {"period": "2021-02-15T03", "fueltype": "WND", "value": "7642"}]}
+    monkeypatch.setattr(eia, "_get", lambda path, params, timeout: rows[path])
+    df, meta = eia.fetch({"window": ["2021-02-14T18:00", "2021-02-15T21:00"], "ba": "ERCO"})
+    assert list(df["utc_end"]) == ["2021-02-15T03:00:00Z"] and df.loc[0, "demand_mw"] == 68862.0
+    assert df.loc[0, "Natural Gas"] == 43967.0 and df.loc[0, "Wind"] == 7642.0 and meta["source"] == "live"
