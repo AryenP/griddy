@@ -69,7 +69,7 @@ const World = (() => {
     const xr = x * c - z * s, zr = x * s + z * c;
     const depth = zr * cp + y * sp;
     const city = S.cam === "city";                                    // the city square is 50 units wide: pull the camera back
-    const fitCity = city && S.cityMap ? 24 / Math.max(24, S.cityMap.half) : 1;   // a wider square (SF, 2.4 km) fits the same frame
+    const fitCity = city && S.cityMap ? (S.cityMap.kind === "datacenters" ? 1.45 : 24 / Math.max(24, S.cityMap.half)) : 1;   // a wider square (SF, 2.4 km) fits the same frame; the data centers' row, the grid's size
     const k = (city ? S.scale * 0.66 * fitCity : S.scale * (S.zoom || 1)) * (S.fit || 1) / (1 - depth / 120);
     return [S.cx + xr * k, (city ? S.cy + S.h * 0.02 : S.cy) - (y * cp - zr * sp) * k, depth];
   }
@@ -380,7 +380,8 @@ const World = (() => {
     if (S.last && now - S.last < 32) { requestAnimationFrame(frame); return; }   // 30 fps: this page runs on the Mac we measure
     const dt = Math.min(0.1, (now - (S.last || now)) / 1000);
     S.last = now; S.t += dt; S.dt = dt;
-    if (!S.drag && !S.city) S.yaw = ease(S.yaw, S.baseYaw, dt, 1.5);  // settles back after a drag; no sway on a timer
+    const rows = S.cityMap && S.cityMap.kind === "datacenters";      // the data centers' row turns face on, like a pick
+    if (!S.drag && (!S.city || rows)) S.yaw = ease(S.yaw, S.baseYaw, dt, 1.5);  // settles back after a drag; no sway on a timer
     step(dt);
     draw(dt);
     requestAnimationFrame(frame);
@@ -601,7 +602,7 @@ const World = (() => {
   function drawCity(dt) {
     const M = S.cityMap, d = S.data, v = S.v, g = S.ctx;
     if (!M) return;
-    if (M.kind === "datacenters") { drawDc(dt); return; }
+    if (M.kind === "datacenters") { drawDc(); return; }
     S.labels = [];
     const st = cityState();
     const key = [S.yaw, S.pitch, S.scale, S.fit, S.cx, S.cy].map((x) => (+x || 0).toFixed(3)).join("|") + `|${S.w}x${S.h}|${st.key}`;
@@ -641,141 +642,72 @@ const World = (() => {
     if (st.relit) label(hf, 3.2, hf * 0.6, "From AI data centers", `${Math.round(d.with_mw)} MW freed`, "rerouted along real streets (mint)", 0.5);
     drawLabels();
   }
-  // ------------------------------------------------------------------ the data centers (Aryen, Sun 03:00 and 04:00)
-  // scripts/fetch_datacenters.py: each one OpenStreetMap maps, by address (never the operator). San Francisco's, which a
-  // click opens ("the datacenters connected to sf"): footprints to scale and raised, each joined to its nearest named
-  // PG&E substation as the crow flies (no public source gives a data center's feeder), with power pulsing along the join
-  // at this Mac's measured watts, which stand in for each: inward while it runs, outward in mint once it is under a cap.
-  // The Bay Area's (kept for later, "dont get rid of ur progress"): pillars larger than life, by cluster.
+  // ------------------------------------------------------------------ San Francisco's data centers, side by side
+  // (Aryen, Sun 04:20: "just put them all next to each other like in grid view ... a cleaner route"; the map version is
+  // tagged datacenter-maps). scripts/fetch_datacenters.py: the four OpenStreetMap maps in the city, by address (never the
+  // operator), each with its real footprint and nearest named PG&E substation. Drawn like the grid: each building as
+  // wide as its footprint, fed from its own substation; their racks are this Mac's, measured, standing in for each.
   function prepareDc(m) {
-    const local = m.half_m < 15000, k = 30 / m.half_m, xz = ([x, z]) => [x * k, z * k];   // 60 units across either way
-    const shoelace = (pts) => pts.reduce((a, q, i) => { const r = pts[(i + 1) % pts.length]; return a + q[0] * r[1] - r[0] * q[1]; }, 0);
-    const dcs = m.data_centers.map((dc, i) => {
-      const side = dc.area_m2 ? Math.sqrt(dc.area_m2) : 70;
-      let pts = local && dc.outline.length > 2 ? dc.outline.map(xz) : null;   // San Francisco: the real footprint
-      if (pts && shoelace(pts) < 0) pts = pts.reverse();
-      const sub = dc.substation && dc.substation.x != null ? { ...dc.substation, x: dc.substation.x * k, z: dc.substation.z * k } : null;
-      return { ...dc, i, x: dc.x * k, z: dc.z * k, pts, sub, s: local ? Math.max(0.4, side * k) : Math.max(0.55, Math.min(1.3, side * k * 9)),
-        h: local ? 1.5 : 0.7 + Math.min(3.2, (dc.area_m2 || 4000) / 6000) };
-    });
-    const groups = {};
-    for (const dc of dcs) (groups[dc.city || "?"] = groups[dc.city || "?"] || []).push(dc);
-    const clusters = local ? [] : Object.entries(groups).filter(([c, xs]) => c !== "?" && xs.length >= 3)
-      .map(([city, xs]) => ({ city, n: xs.length, x: xs.reduce((a, b) => a + b.x, 0) / xs.length, z: xs.reduce((a, b) => a + b.z, 0) / xs.length,
-        m2: xs.reduce((a, b) => a + (b.area_m2 || 0), 0) }))
-      .sort((a, b) => b.n - a.n);
-    const joined = new Set(dcs.filter((dc) => dc.sub).map((dc) => dc.sub.name));
-    return { kind: "datacenters", half: 30, local, area: m.area, counts: m.counts, dcs, clusters,
-      sf: dcs.filter((dc) => dc.in_sf), coast: m.coast.map((l) => l.map(xz)), roads: m.roads.map((r) => r.p.map(xz)),
-      lines: m.lines.map((l) => l.p.map(xz)), places: m.places.map((pl) => ({ ...pl, x: pl.x * k, z: pl.z * k })),
-      subs: (m.substations || []).map((sb) => ({ ...sb, x: sb.x * k, z: sb.z * k, joined: joined.has(sb.name) })) };
-  }
-  function strokePath(pts, y, color, w) {
-    const g = S.ctx;
-    g.beginPath(); pts.forEach(([x, z], i) => { const p = P(x, y, z); if (i) g.lineTo(p[0], p[1]); else g.moveTo(p[0], p[1]); });
-    g.strokeStyle = color; g.lineWidth = w; g.stroke();
-  }
-  const DC_LOOK = { wall: [140, 232, 200], alpha: 0.97, floors: "rgba(220,255,240,0.45)", edge: "rgba(170,255,222,1)" };
-  function drawDcStatic(look) {
-    const g = S.ctx, M = S.cityMap, hf = M.half;
-    platform(-hf - 1, -hf - 1, 2 * hf + 2, 2 * hf + 2, 0.25);
-    g.save(); g.lineCap = "round"; g.lineJoin = "round";
-    for (const l of M.coast) strokePath(l, 0.37, "rgba(90,168,255,0.6)", 1.4);           // the shoreline
-    for (const r of M.roads) strokePath(r, 0.37, M.local ? "rgba(150,190,215,0.22)" : "rgba(150,190,215,0.16)", 1);
-    for (const l of M.lines) strokePath(l, 0.38, "rgba(255,206,130,0.4)", 1);            // power lines and cables
-    for (const dc of M.dcs) if (dc.sub) {                              // each data center to its substation: a wide glow, a thin core
-      strokePath([[dc.x, dc.z], [dc.sub.x, dc.sub.z]], 0.42, rgb(look.color, 0.18), 7);
-      strokePath([[dc.x, dc.z], [dc.sub.x, dc.sub.z]], 0.42, rgb(look.color, 0.85), 1.6);
+    const subs = [], byName = {};
+    for (const [i, dc] of m.data_centers.entries()) {
+      const key = dc.substation ? dc.substation.name : "";
+      if (!byName[key]) { byName[key] = { ...(dc.substation || {}), dcs: [] }; subs.push(byName[key]); }
+      byName[key].dcs.push({ ...dc, i });
     }
-    g.restore();
-    if (M.places.length <= 80) {
-      g.save(); g.font = `500 ${M.local ? 9 : 10}px Inter, system-ui, sans-serif`; g.textAlign = "center"; g.fillStyle = `rgba(190,215,210,${M.local ? 0.32 : 0.5})`;
-      for (const pl of M.places) { const p = P(pl.x, 0.4, pl.z); g.fillText(pl.name, p[0], p[1] + 14); }
-      g.restore();
+    subs.sort((a, b) => b.dcs.length - a.dcs.length);                // the busiest substation first, its data centers beside it
+    const dcs = subs.flatMap((sb) => sb.dcs), gap = 11, x0 = -((dcs.length - 1) * gap) / 2;
+    dcs.forEach((dc, k) => { dc.px = x0 + k * gap; dc.w = dc.area_m2 ? Math.max(3.2, Math.min(6, Math.sqrt(dc.area_m2) / 14)) : 3.6; });
+    for (const sb of subs) sb.px = sb.dcs.reduce((a, b) => a + b.px, 0) / sb.dcs.length;
+    return { kind: "datacenters", half: 24, area: m.area, counts: m.counts, dcs, subs };
+  }
+  function drawSubstation(sb) {                                         // the grid's substation, at its place in the row
+    platform(sb.px - 2.4, -9.4, 4.8, 4.6, 0.6);
+    for (const [tx, ring] of [[-1.2, C.lineCity], [0.5, C.lineOk]]) {
+      box(sb.px + tx - 0.5, -8.0, 1.0, 1.1, 1.0, { y: 0.36, color: C.steel });
+      for (let f = 0; f < 4; f++) box(sb.px + tx - 0.62, -7.9 + f * 0.26, 0.12, 0.1, 0.8, { y: 0.4, color: [150, 160, 170] });
+      lathe(sb.px + tx, -7.45, [[0.12, 0], [0.12, 0.6]], { y: 1.36, color: [235, 238, 240], n: 8, stripes: [[0.3, rgb(ring, 0.9)]] });
     }
-    for (const sb of M.subs) {                                         // the substations: the joined ones larger, named
-      const r = sb.joined ? 0.32 : 0.14;
-      box(sb.x - r, sb.z - r, 2 * r, 2 * r, sb.joined ? 0.7 : 0.3, { y: 0.36, color: [255, 196, 110], cap: sb.joined });
-      if (sb.joined && sb.name) {
-        const p = P(sb.x, 1.3, sb.z);
-        g.save(); g.font = "600 10px Inter, system-ui, sans-serif"; g.textAlign = "left"; g.fillStyle = "rgba(255,214,150,0.9)";
-        g.fillText(sb.name, p[0] + 8, p[1]); g.restore();
+    pylon(sb.px, -5.9, 3.8);
+    label(sb.px, 6.6, -7.2, "PG&E substation", sb.name || "substation",
+      `${sb.kv ? `${Math.round(sb.kv)} kV · ` : ""}feeds ${sb.dcs.length} of them here · OpenStreetMap`, 4.4);
+  }
+  function drawDcBuilding(dc, edge) {                                   // the grid's data center, as wide as its footprint
+    const d = S.data, x = dc.px - dc.w / 2;
+    platform(dc.px - 3.5, 2.6, 7, 5, 0.85, edge);
+    RACKS.forEach(([job, color], i) => {
+      const z0 = 3.1 + i * 1.3, r = (d.racks || []).find((q) => q.job === job), st = r ? r.state : "off", n = Math.max(4, Math.round(dc.w * 1.6));
+      box(x, z0, dc.w, 0.7, 1.4, { y: 0.36, color: [200, 210, 218] });
+      for (let k = 0; k < n; k++) {
+        const lit = st === "running" || (st === "slowed" && k % 2 === 0);
+        glowDot(x + 0.25 + (k * (dc.w - 0.5)) / (n - 1), 1.84, z0 + 0.35, lit ? 7 : 3, lit ? color : [70, 80, 88], lit ? 0.95 : 0.6);
       }
-    }
-    const items = M.dcs.map((dc) => ({ dc, depth: P(dc.x, 0, dc.z)[2] })).sort((a, b) => a.depth - b.depth);
-    for (const { dc } of items) {
-      const sel = S.hover === `dc:${dc.i}`;
-      if (dc.pts) prism({ pts: dc.pts, h0: 0.36, h: 0.36 + dc.h }, sel ? { ...DC_LOOK, wall: [215, 255, 238] } : DC_LOOK);
-      else box(dc.x - dc.s / 2, dc.z - dc.s / 2, dc.s, dc.s, dc.h, { y: 0.36, color: sel ? [235, 255, 248] : dc.in_sf ? [170, 245, 215] : [196, 214, 226],
-        band: look.band, bandColor: look.color, cap: true });
-    }
-  }
-  function drawDc(dt) {
-    const M = S.cityMap, d = S.data, v = S.v, g = S.ctx, cap = d.cap;
-    S.labels = [];
-    const giving = cap && !cap.over && cap.ttc != null;               // the same states as our data center on the grid
-    const look = { band: Math.min(1, v.ours), color: giving ? C.mint : cap ? [255, 190, 70] : [120, 200, 255] };
-    const key = [S.yaw, S.pitch, S.scale, S.fit, S.cx, S.cy].map((x) => (+x || 0).toFixed(3)).join("|")
-      + `|${S.w}x${S.h}|${S.hover}|${look.band.toFixed(1)}|${look.color}`;
-    if (!S.cityCache) S.cityCache = document.createElement("canvas");
-    const cc = S.cityCache, cw = Math.round(S.cv.width / S.dpr), ch = Math.round(S.cv.height / S.dpr);
-    if (cc.width !== cw || cc.height !== ch) { cc.width = cw; cc.height = ch; S.cityKey = null; }
-    if (S.cityKey !== key) {
-      const main = S.ctx, c2 = cc.getContext("2d");
-      c2.setTransform(1, 0, 0, 1, 0, 0); c2.clearRect(0, 0, cw, ch);
-      S.ctx = c2; drawDcStatic(look); S.ctx = main; S.cityKey = key;
-    }
-    g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(cc, 0, 0, S.cv.width, S.cv.height); g.restore();
-    if (!REDUCE) {                                                     // the only per-frame drawing: lights and moving power
-      g.save(); g.globalCompositeOperation = "lighter";
-      const a = 0.35 + 0.5 * look.band * (0.75 + 0.25 * Math.sin(S.t * 2.2));
-      for (const dc of M.dcs) glowDot(dc.x, dc.h + (M.local ? 0.9 : 0.55), dc.z, M.local ? 12 : dc.in_sf ? 9 : 6, look.color, a);
-      const speed = 0.5 + 1.8 * look.band;                             // faster with more measured watts
-      for (const dc of M.dcs) if (dc.sub) {
-        const a3 = [dc.sub.x, 0.45, dc.sub.z], b3 = [dc.x, 0.45, dc.z], pts = giving ? [b3, a3] : [a3, b3];
-        const L = lenOf(pts);
-        if (L < 0.05) continue;                                        // a data center beside its substation: nothing to show
-        for (let f = ((S.t * speed) % 0.9) / L; f < 1; f += 0.9 / L) { const q = P(...along(pts, f)); g.fillStyle = rgb(look.color, 0.95); g.beginPath(); g.arc(q[0], q[1], 2.4, 0, 7); g.fill(); }
-      }
-      g.restore();
-    }
-    S.hits = M.dcs.map((dc) => {                                       // hover one: its address, footprint and substation
-      const r = Math.max(dc.s / 2, 0.5);
-      const pts = [[dc.x - r, 0, dc.z - r], [dc.x + r, dc.h + 0.6, dc.z + r], [dc.x - r, dc.h + 0.6, dc.z + r], [dc.x + r, 0, dc.z - r]].map((q) => P(...q));
-      const xs = pts.map((q) => q[0]), ys = pts.map((q) => q[1]);
-      return { id: `dc:${dc.i}`, title: dc.address || "data center", x0: Math.min(...xs) - 3, x1: Math.max(...xs) + 3, y0: Math.min(...ys) - 3, y1: Math.max(...ys) + 3, depth: P(dc.x, 0, dc.z)[2] };
     });
-    const c = M.counts, hf = M.half;
-    if (M.local) {
-      label(-hf, 6, -hf, `${M.area} · data centers`, `${c.data_centers} mapped`, "each joined to its nearest PG&E substation · OpenStreetMap", 0.4);
-      for (const dc of M.dcs) label(dc.x, dc.h + 5, dc.z, dc.city || M.area, dc.address || "address not mapped",
-        dc.sub ? `to ${dc.sub.name || "a substation"}${dc.sub.kv ? `, ${Math.round(dc.sub.kv)} kV` : ""}: ${dc.sub.km} km` : "", dc.h + 0.9);
-      const hov = S.hover && S.hover.startsWith("dc:") ? M.dcs[+S.hover.slice(3)] : null;
-      if (hov) label(hov.x, hov.h + 9, hov.z, "this Mac stands in for it", d.ours_w != null ? `${d.ours_w.toFixed(1)} W, measured` : "measured",
-        hov.area_m2 ? `${hov.area_m2.toLocaleString()} m² footprint` : "", hov.h + 5);
-      drawLabels();
-      return;
+    label(dc.px, 6.2, 5.1, dc.city && dc.city !== "San Francisco" ? `${dc.city} · San Francisco` : "San Francisco", dc.address || "address not mapped",
+      `${dc.area_m2 ? `${dc.area_m2.toLocaleString()} m² footprint` : "footprint not mapped"}${dc.substation ? ` · ${dc.substation.km} km from its substation` : ""}`, 2.2);
+  }
+  function drawDc() {
+    const M = S.cityMap, d = S.data, v = S.v, cap = d.cap;
+    S.labels = []; S.hits = [];
+    const giving = cap && !cap.over && cap.ttc != null;                // the same states as our data center on the grid
+    const edge = cap ? (giving ? "rgba(125,240,191,0.95)" : "rgba(255,190,70,0.95)") : null;
+    const on = Math.min(1, v.ours);
+    for (const sb of M.subs) for (const dc of sb.dcs) {                // each feeder: thickness and pulse with the measured watts
+      const pts = [[sb.px, 0.05, -4.4], [sb.px, 0.05, -1.4], [dc.px, 0.05, -1.4], [dc.px, 0.05, 2.5]];
+      route(pts, v.tint.city, 0.3 + 1.6 * v.ours, 0.45 + 1.1 * on);
+      if (giving) route([...pts].reverse(), C.mint, 1.4, 0.9);         // under the cap: power flows back out
     }
-    label(-hf, 6, -hf, "San Francisco Bay Area · data centers", `${c.data_centers} mapped`,
-      `OpenStreetMap · ${c.with_outline} with outlines · pillars larger than life`, 0.4);
-    if (M.sf.length) {
-      const sx = M.sf.reduce((a, b) => a + b.x, 0) / M.sf.length, sz = M.sf.reduce((a, b) => a + b.z, 0) / M.sf.length;
-      label(-hf * 0.92, 5, sz - 4, `San Francisco · ${M.sf.length} data centers`, d.ours_w != null ? `this Mac: ${d.ours_w.toFixed(1)} W` : "this Mac",
-        M.sf.map((x) => x.address).filter(Boolean).join(" · "), 1.2, [sx, sz]);   // on the west edge, pointing at the city
-    }
-    M.clusters.filter((x) => !M.sf.some((sf) => sf.city === x.city)).slice(0, 2).forEach((cl, k) =>   // on the east edge
-      label(hf * 0.95, 5, cl.z - 7 + k * 9, cl.city, `${cl.n} data centers`,
-        cl.m2 ? `about ${Math.round(cl.m2 / 1000).toLocaleString()}k m² of footprint, mapped` : "mapped", 1.2, [cl.x, cl.z]));
-    const hov = S.hover && S.hover.startsWith("dc:") ? M.dcs[+S.hover.slice(3)] : null;
-    if (hov) label(hov.x, hov.h + 4, hov.z, `${hov.city || "data center"}${hov.in_sf ? " · San Francisco" : ""}`, hov.address || "address not mapped",
-      [hov.area_m2 ? `${hov.area_m2.toLocaleString()} m² footprint` : null,
-        hov.sub ? `${hov.sub.km} km from ${hov.sub.name || "a"} ${Math.round(hov.sub.kv)} kV substation` : null].filter(Boolean).join(" · "), hov.h + 0.6);
+    const items = [...M.subs.map((sb) => ({ x: sb.px, z: -7, draw: () => drawSubstation(sb) })),
+      ...M.dcs.map((dc) => ({ x: dc.px, z: 5, draw: () => drawDcBuilding(dc, edge) }))];
+    items.sort((a, b) => P(a.x, 0, a.z)[2] - P(b.x, 0, b.z)[2]).forEach((it) => it.draw());   // far first
+    label(-M.dcs.length * 5.5 - 4, 3, 9, `${M.area}'s data centers`, `${M.counts.data_centers} mapped`,   // front left, clear of Back
+      d.ours_w != null ? `their racks are this Mac's: ${d.ours_w.toFixed(1)} W, measured` : "their racks are this Mac's, measured", 0.4);
     drawLabels();
   }
 
   // Click the city: the camera flies into it. Back: it flies out. About 1.2 s; none under prefers-reduced-motion.
   function openCity(city, map) {
     S.cityMap = map.kind === "datacenters" ? prepareDc(map) : prepareMap(map); S.cityKey = null; S.hover = null;
+    if (map.kind === "datacenters") S.baseYaw = -0.12;                 // the row nearly face on: the camera eases round to it
     S.trans = REDUCE ? null : { t0: performance.now(), dir: 1, o: P(13, 2.5, -9) };   // wall clock: smooth even at a low frame rate
     S.city = city;
     if (!S.running) { step(1); draw(); }
@@ -856,9 +788,7 @@ const World = (() => {
     canvas.addEventListener("pointermove", (e) => {
       if (!S.drag) {                                                  // hover: say what a click would break
         const h = hitAt(e);
-        if ((h && h.id) !== S.hover) {                                // a data center pillar: hover only, no hand
-          S.hover = h ? h.id : null; canvas.style.cursor = h && S.onPick && !h.id.startsWith("dc:") ? "pointer" : ""; if (!S.running) draw();
-        }
+        if ((h && h.id) !== S.hover) { S.hover = h ? h.id : null; canvas.style.cursor = h && S.onPick ? "pointer" : ""; if (!S.running) draw(); }
         return;
       }
       S.yaw = S.drag.yaw + (e.clientX - S.drag.x) * 0.006;
