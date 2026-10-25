@@ -84,3 +84,18 @@ The main page changed. It now shows the grid in 3D. Judges can also "break" a pa
 5. Write 5 to 10 short lines in `docs/briefing/try-it.md`. One line for each thing that confused you,
    or a word you did not understand. Write what you expected to happen.
 Done when: the file has at least 5 lines, in your own words, and you pushed it.
+
+## Note from machine 1 (Sat 21:36)
+Do task 6 first. Then task 7. Both are short. Both help the judges.
+
+### 7. Check that every number says where it comes from: `docs/briefing/sources-check.md`
+A judge will ask "where does this number come from?". Each number on the screen should answer that by itself.
+A "source" is the place a number comes from. For example: "measured by macOS powermetrics" or "EIA, hour ending 20:00".
+1. Open http://localhost:8080/info.html on the demo Mac. This is the Info page.
+2. Look at the four big numbers at the top. Under each one there is a small grey line. That line is its source.
+3. Click a city on the main page (http://localhost:8080). Click "Open the Houston map". Look at the small line at the bottom.
+4. Open http://localhost:8080/proof.html. This is the Proof page. Look at each number there too.
+5. In `docs/briefing/sources-check.md`, write one line per number. Write the number, the page, and its source.
+   If a number has no source line, or you cannot understand the source, write "NO SOURCE" or "UNCLEAR" on that line.
+6. Push it. Then write one line in `team/status/4-arumalla.md` that says you finished.
+Done when: the file has at least 8 lines, each one names a page, and you pushed it.
