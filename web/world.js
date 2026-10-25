@@ -56,7 +56,8 @@ const World = (() => {
     const xr = x * c - z * s, zr = x * s + z * c;
     const depth = zr * cp + y * sp;
     const city = S.cam === "city";                                    // the city square is 50 units wide: pull the camera back
-    const k = (city ? S.scale * 0.66 : S.scale) * (S.fit || 1) / (1 - depth / 120);
+    const fitCity = city && S.cityMap ? 24 / Math.max(24, S.cityMap.half) : 1;   // a wider square (SF, 2.4 km) fits the same frame
+    const k = (city ? S.scale * 0.66 * fitCity : S.scale) * (S.fit || 1) / (1 - depth / 120);
     return [S.cx + xr * k, (city ? S.cy + S.h * 0.02 : S.cy) - (y * cp - zr * sp) * k, depth];
   }
   const rgb = (a, al = 1) => `rgba(${a[0] | 0},${a[1] | 0},${a[2] | 0},${al})`;
@@ -557,8 +558,8 @@ const World = (() => {
       st.relit ? `${Math.round((lit + st.relit) * 100)}% with Griddy's ${Math.round(d.with_mw)} MW` : d.needed ? `${(d.served / 1000).toFixed(1)} of ${(d.needed / 1000).toFixed(1)} GW served` : "", 0.4);
     const hs = M.hospitals.filter((hh) => Math.abs(hh.x) < hf && Math.abs(hh.z) < hf).slice(0, 3);
     for (const hh of hs) label(hh.x, 5.5, hh.z, "Hospital · kept on", hh.name.length > 30 ? `${hh.name.slice(0, 29)}…` : hh.name, "critical load, OpenStreetMap", 1.4);
-    const site = M.sites.find((x) => x.name);
-    if (site) label(site.x, 4, site.z, `Power ${site.kind} · real`, site.name.length > 26 ? `${site.name.slice(0, 25)}…` : site.name, "OpenStreetMap", 0.8);
+    for (const site of M.sites.filter((x) => x.name).slice(0, 2))     // the named substations first (scripts/fetch_city_map.py)
+      label(site.x, 4, site.z, `Power ${site.kind} · real`, site.name.length > 26 ? `${site.name.slice(0, 25)}…` : site.name, "OpenStreetMap", 0.8);
     if (st.relit) label(hf, 3.2, hf * 0.6, "From AI data centers", `${Math.round(d.with_mw)} MW freed`, "rerouted along real streets (mint)", 0.5);
     drawLabels();
   }

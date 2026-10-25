@@ -53,6 +53,37 @@ body.d.i .legend { font-size: 0.72rem; color: var(--muted); gap: 4px 14px; }
 .i-more .d-why { padding: 16px 20px 20px; }
 .i-more .d-why > .panel { padding: 0; border: 0; background: transparent; }
 
+/* the control bar: every control the same height and shape (Aryen, Sat 23:45: "looks really ugly") */
+body.d.i .d-knobs { gap: 10px; }
+body.d.i .d-iso { font-size: 0.85rem; color: var(--muted); gap: 10px; }
+body.d.i .d-iso select { height: 38px; padding: 0 36px 0 16px; border-radius: 999px; border: 1px solid var(--line); background-color: var(--panel);
+  color: var(--text); font-size: 0.9rem; font-weight: 500; appearance: none; -webkit-appearance: none; cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%238b9794' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 14px center; }
+body.d.i .d-seg { height: 38px; padding: 3px; gap: 2px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel); overflow: visible; }
+body.d.i .d-seg button { height: 30px; padding: 0 16px; border: 0; border-radius: 999px; background: transparent; color: var(--muted);
+  font-size: 0.88rem; font-weight: 500; box-shadow: none; }
+body.d.i .d-seg button + button { border-left: 0; }
+body.d.i .d-seg button:hover { color: var(--text); }
+body.d.i .d-seg button[aria-pressed="true"] { background: rgba(255, 255, 255, 0.1); color: var(--text); box-shadow: none; }
+body.d.i .d-switch { height: 38px; padding: 0 16px 0 4px; gap: 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel);
+  font-size: 0.88rem; font-weight: 500; }
+body.d.i .d-knob { width: 44px; height: 30px; }
+body.d.i .d-knob::after { top: 4px; left: 4px; width: 22px; height: 22px; }
+body.d.i .d-switch[aria-checked="true"] .d-knob::after { transform: translateX(14px); }
+body.d.i .d-seg button:focus-visible, body.d.i .d-switch:focus-visible, body.d.i .d-iso select:focus-visible { outline: 2px solid var(--ok); outline-offset: 2px; }
+
+/* the jobs: one plain line each, details small */
+body.d.i .d-jobs-src { margin: -4px 0 6px; }
+body.d.i .d-job { grid-template-columns: 130px minmax(0, 1.7fr) minmax(0, 1fr); gap: 6px 32px; padding: 18px 0 18px 18px; border-left-width: 3px; }
+body.d.i .d-job-id { gap: 8px; }
+body.d.i .d-job-id h3 { font-size: 1.1rem; font-weight: 600; margin: 0; }
+body.d.i .d-job-id .badge { font-size: 0.72rem; font-weight: 600; padding: 2px 9px; }
+body.d.i .d-job-line { margin: 1px 0 0; font-size: 0.98rem; }
+body.d.i .d-job-main .bar { margin: 10px 0 2px; height: 5px; }
+body.d.i .d-job-src { margin: 8px 0 0; }
+body.d.i .d-job-plan { font-size: 0.9rem; color: var(--muted); line-height: 1.45; }
+
 @media (max-width: 1100px) { .i-kpis { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 640px) {
   body.dash.d.i { padding: 10px 12px 32px; }

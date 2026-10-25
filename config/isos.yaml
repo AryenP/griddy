@@ -5,7 +5,8 @@ isos:
     timezone: US/Pacific
     lmp_market: REAL_TIME_5_MIN
     day_ahead_market: DAY_AHEAD_HOURLY
-    locations: [TH_SP15_GEN-APND, TH_NP15_GEN-APND]   # trading hubs: SoCal, NorCal
+    locations: [DLAP_PGAE-APND, TH_NP15_GEN-APND, TH_SP15_GEN-APND]   # PG&E's default load price, which San Francisco's load
+                              # pays (the demo's city); the NorCal and SoCal trading hubs beside it
     poll_s: {lmp: 300, forecast: 1800, fuel_mix: 300}
   ERCOT:
     timezone: US/Central

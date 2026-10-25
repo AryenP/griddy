@@ -557,7 +557,8 @@ def compare_runs(dispatched: str | Path, baseline: str | Path) -> Comparison:
     for job in PROGRESS:
         pairs[f"work_{job}"] = (d.work_done.get(job), b.work_done.get(job))
     delta = {k: x - y for k, (x, y) in pairs.items() if x is not None and y is not None}
-    return Comparison(dispatched=d, baseline=b, window_s=span, delta=delta, notes=notes)
+    return Comparison(dispatched=d, baseline=b, window_s=span, delta=delta, notes=notes,
+                      under_cap_pct={k: None if under[k] is None else 100 * under[k] for k in ("dispatched", "baseline")})
 
 
 # ---------------------------------------------------------------------------------------- rendering

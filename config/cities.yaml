@@ -12,11 +12,11 @@ cities:
       name: Texas Medical Center
       center: [29.7075, -95.3990]
       half_m: 600
-  - id: los-angeles
-    name: Los Angeles
-    iso: CAISO
-    viewbox: [-118.45, 34.15, -118.15, 33.95]
+  - id: san-francisco
+    name: San Francisco
+    iso: CAISO                 # Cal Hacks is here; its load pays PG&E's default load price, DLAP_PGAE (config/isos.yaml)
+    viewbox: [-122.52, 37.81, -122.35, 37.70]
     map:
-      name: Downtown, around California Hospital Medical Center
-      center: [34.0405, -118.2630]
-      half_m: 600
+      name: Mission District, from PG&E's Mission substation to SF General
+      center: [37.7662, -122.4085]
+      half_m: 1200

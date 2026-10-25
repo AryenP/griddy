@@ -326,7 +326,7 @@ $("w-picks").addEventListener("click", async (e) => {
 $("w-work-btn").addEventListener("click", async () => {
   const job = "train", mins = (D.specs[job] && D.specs[job].required_runtime_min) || 60;
   const due = new Date(Date.now() + (mins + 5) * 60e3);
-  const r = await postJSON(`/api/jobs/${job}`, { deadline: due.toISOString(), who: "demo driver" });
+  const r = await postJSON(`/api/jobs/${job}`, { deadline: localISO(due), who: "demo driver" });
   toast(r.ok ? "brownout" : "emergency", "training", r.ok ? `Training is due at ${due.toTimeString().slice(0, 5)}, its GPU time from now: the solver runs it now. Replay in about 20 s.` : `Could not set a deadline: ${routeError(`/api/jobs/${job}`, r)}`, "");
 });
 $("w-play-btn").addEventListener("click", async () => {
