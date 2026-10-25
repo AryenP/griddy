@@ -25,7 +25,7 @@ const World = (() => {
     drag: null, last: 0, t: 0, running: false, labels: [], smoke: [], smokeAcc: 0, safe: { top: 72, bottom: 230, right: 0 },
     data: { mix: {}, served: null, needed: null, ours_w: null, baseline_w: null, cut_pct: null, alert: null, campus: null, peaks: {},
       tripped: null, tripped_mw: null, fault: null, with_mw: null, city: null },
-    hits: [], hover: null, onPick: null, down: null, city: null, cityLayout: null,
+    hits: [], hover: null, onPick: null, down: null, city: null, cityMap: null, cam: null, trans: null,
     v: { served: 0, needed: 0, lit: 1, ours: 0.5, mix: {}, tint: { gen: [...C.lineOk], city: [...C.lineCity] } },
   };
 
@@ -55,8 +55,9 @@ const World = (() => {
     const c = Math.cos(S.yaw), s = Math.sin(S.yaw), cp = Math.cos(S.pitch), sp = Math.sin(S.pitch);
     const xr = x * c - z * s, zr = x * s + z * c;
     const depth = zr * cp + y * sp;
-    const k = (S.city ? S.scale * 0.7 : S.scale) * (S.fit || 1) / (1 - depth / 120);   // the city map is wider: pull the camera back
-    return [S.cx + xr * k, (S.city ? S.cy - S.h * 0.04 : S.cy) - (y * cp - zr * sp) * k, depth];
+    const city = S.cam === "city";                                    // the city square is 50 units wide: pull the camera back
+    const k = (city ? S.scale * 0.66 : S.scale) * (S.fit || 1) / (1 - depth / 120);
+    return [S.cx + xr * k, (city ? S.cy + S.h * 0.02 : S.cy) - (y * cp - zr * sp) * k, depth];
   }
   const rgb = (a, al = 1) => `rgba(${a[0] | 0},${a[1] | 0},${a[2] | 0},${al})`;
   const mix = (a, b, f) => [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f];
@@ -343,7 +344,7 @@ const World = (() => {
     if (S.last && now - S.last < 32) { requestAnimationFrame(frame); return; }   // 30 fps: this page runs on the Mac we measure
     const dt = Math.min(0.1, (now - (S.last || now)) / 1000);
     S.last = now; S.t += dt; S.dt = dt;
-    if (!S.drag) S.yaw = ease(S.yaw, S.baseYaw + 0.26 * Math.sin(S.t * 0.045), dt, 1.5);   // a slow sway, easing back after a drag
+    if (!S.drag && !S.city) S.yaw = ease(S.yaw, S.baseYaw + 0.26 * Math.sin(S.t * 0.045), dt, 1.5);   // a slow sway (not in the city: its image is cached)
     step(dt);
     draw(dt);
     requestAnimationFrame(frame);
@@ -360,7 +361,13 @@ const World = (() => {
       line3([i, 0, -18], [i, 0, 18], `${C.grid}${al})`, 1);
       line3([-28, 0, i * 0.7], [28, 0, i * 0.7], `${C.grid}${al})`, 1);
     }
-    if (S.city) { drawCity(); S.hits = []; smoke(dt); drawLabels(); return; }
+    if (S.trans) { S.hits = []; drawTransition(dt); return; }
+    if (S.city) { S.hits = []; S.cam = "city"; drawCity(dt); S.cam = null; return; }
+    drawGrid(dt);
+  }
+  function drawGrid(dt) {
+    const g = S.ctx, d = S.data, v = S.v;
+    S.labels = [];
     const flow = v.served ? Math.min(2.2, 0.4 + v.served / 40000) : 0.4;
     route(ROUTES.gen, v.tint.gen, flow);
     route(ROUTES.city, v.tint.city, flow);
@@ -427,73 +434,173 @@ const World = (() => {
     drawLabels();
   }
 
-  // ------------------------------------------------------------------ the city (Aryen: "if the judges click the city
-  // it expands to the city map ... hospitals, houses ... take damage ... lines to see how power is re-routed").
-  // REAL: the hospitals (OpenStreetMap places at their positions) and the share of homes dark (1 - served / needed, the
-  // grid's own numbers). ILLUSTRATIVE, and the page says so: the substations, feeders and blocks. Dark blocks rotate every
-  // 8 s, as rotating outages do; hospitals stay on as critical loads; Griddy's freed MW relights blocks, fed from the
-  // data centers along the mint path.
-  const nearest = (pts, p) => pts.reduce((b, q, i) => (Math.hypot(q[0] - p[0], q[1] - p[1]) < Math.hypot(pts[b][0] - p[0], pts[b][1] - p[1]) ? i : b), 0);
-  function cityLayout(city) {
-    const [w, n, e, s] = city.viewbox, cx = (w + e) / 2, cy = (n + s) / 2, kx = Math.cos((cy * Math.PI) / 180);
-    const k = 40 / Math.max((e - w) * kx, n - s);
-    const at = (lon, lat) => [(lon - cx) * kx * k, -(lat - cy) * k];   // x east, z south (toward the viewer)
-    const hx = city.hospitals.map((h) => ({ ...h, p: at(h.lon, h.lat) }));
-    const subs = [];
-    for (let i = 0; i < 6; i++) subs.push([-13 + (i % 3) * 13 + (hash(i + 3) - 0.5) * 4, -6.5 + Math.floor(i / 3) * 13 + (hash(i + 9) - 0.5) * 3]);
-    const cells = [];
-    for (let i = 0; i < 10; i++) for (let j = 0; j < 7; j++) {
-      const x = -19 + i * 4.2 + (hash(i * 7 + j) - 0.5) * 1.2, z = -12 + j * 4 + (hash(i * 13 + j) - 0.5) * 1.2;
-      if (hx.some((h) => Math.hypot(h.p[0] - x, h.p[1] - z) < 1.4)) continue;   // a hospital stands here
-      cells.push({ x, z, sub: nearest(subs, [x, z]), h: 0.3 + 0.5 * hash(i * 31 + j * 17), key: hash(i * 101 + j * 37) });
+  // ------------------------------------------------------------------ the city, 1:1 (Aryen, Sat: "make this 1 to 1, pull
+  // data from maps online ... just part of it ... some sort of zoom in when we click into the city"). One real square of
+  // the event's city from OpenStreetMap (/api/cities/{id}/map): every building at its footprint and height, the streets,
+  // parks and water, the mapped power lines and plants, the hospitals. 25 m to a scene unit. Which blocks go dark is
+  // illustrative: the grid's real unserved share (1 - served / needed) of sixteen feeder zones, rotating every 8 s as
+  // rotating outages do; hospitals stay on as critical loads; Griddy's freed MW relights that share of zones and its
+  // power flows in mint along real streets. The static city is drawn once into a cached image per camera and state.
+  const MU = 1 / 25, ZONES = 4;
+  function prepareMap(m) {
+    const half = m.half_m;
+    const zoneOf = (x, z) => Math.min(ZONES - 1, Math.max(0, Math.floor(((x + half) / (2 * half)) * ZONES)))
+      + ZONES * Math.min(ZONES - 1, Math.max(0, Math.floor(((z + half) / (2 * half)) * ZONES)));
+    const shoelace = (pts) => pts.reduce((s, p, i) => { const q = pts[(i + 1) % pts.length]; return s + p[0] * q[1] - q[0] * p[1]; }, 0);
+    const buildings = m.buildings.map((b) => {
+      let pts = b.p.map(([x, z]) => [x * MU, z * MU]);
+      if (shoelace(pts) < 0) pts = pts.reverse();                     // one winding, so wall facing tests agree
+      const cx = b.p.reduce((s, p) => s + p[0], 0) / b.p.length, cz = b.p.reduce((s, p) => s + p[1], 0) / b.p.length;
+      return { pts, h: b.h * MU, h0: (b.h0 || 0) * MU, hospital: !!b.hospital, cx: cx * MU, cz: cz * MU, zone: zoneOf(cx, cz) };
+    });
+    const roads = m.roads.map((r) => ({ w: r.w, pts: r.p.map(([x, z]) => [x * MU, 0.04, z * MU]),
+      zone: zoneOf(r.p[Math.floor(r.p.length / 2)][0], r.p[Math.floor(r.p.length / 2)][1]) }));
+    return { ...m, half: half * MU, buildings, roads,
+      parks: m.parks.map((ps) => ps.map(([x, z]) => [x * MU, z * MU])), water: m.water.map((ps) => ps.map(([x, z]) => [x * MU, z * MU])),
+      lines: m.power_lines.map((l) => ({ ...l, pts: l.p.map(([x, z]) => [x * MU, l.kind === "cable" ? 0.05 : 0.9, z * MU]) })),
+      sites: m.power_sites.map((s) => ({ ...s, x: s.x * MU, z: s.z * MU })),
+      hospitals: m.hospitals.map((hh) => ({ ...hh, x: hh.x * MU, z: hh.z * MU })) };
+  }
+  // The city's state this moment: which zones are dark, which Griddy relit (from the grid's real numbers).
+  function cityState() {
+    const d = S.data, N = ZONES * ZONES;
+    const dark = d.needed ? Math.max(0, 1 - (d.served || 0) / d.needed) : 0;
+    const relit = d.with_mw && d.needed ? Math.min(dark, d.with_mw / d.needed) : 0;
+    const turn = REDUCE ? 0 : Math.floor(S.t / 8);
+    const order = [...Array(N).keys()].map((z) => [hash(z * 977 + turn * 0.137), z]).sort((a, b) => a[0] - b[0]).map((x) => x[1]);
+    const nDark = Math.round(dark * N), nRelit = Math.round(relit * N), zone = new Array(N).fill("on");
+    order.slice(0, nDark).forEach((z, r) => { zone[z] = r < nRelit ? "griddy" : "off"; });
+    return { dark, relit, zone, key: `${turn}|${nDark}|${nRelit}` };
+  }
+  function prism(b, look) {
+    const g = S.ctx, n = b.pts.length;
+    const base = b.pts.map(([x, z]) => P(x, b.h0, z)), top = b.pts.map(([x, z]) => P(x, b.h, z));
+    for (let i = 0; i < n; i++) {
+      const j = (i + 1) % n, q = [base[i], base[j], top[j], top[i]];
+      if (area(q) >= 0) continue;                                     // facing away
+      const ex = b.pts[j][0] - b.pts[i][0], ez = b.pts[j][1] - b.pts[i][1], len = Math.hypot(ex, ez) || 1;
+      const sh = 0.55 + 0.4 * Math.max(0, (ez / len) * 0.6 - (ex / len) * 0.8);   // light from the south-west
+      poly(q, rgb(shade(look.wall, sh), look.alpha));
+      if (look.floors) {                                              // floor lines every ~10 m
+        g.strokeStyle = look.floors; g.lineWidth = 0.6;
+        for (let y = b.h0 + 0.42; y < b.h - 0.1; y += 0.42) {
+          const a1 = P(b.pts[i][0], y, b.pts[i][1]), a2 = P(b.pts[j][0], y, b.pts[j][1]);
+          g.beginPath(); g.moveTo(a1[0], a1[1]); g.lineTo(a2[0], a2[1]); g.stroke();
+        }
+      }
     }
-    for (const h of hx) h.sub = nearest(subs, h.p);
-    return { hx, subs, cells, entry: [-25, -1], dc: [21, 10] };
+    poly(top, rgb(shade(look.wall, 1.05), look.alpha), look.edge, look.edge ? 1 : 0);
   }
-  function drawCity() {
-    const d = S.data, v = S.v, L = S.cityLayout, y = 0.36;
-    platform(-23.5, -14.5, 47, 29, 0.3);
-    const dark = d.needed ? Math.max(0, 1 - (d.served || 0) / d.needed) : 0;            // the grid's real unserved share
-    const relit = d.with_mw && d.needed ? Math.min(dark, d.with_mw / d.needed) : 0;    // what Griddy's freed MW covers
-    const turn = REDUCE ? 0 : Math.floor(S.t / 8), N = L.cells.length;
-    const order = L.cells.map((c, i) => [hash(c.key * 977 + turn * 0.137), i]).sort((a, b) => a[0] - b[0]).map((x) => x[1]);
-    const state = new Array(N).fill("on"), nDark = Math.round(dark * N), nRelit = Math.round(relit * N);
-    order.slice(0, nDark).forEach((i, r) => { state[i] = r < nRelit ? "griddy" : "off"; });
-    const tint = v.tint.city;
-    L.subs.forEach((sb) => route([[L.entry[0], 0.05, L.entry[1]], [sb[0], 0.05, L.entry[1]], [sb[0], 0.05, sb[1]]], tint, 0.5));
-    const fed = [...new Set(L.cells.filter((c, i) => state[i] === "griddy").map((c) => c.sub))];
-    fed.forEach((k) => route([[L.dc[0], 0.05, L.dc[1]], [L.subs[k][0], 0.05, L.dc[1]], [L.subs[k][0], 0.05, L.subs[k][1]]], C.mint, 1.2));
-    const items = [];
-    L.cells.forEach((c, i) => items.push({ x: c.x, z: c.z, draw: () => {
-      const st = state[i], col = st === "off" ? "rgba(255,90,90,0.22)" : st === "griddy" ? "rgba(125,240,191,0.7)" : "rgba(120,190,255,0.28)";
-      line3([L.subs[c.sub][0], 0.06, L.subs[c.sub][1]], [c.x + 0.7, 0.06, c.z + 0.7], col, st === "griddy" ? 1.4 : 0.8);
-      box(c.x, c.z, 1.4, 1.4, c.h, { y, color: st === "off" ? [70, 78, 86] : [200, 214, 226], windows: true, cols: 3, floor: 0.4,
-        lit: st === "off" ? 0 : 0.85, seed: i + 300, litColor: st === "griddy" ? C.mint : C.lit, cap: true });
-    } }));
-    L.subs.forEach((sb, k) => items.push({ x: sb[0], z: sb[1], draw: () => {
-      box(sb[0] - 0.6, sb[1] - 0.5, 1.2, 1.0, 0.7, { y, color: C.steel });
-      glowDot(sb[0], y + 0.9, sb[1], 6, fed.includes(k) ? C.mint : tint, 0.8);
-    } }));
-    L.hx.forEach((h, i) => items.push({ x: h.p[0], z: h.p[1], draw: () => {
-      line3([L.subs[h.sub][0], 0.07, L.subs[h.sub][1]], [h.p[0], 0.07, h.p[1]], "rgba(125,240,191,0.45)", 1);
-      box(h.p[0] - 0.45, h.p[1] - 0.45, 0.9, 0.9, 1.1, { y, color: [236, 240, 242], windows: true, cols: 2, floor: 0.35, lit: 0.9, seed: i + 700, cap: true });
-      const c = [h.p[0], y + 1.32, h.p[1]];
-      line3([c[0] - 0.28, c[1], c[2]], [c[0] + 0.28, c[1], c[2]], "rgba(255,70,70,0.95)", 2.4);
-      line3([c[0], c[1], c[2] - 0.28], [c[0], c[1], c[2] + 0.28], "rgba(255,70,70,0.95)", 2.4);
-      if (i < 3) label(h.p[0], y + 3.2, h.p[1], "Hospital · kept on", h.name.length > 28 ? `${h.name.slice(0, 27)}…` : h.name, "OpenStreetMap place, critical load", y + 1.4);
-    } }));
-    items.push({ x: L.dc[0], z: L.dc[1], draw: () => {
-      box(L.dc[0] - 1.6, L.dc[1] - 1.1, 3.2, 2.2, 1.0, { y, color: [205, 218, 228], band: Math.min(1, v.ours), cap: true });
-      label(L.dc[0], y + 3.4, L.dc[1], "Data centers", relit ? `${Math.round(d.with_mw)} MW freed` : "running", relit ? "rerouted to the mint blocks" : "AI compute, flexible", y + 1.1);
-    } });
-    items.sort((a, b) => P(a.x, 0, a.z)[2] - P(b.x, 0, b.z)[2]);
-    items.forEach((it) => it.draw());
-    const lit = 1 - dark + relit;
-    label(-16, 6.5, -13, S.city.name, d.needed ? `${Math.round((1 - dark) * 100)}% of homes lit` : "—",
-      relit ? `${Math.round(lit * 100)}% with Griddy's ${Math.round(d.with_mw)} MW` : d.needed ? `${(d.served / 1000).toFixed(1)} of ${(d.needed / 1000).toFixed(1)} GW served` : "", 0.4);
+  const LOOK = {
+    on: { wall: [78, 138, 168], alpha: 0.95, floors: "rgba(200,238,255,0.4)", edge: "rgba(185,245,255,0.95)" },
+    griddy: { wall: [52, 150, 120], alpha: 0.97, floors: "rgba(160,255,215,0.7)", edge: "rgba(140,255,205,1)" },
+    off: { wall: [14, 17, 22], alpha: 0.97, floors: null, edge: "rgba(255,90,90,0.4)" },
+    hospital: { wall: [214, 226, 234], alpha: 1, floors: "rgba(255,255,255,0.45)", edge: "rgba(255,255,255,0.9)" },
+  };
+  function drawCityStatic(st) {
+    const g = S.ctx, M = S.cityMap, hf = M.half;
+    platform(-hf - 0.6, -hf - 0.6, 2 * hf + 1.2, 2 * hf + 1.2, 0.35);
+    for (const pk of M.parks) poly(pk.map(([x, z]) => P(x, 0.37, z)), "rgba(40,96,64,0.35)");
+    for (const w of M.water) poly(w.map(([x, z]) => P(x, 0.37, z)), "rgba(30,72,118,0.55)");
+    g.save(); g.lineCap = "round"; g.lineJoin = "round";
+    const px = S.scale * (S.fit || 1) / 20;
+    for (const r of M.roads) {
+      const pp = r.pts.map(([x, y, z]) => P(x, 0.38, z)), dark = st.zone[r.zone] === "off";
+      g.beginPath(); pp.forEach((p, i) => (i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])));
+      if (r.w >= 3 && !dark) { g.shadowColor = "rgba(90,190,255,0.8)"; g.shadowBlur = 6; }
+      g.strokeStyle = dark ? "rgba(90,110,130,0.18)" : r.w >= 4 ? "rgba(130,215,255,0.55)" : r.w >= 3 ? "rgba(110,190,240,0.4)" : "rgba(100,160,210,0.22)";
+      g.lineWidth = (0.5 + 0.55 * r.w) * px; g.stroke(); g.shadowBlur = 0;
+    }
+    for (const l of M.lines) {                                         // real power lines: a soft amber glow
+      const pp = l.pts.map((v) => P(...v));
+      g.beginPath(); pp.forEach((p, i) => (i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])));
+      g.shadowColor = "rgba(255,200,110,0.9)"; g.shadowBlur = 8; g.strokeStyle = "rgba(255,214,140,0.7)"; g.lineWidth = 1.2; g.stroke();
+    }
+    g.restore();
+    const items = M.buildings.map((b) => ({ b, depth: P(b.cx, 0, b.cz)[2] })).sort((x, y) => x.depth - y.depth);
+    for (const { b } of items) prism(b, b.hospital ? LOOK.hospital : LOOK[st.zone[b.zone]]);
+    for (const b of M.buildings) if (b.hospital) {                    // a red cross on each hospital roof
+      const c = P(b.cx, b.h + 0.02, b.cz), r = Math.max(3, 0.6 * px * 4);
+      g.fillStyle = "rgba(255,70,70,0.95)"; g.fillRect(c[0] - r, c[1] - r / 3, 2 * r, (2 * r) / 3); g.fillRect(c[0] - r / 3, c[1] - r, (2 * r) / 3, 2 * r);
+    }
   }
-  function openCity(city) { S.city = city; S.cityLayout = cityLayout(city); S.hover = null; if (!S.running) { step(1); draw(); } }
-  function closeCity() { S.city = null; S.cityLayout = null; if (!S.running) { step(1); draw(); } }
+  function drawCity(dt) {
+    const M = S.cityMap, d = S.data, v = S.v, g = S.ctx;
+    if (!M) return;
+    S.labels = [];
+    const st = cityState();
+    const key = [S.yaw, S.pitch, S.scale, S.fit, S.cx, S.cy].map((x) => (+x || 0).toFixed(3)).join("|") + `|${S.w}x${S.h}|${st.key}`;
+    if (!S.cityCache) S.cityCache = document.createElement("canvas");
+    const cc = S.cityCache;
+    if (cc.width !== S.cv.width || cc.height !== S.cv.height) { cc.width = S.cv.width; cc.height = S.cv.height; S.cityKey = null; }
+    if (S.cityKey !== key) {                                           // redraw the static city only when it changed
+      const main = S.ctx, c2 = cc.getContext("2d");
+      c2.setTransform(1, 0, 0, 1, 0, 0); c2.clearRect(0, 0, cc.width, cc.height); c2.setTransform(S.dpr, 0, 0, S.dpr, 0, 0);
+      S.ctx = c2; drawCityStatic(st); S.ctx = main; S.cityKey = key;
+    }
+    g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(cc, 0, 0); g.restore();
+    if (!REDUCE) {                                                     // power moving: the only per-frame drawing
+      const pulse = (pts, color, speed, gap) => {
+        const L = lenOf(pts);
+        if (L < 0.5) return;
+        for (let f = ((S.t * speed) % gap) / L; f < 1; f += gap / L) { const q = along(pts, f), p = P(...q); g.fillStyle = color; g.beginPath(); g.arc(p[0], p[1], 2.2, 0, 7); g.fill(); }
+      };
+      g.save(); g.globalCompositeOperation = "lighter";
+      for (const l of M.lines) pulse(l.pts, "rgba(255,220,150,0.95)", 2.2, 3);
+      const tint = rgb(v.tint.city, 0.9);
+      for (const r of M.roads) if (r.w >= 4 && st.zone[r.zone] !== "off") pulse(r.pts.map(([x, , z]) => [x, 0.4, z]), st.zone[r.zone] === "griddy" ? "rgba(125,240,191,0.95)" : tint, 1.6, 4);
+      if (st.relit) for (const r of M.roads) if (r.w >= 2 && r.w < 4 && st.zone[r.zone] === "griddy") pulse(r.pts.map(([x, , z]) => [x, 0.4, z]), "rgba(125,240,191,0.95)", 1.4, 2.5);
+      g.restore();
+    }
+    const hf = M.half, lit = 1 - st.dark;
+    label(-hf, 4.5, -hf, `${S.city.name} · ${M.area}`, d.needed ? `${Math.round(lit * 100)}% of homes lit` : "—",
+      st.relit ? `${Math.round((lit + st.relit) * 100)}% with Griddy's ${Math.round(d.with_mw)} MW` : d.needed ? `${(d.served / 1000).toFixed(1)} of ${(d.needed / 1000).toFixed(1)} GW served` : "", 0.4);
+    const hs = M.hospitals.filter((hh) => Math.abs(hh.x) < hf && Math.abs(hh.z) < hf).slice(0, 3);
+    for (const hh of hs) label(hh.x, 5.5, hh.z, "Hospital · kept on", hh.name.length > 30 ? `${hh.name.slice(0, 29)}…` : hh.name, "critical load, OpenStreetMap", 1.4);
+    const site = M.sites.find((x) => x.name);
+    if (site) label(site.x, 4, site.z, `Power ${site.kind} · real`, site.name.length > 26 ? `${site.name.slice(0, 25)}…` : site.name, "OpenStreetMap", 0.8);
+    if (st.relit) label(hf, 3.2, hf * 0.6, "From AI data centers", `${Math.round(d.with_mw)} MW freed`, "rerouted along real streets (mint)", 0.5);
+    drawLabels();
+  }
+  // Click the city: the camera flies into it. Back: it flies out. About 1.2 s; none under prefers-reduced-motion.
+  function openCity(city, map) {
+    S.cityMap = prepareMap(map); S.cityKey = null; S.hover = null;
+    S.trans = REDUCE ? null : { t0: performance.now(), dir: 1, o: P(13, 2.5, -9) };   // wall clock: smooth even at a low frame rate
+    S.city = city;
+    if (!S.running) { step(1); draw(); }
+  }
+  function closeCity() {
+    if (REDUCE || !S.city) { S.city = null; S.cityMap = null; if (!S.running) { step(1); draw(); } return; }
+    S.trans = { t0: performance.now(), dir: -1, o: S.trans ? S.trans.o : null };
+  }
+  function offscreen(fn) {                                             // draw a scene into a spare canvas (for the fly-in)
+    if (!S.fx) S.fx = document.createElement("canvas");
+    const fx = S.fx, c2 = fx.getContext("2d");
+    if (fx.width !== S.cv.width || fx.height !== S.cv.height) { fx.width = S.cv.width; fx.height = S.cv.height; }
+    c2.setTransform(1, 0, 0, 1, 0, 0); c2.clearRect(0, 0, fx.width, fx.height); c2.setTransform(S.dpr, 0, 0, S.dpr, 0, 0);
+    const main = S.ctx; S.ctx = c2; fn(); S.ctx = main;
+    return fx;
+  }
+  function stamp(img, ox, oy, k, alpha) {
+    const g = S.ctx;
+    g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = Math.max(0, Math.min(1, alpha));
+    g.translate(ox * S.dpr, oy * S.dpr); g.scale(k, k); g.translate(-ox * S.dpr, -oy * S.dpr);
+    g.drawImage(img, 0, 0); g.restore();
+  }
+  function drawTransition(dt) {
+    const tr = S.trans, raw = Math.min(1, (performance.now() - tr.t0) / 1200);
+    const p = tr.dir > 0 ? raw : 1 - raw, smooth = (x) => x * x * (3 - 2 * x);
+    const o = tr.o || [S.cx, S.cy];
+    if (p < 0.5) {
+      const q = smooth(p / 0.5);
+      stamp(offscreen(() => { S.cam = "grid"; drawGrid(dt); }), o[0], o[1], 1 + 2.6 * q, 1 - q);
+    } else {
+      const q = smooth((p - 0.5) / 0.5);
+      stamp(offscreen(() => { S.cam = "city"; drawCity(dt); }), S.cx, S.cy, 0.55 + 0.45 * q, q);
+    }
+    S.cam = null;
+    if (raw >= 1) { if (tr.dir < 0) { S.city = null; S.cityMap = null; } S.trans = null; }
+  }
 
   // ------------------------------------------------------------------ smoke: spawned at a rate per second, not per frame
   function smokeFrom(x, y, z, rate, steam) {

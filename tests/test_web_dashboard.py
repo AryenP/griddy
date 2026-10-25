@@ -127,11 +127,14 @@ def test_a_judge_can_say_how_it_breaks_and_confirms_the_reading_first():
 
 
 def test_the_city_map_says_what_is_real_and_what_is_drawn():
-    """Sat 18:06: clicking the city opens its map. Hospitals are real (OpenStreetMap via /api/cities), the share of
-    homes dark is the grid's real served / needed, and the page names the substations, feeders and blocks illustrative."""
-    assert "/api/cities" in DEMO_JS and "openCity" in DEMO_JS and 'id="w-back"' in WORLD_HTML
-    assert "illustrative layout" in DEMO_JS and "license" in DEMO_JS
-    assert "function drawCity" in WORLD_JS and "d.served" in WORLD_JS.split("function drawCity")[1][:600]
+    """Sat 19:59: clicking the city flies into one real square of it, drawn 1:1 from OpenStreetMap (/api/cities/{id}/map):
+    buildings at their heights, streets, power lines, hospitals. Homes dark: the grid's real served / needed; which blocks
+    go dark and the feeder routing are illustrative, and the footer says so, with how many heights are estimated."""
+    assert "/api/cities/${city.id}/map" in DEMO_JS and "openCity" in DEMO_JS and 'id="w-back"' in WORLD_HTML
+    assert "drawn 1:1" in DEMO_JS and "illustrative" in DEMO_JS and "heights estimated" in DEMO_JS
+    state = WORLD_JS[WORLD_JS.index("function cityState"):WORLD_JS.index("function prism")]
+    assert "d.served" in state and "d.needed" in state and "d.with_mw" in state
+    assert "function drawTransition" in WORLD_JS and "REDUCE ? null" in WORLD_JS          # the fly-in, none if reduced motion
 
 
 def test_the_logo_loader_shows_while_the_page_loads_and_always_goes_away():

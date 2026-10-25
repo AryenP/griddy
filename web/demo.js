@@ -6,7 +6,7 @@
 "use strict";
 
 const D = { grid: null, power: null, replay: null, last: null, whatif: null, cat: [], pick: "live", scale: null, fetching: false,
-  cities: [], city: null,
+  cities: [], city: null, maps: {},
   shown: new Set(), peaks: {}, specs: {}, jobs: {} };
 
 const gw = (mw) => (mw == null ? "—" : `${fixed(mw / 1000, 1)} GW`);
@@ -188,7 +188,8 @@ function render() {
 // In the city map, the footer says what is real and what is drawn.
 function citySources() {
   if (!D.city) return;
-  setHTML($("w-sources"), html`${D.city.name}: hospitals are real places, ${D.city.license}, fetched ${String(D.city.fetched_at).slice(0, 10)}. Homes lit: the grid's real served over needed. Substations, feeders and blocks: an illustrative layout. Dark blocks rotate, as rotating outages do.`);
+  const m = D.maps[D.city.id], h = (m && m.heights) || {};
+  setHTML($("w-sources"), html`${D.city.name}${m ? `, ${m.area}` : ""}: buildings, heights, streets and power lines drawn 1:1 from ${m ? m.license : D.city.license}, fetched ${String((m || D.city).fetched_at).slice(0, 10)}${m ? `; ${h.estimated} of ${m.buildings.length} heights estimated from the building's type` : ""}. Homes lit: the grid's real served over needed. Which blocks go dark, and the feeder routing: illustrative.`);
 }
 
 // A judge's what-if on top of whatever the world shows: the broken part, the grid's real numbers after it, our cut.
@@ -227,7 +228,14 @@ function cityNow() {
   const iso = ev ? ev.iso : D.grid ? D.grid.iso : null;
   return D.cities.find((c) => c.iso === iso) || null;
 }
-function openCity(city) { D.city = city; World.openCity(city); $("w-back").hidden = false; render(); }
+async function openCity(city) {
+  if (!D.maps[city.id]) {                                       // one real square of the city, 1:1 (OpenStreetMap)
+    const r = await getJSON(`/api/cities/${city.id}/map`);
+    if (!r.ok) { toast("emergency", "city", `No map for ${city.name}: ${routeError(`/api/cities/${city.id}/map`, r)}`, ""); return; }
+    D.maps[city.id] = r.data;
+  }
+  D.city = city; World.openCity(city, D.maps[city.id]); $("w-back").hidden = false; render();
+}
 function closeCity() { D.city = null; World.closeCity(); $("w-back").hidden = true; render(); }
 $("w-back").addEventListener("click", closeCity);
 
