@@ -375,3 +375,17 @@ to every page's wording, no fact changed. 502 tests pass. Next: the docs' wordin
   of the live pages in the repo). The "neighbourhood panel" item in the tick prompt is obsolete: it was replaced by
   the real-event replay and Break a part.
 - Blockers: none new.
+
+## Sat 21:45 tick
+- Done: quiet on the team side (no new commits, no PR to merge, no issues; every queue has two unstarted tasks).
+  Checked Aryen's pasted status against the repo: the demo is up since 21:20 and every page answers; git history
+  holds no real key (only all-zero test placeholders; .env, .azure and tokens never committed), so the repo is safe
+  to make public; the published evals are 135/138 live, 19/19 injections, fault reader 14/14 (the paste's 86/90 and
+  12/12 are older).
+- Found: Application Insights is provisioned (azd's env has its connection string) but the string is not in the
+  repo's .env, so the running app exports no spans; the video's 2:40 beat and the driver card would show nothing.
+- Needs Aryen (once): (1) copy that line into .env with
+  `grep '^APPLICATIONINSIGHTS_CONNECTION_STRING=' .azure/brownout-calhacks/.env >> .env`, then machine 1 restarts
+  the demo and checks spans arrive, or say "cut it" and the pitch uses /api/trace; (2) make the repo public;
+  (3) rotate the EIA key pasted in chat earlier. Recommendation on Prompt Shields: skip tonight (documented gap).
+- Next: the rehearsal, demo-stable-7 and gallery screenshots in one runtime session, on Aryen's go.
