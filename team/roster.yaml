@@ -54,6 +54,7 @@ members:
   - config/cities.yaml
   - scripts/fetch_city.py
   - scripts/fetch_city_map.py
+  - scripts/fetch_datacenters.py
   - docs/evidence/city/**
   - docs/gallery/**
   - tests/test_city*.py
