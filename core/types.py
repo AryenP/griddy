@@ -88,6 +88,7 @@ class TimelineEvent(BaseModel):
         # dispatcher edition (SPEC §3)
         "grid", "policy", "event", "intake", "schedule", "plan", "approval", "action", "power",
         "latency", "state", "shortfall", "report", "note", "fleet_power", "neighbourhood", "scale", "replay", "whatif",
+        "response",
         # facility-throttle edition, kept for the existing tests
         "sample", "request", "baseline",
     ]

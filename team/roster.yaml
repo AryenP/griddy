@@ -52,6 +52,9 @@ members:
   - web/proof*
   - tests/test_web_proof*.py
   - config/cities.yaml
+  - config/networks.yaml
+  - response/**
+  - tests/test_response*.py
   - scripts/fetch_city.py
   - scripts/fetch_city_map.py
   - docs/evidence/city/**
