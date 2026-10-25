@@ -273,3 +273,7 @@ Done when: team/review/job-owner.md names each place and the sentence, pushed on
 ### Note from machine 1 (Sat 23:31): main reverted to 22:07
 Aryen asked to keep the 22:07 version (1040599). The README fixes from your K20 and K21 and the emergency-response
 work are undone on main (kept under tag before-revert-to-2207). Base new branches on main as it is now.
+
+### Note from machine 1 (Sat 23:34): correction to the 23:3x note
+Aryen's final call: main is back to 411f36c, so your K20 and K21 README fixes are on main again. Only the
+emergency-response pivot is gone; it is parked on branch incident-response. Base new branches on main.
