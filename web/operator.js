@@ -1,8 +1,9 @@
 // Grid operator's console (operator.html): the utility's side of DEMO.md 1:15 and 3:00. Free text or a
 // dictated transcript -> POST /request; an OpenADR 3.1 EVENT -> POST /openadr/event; active cap events with a
 // countdown and a time-to-compliance counter computed from measured watts; the operator's own approval
-// requests (job_id "power_cap"); "ask why" -> POST /api/ask; and the SIMULATED neighbourhood's evening-peak replay
-// (POST /api/neighbourhood), whose utility call reaches the real dispatcher as a real cap. Nothing here decides: it sends words, the
+// requests (job_id "power_cap"); "ask why" -> POST /api/ask; a real grid emergency replayed through the live software
+// (GET /api/replay/events, POST /api/replay, Sat 19:50); and a judge's what-if in their own words (POST /api/whatif/read,
+// then /api/whatif). Nothing here decides: it sends words, the
 // agent reads them, the solver re-plans, and this page shows what came back.
 "use strict";
 
@@ -11,8 +12,9 @@ const P = {
   power: [],                 // PowerReading {t, combined_w}, oldest first, last POWER_KEEP_S seconds
   events: new Map(),         // CapEvent id -> CapEvent: the snapshot's cap_events, then `event` WS messages
   plan: null, loadedT: null, loadErr: null,
-  nb: null,                  // the snapshot's neighbourhood summary (config), null before the first snapshot
-  nbLast: null,              // the newest `neighbourhood` event: SIMULATED, except ours_w
+  cat: [], evPick: null, evFetching: false,
+  evLast: null,              // the newest `replay` state (EIA-930 hours, measured watts, the estimate at grid scale)
+  wiLast: null, wiReading: null,   // the newest `whatif` state; a reading of the judge's words awaiting confirmation
 };
 const POWER_KEEP_S = 3 * 3600;
 const MEAN_S = 10;          // the compliance test: 10-s rolling mean of measured watts at or under the cap
@@ -202,71 +204,98 @@ async function sendAsk() {
     ${e.facts && e.facts.length ? html`<ul class="explanations src">${e.facts.map((f) => html`<li>${f}</li>`)}</ul>` : ""}`);
 }
 
-// ---------- the SIMULATED neighbourhood (config/neighbourhood.yaml, DECISIONS 05:45) ----------
-const NB_STALE_S = 15;      // events come every second during the replay and every 10 s otherwise
+// ---------- a real grid emergency, replayed through the live software (replay/engine.py) ----------
+const LIVE_S = 12;          // the replay and a what-if send a state every second
+const compactN = (n) => (n >= 1e6 ? `${fixed(n / 1e6, 1)}M` : n >= 1e3 ? `${Math.round(n / 1e3)}k` : String(Math.round(n)));
 
-function nbClock(h) {
-  if (h == null || !isFinite(h)) return "—";
-  const m = Math.floor((((h % 24) + 24) % 24) * 60);
-  return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
-}
+function evRunning() { const d = P.evLast; return !!(d && d.event && nowS() - d.t < LIVE_S); }
 
-function nbRunning() {
-  const d = P.nbLast;
-  return !!(d && d.scenario && nowS() - d.t < NB_STALE_S);
-}
-
-function renderNeighbourhood() {
-  const nb = P.nb, d = P.nbLast, btn = $("nb-toggle");
-  const sc = (nb && nb.scenario) || {};
-  const name = sc.name || "evening peak";
-  if (!nb || !nb.enabled) {
-    btn.disabled = true;
-    btn.textContent = `Replay the ${name} (simulated)`;
-    setHTML($("nb-now"), html`<p class="empty">${nb ? "no neighbourhood configured on the server (config/neighbourhood.yaml)" : "waiting for the server"}</p>`);
-    $("nb-src").textContent = "";
+function renderReplay() {
+  if ($("ev-picks").children.length !== P.cat.length) {        // built once, so focus survives the 1-s refresh
+    setHTML($("ev-picks"), html`${P.cat.map((e) => html`<button type="button" data-ev="${e.id}">${e.title}<small> · ${e.when}</small></button>`)}`);
+  }
+  const running = evRunning(), pick = running ? P.evLast.event : P.evPick;
+  for (const b of $("ev-picks").children) b.setAttribute("aria-pressed", String(b.dataset.ev === pick));
+  const btn = $("ev-play");
+  btn.disabled = !pick || P.evFetching;
+  btn.textContent = running ? "Stop" : P.evFetching ? "Fetching from the EIA…" : "Replay it live";
+  const ev = P.cat.find((e) => e.id === pick);
+  if (!running) {
+    setHTML($("ev-now"), html`<p class="empty">${ev ? `${ev.title}, ${ev.when}. ${ev.impact[0].text}.` : P.cat.length ? "pick an event to replay" : "loading the events…"}</p>`);
+    $("ev-src").textContent = ev ? `${ev.data_source}; alerts and impact from the official report, page on each` : "";
     return;
   }
-  const running = nbRunning();
-  btn.disabled = false;
-  btn.textContent = running ? "Stop the replay" : `Replay the ${name} (simulated)`;
-  const span = sc.hours ? `${nbClock(sc.hours[0])}–${nbClock(sc.hours[1])} of today's forecast in ${sc.seconds} s` : "";
-  if (!d) {
-    setHTML($("nb-now"), html`<p class="empty">no neighbourhood state yet${span ? `: the replay plays ${span}` : ""}</p>`);
-    $("nb-src").textContent = "";
-    return;
-  }
-  const over = d.loading_pct != null && d.loading_pct >= 100;
-  const avoided = d.diesel_off_kwh != null && d.diesel_kwh != null ? d.diesel_off_kwh - d.diesel_kwh : null;
-  setHTML($("nb-now"), html`
-    <div><div class="label">Clock (simulated)</div><div class="value">${nbClock(d.sim_hour)}</div>
-      <div class="src">${running ? `${name} replay: ${span}` : "wall clock: no replay running"}</div></div>
-    <div><div class="label">Line loading (simulated)</div><div class="value${over ? " bad" : ""}">${fixed(d.loading_pct, 0)}<small>%</small></div>
-      <div class="bar${over ? " over" : ""}"><span style="width:${Math.max(0, Math.min(100, d.loading_pct || 0)).toFixed(1)}%"></span></div>
-      <div class="src">${sig(d.demand_kw)} kW of a ${sig(d.limit_kw)} kW limit</div></div>
-    <div><div class="label">Diesel generator (simulated)</div><div class="value">${sig(d.diesel_kw)}<small>kW</small></div>
-      <div class="src">${nb.diesel_kw != null ? `of ${sig(nb.diesel_kw)} kW backup` : "backup generator"}</div></div>
-    <div><div class="label">Diesel this replay (simulated)</div><div class="value">${fixed(d.diesel_kwh, 1)}<small>kWh</small></div>
-      <div class="src">vs ${fixed(d.diesel_off_kwh, 1)} kWh with Brownout off · ${fixed(avoided, 1)} kWh avoided</div></div>
-    <div><div class="label">Our sites (measured)</div><div class="value">${fixed(d.ours_w, 1)}<small>W</small></div>
-      <div class="src">${d.response != null ? `${sig(100 * d.response)}% of their pre-cap baseline` : "no cap response yet"}</div></div>`);
-  const stale = nowS() - d.t >= NB_STALE_S;
-  $("nb-src").textContent = `${stale ? "STALE: " : ""}simulated neighbourhood, updated ${age(d.t)}`
-    + (d.cap_id ? " · its utility call is a real cap on the real dispatcher (see Active cap events)" : "");
+  const d = P.evLast, sc = d.scale, cut = d.measured_cut_pct;
+  setHTML($("ev-now"), html`
+    <div><div class="label">Hour (${ev ? ev.ba : ""})</div><div class="value">${isoClock(d.hour_ending)}</div><div class="src">${isoLabel(d.hour_ending)} · the last hour that has ended</div></div>
+    <div><div class="label">Served / needed</div><div class="value">${fixed(d.demand_mw / 1000, 1)}<small> / ${fixed(d.forecast_mw / 1000, 1)} GW</small></div><div class="src">EIA-930 demand and the operator's day-ahead forecast</div></div>
+    <div><div class="label">Our sites (measured)</div><div class="value">${fixed(d.ours_w, 1)}<small> W</small></div><div class="src">${d.nothing_to_shed ? "nothing running to shed" : cut != null ? `${fixed(Math.abs(cut), 0)}% ${cut >= 0 ? "below" : "above"} the ${fixed(d.baseline_w, 1)} W baseline` : "no cut asked yet"}</div></div>
+    <div><div class="label">With Griddy (estimate)</div><div class="value">${sc ? (sc.people != null ? compactN(sc.people) : `${fixed(sc.freed_mw, 0)}`) : "—"}<small>${sc ? (sc.people != null ? ` ${sc.people_unit}` : " MW") : ""}</small></div><div class="src">${sc ? `${sc.people != null ? "kept on · " : ""}${fixed(sc.freed_mw, 0)} MW freed, ${fixed(sc.share_pct, 0)}% cut asked on ${fixed(sc.flexible_mw, 0)} MW` : "appears once our sites cut"}</div></div>`);
+  const src = d.data || {};
+  $("ev-src").textContent = `${src.source === "live" ? `Fetched live from api.eia.gov at ${src.fetched_at ? new Date(src.fetched_at).toTimeString().slice(0, 5) : "—"}`
+    : `Evidence copy of EIA-930 (${src.why || "api.eia.gov not reached"})`} · ${fixed(100 * d.progress, 0)}% through the replay`;
 }
 
-async function toggleNeighbourhood() {
-  const btn = $("nb-toggle");
-  if (btn.disabled) return;
-  const action = nbRunning() ? "stop" : "start";
-  btn.disabled = true;
-  $("nb-note").textContent = action === "start" ? "starting the replay…" : "stopping…";
-  const r = await postJSON("/api/neighbourhood", { action });
-  btn.disabled = false;
-  if (!r.ok) { $("nb-note").textContent = `not ${action === "start" ? "started" : "stopped"}: ${routeError("/api/neighbourhood", r)}`; return; }
-  $("nb-note").textContent = r.data && r.data.running ? "replay running (simulated)" : "replay stopped";
-  if (!(r.data && r.data.running) && P.nbLast) P.nbLast = { ...P.nbLast, scenario: null };
-  renderNeighbourhood();
+async function toggleReplay() {
+  if (evRunning()) {
+    $("ev-note").textContent = "stopping…";
+    const r = await postJSON("/api/replay", { action: "stop" });
+    $("ev-note").textContent = r.ok ? "replay stopped" : routeError("/api/replay", r);
+    P.evLast = null; renderReplay(); return;
+  }
+  if (!P.evPick) return;
+  P.evFetching = true; renderReplay();
+  const r = await postJSON("/api/replay", { action: "start", event: P.evPick });
+  P.evFetching = false;
+  if (!r.ok) { $("ev-note").textContent = `not started: ${routeError("/api/replay", r)}`; renderReplay(); return; }
+  const src = r.data && r.data.data;
+  $("ev-note").textContent = r.data.nothing_to_shed ? "running, but nothing on our sites to shed: give training a deadline on the main page"
+    : src && src.source === "live" ? `fetched ${src.rows} hours live from the EIA` : "running on the evidence copy";
+  renderReplay();
+}
+
+// ---------- break a part (replay/whatif.py, agent/faults.py): words -> a reading with its real size -> confirm ----------
+function wiActive() { const w = P.wiLast; return !!(w && w.target && nowS() - w.t < LIVE_S); }
+
+async function readFault() {
+  const text = $("wi-text").value.trim();
+  if (text.length < 3) { $("wi-text").focus(); return; }
+  $("wi-go").hidden = true; P.wiReading = null;
+  $("wi-read").textContent = "reading…";
+  const r = await postJSON("/api/whatif/read", { text });
+  if (!r.ok) { $("wi-read").textContent = r.data && r.data.detail ? String(r.data.detail) : routeError("/api/whatif/read", r); return; }
+  const f = r.data, part = f.target === "hub" ? "the substation" : f.target === "city" ? "demand" : `the ${f.target.slice(6).toLowerCase()} fleet`;
+  P.wiReading = f;
+  $("wi-read").textContent = `${f.how}: “${f.cause}”. ${part[0].toUpperCase()}${part.slice(1)} ${f.target === "city" ? "rises" : "loses"} ${fixed(f.share_pct, 0)}%: `
+    + `${f.target === "city" ? "+" : "−"}${fixed(f.size_mw / 1000, 1)} GW of its real ${fixed(f.part_mw / 1000, 1)} GW now.`;
+  $("wi-go").hidden = false;
+}
+
+async function breakIt() {
+  const f = P.wiReading;
+  if (!f) return;
+  $("wi-go").hidden = true;
+  const r = await postJSON("/api/whatif", { target: f.target, share_pct: f.share_pct, cause: f.cause });
+  if (!r.ok) { $("wi-read").textContent = `not broken: ${r.data && r.data.detail ? r.data.detail : routeError("/api/whatif", r)}`; return; }
+  P.wiLast = r.data; P.wiReading = null; $("wi-read").textContent = ""; renderWhatIf();
+}
+
+async function clearFault() {
+  const r = await postJSON("/api/whatif", { target: "clear" });
+  if (r.ok) { P.wiLast = null; renderWhatIf(); } else $("wi-read").textContent = routeError("/api/whatif", r);
+}
+
+function renderWhatIf() {
+  const w = wiActive() ? P.wiLast : null;
+  $("wi-clear").hidden = !w;
+  if (!w) { setHTML($("wi-now"), html``); $("wi-src").textContent = ""; return; }
+  const sc = w.scale, cut = w.measured_cut_pct;
+  setHTML($("wi-now"), html`
+    <div><div class="label">What-if · ${fixed(w.remaining_s, 0)} s left</div><p>${w.label}</p></div>
+    <div><div class="label">Without Griddy</div><div class="value${w.shortfall_mw > 0 ? " bad" : ""}">${fixed(w.shortfall_mw / 1000, 1)}<small> GW short</small></div><div class="src">${fixed(w.served_after / 1000, 1)} served of ${fixed(w.needed_after / 1000, 1)} GW needed</div></div>
+    <div><div class="label">Our sites (measured)</div><div class="value">${fixed(w.ours_w, 1)}<small> W</small></div><div class="src">${w.nothing_to_shed ? "nothing running to shed" : cut != null ? `${fixed(Math.abs(cut), 0)}% ${cut >= 0 ? "below" : "above"} baseline, ${fixed(w.asked_cut_pct, 0)}% asked` : w.asked_cut_pct ? `${fixed(w.asked_cut_pct, 0)}% cut asked` : "no cut needed"}</div></div>
+    <div><div class="label">With Griddy (estimate)</div><div class="value">${sc ? fixed(sc.freed_mw, 0) : "—"}<small>${sc ? " MW" : ""}</small></div><div class="src">${sc ? `${fixed(sc.share_of_shortfall_pct, 1)}% of the shortfall, on ${fixed(sc.flexible_mw, 0)} MW of ${sc.flexible_source}` : "appears once our sites cut"}</div></div>`);
+  $("wi-src").textContent = `arithmetic on ${w.source}`;
 }
 
 // ---------- dictation: the browser's speech recognition, shown as a transcript to check before sending ----------
@@ -321,9 +350,9 @@ function handle(msg) {
       addPower(d.power);
       for (const e of d.cap_events || []) P.events.set(e.id, e);   // caps in force or upcoming, target_w resolved
       for (const q of d.approvals || []) { P.reqs.set(q.id, q); board.upsert(q); }
-      P.nb = d.neighbourhood || { enabled: false };
-      if (P.nb.last) P.nbLast = P.nb.last;
-      renderBadges(); renderPower(); renderSlot(); renderEvents(); renderNeighbourhood(); loadPending();
+      P.evLast = (d.replay && d.replay.last) || null;
+      P.wiLast = d.whatif || null;
+      renderBadges(); renderPower(); renderSlot(); renderEvents(); renderReplay(); renderWhatIf(); loadPending();
       break;
     case "plan": P.plan = d; renderSlot(); break;
     case "power": addPower(d); renderPower(); break;
@@ -336,7 +365,8 @@ function handle(msg) {
       break;
     case "schedule": P.schedule = d; board.onSchedule(d); renderSlot(); break;
     case "policy": if (d.operator) { P.operator = d.operator; renderBadges(); } break;
-    case "neighbourhood": if (d.simulated === true && d.t != null) { P.nbLast = d; renderNeighbourhood(); } break;
+    case "replay": P.evLast = d; P.evPick = d.event; renderReplay(); break;
+    case "whatif": P.wiLast = d; renderWhatIf(); break;
   }
 }
 
@@ -346,14 +376,26 @@ $("req-text").addEventListener("keydown", (e) => {
 });
 $("adr-send").addEventListener("click", sendOpenADR);
 $("ask-send").addEventListener("click", sendAsk);
-$("nb-toggle").addEventListener("click", toggleNeighbourhood);
+$("ev-picks").addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-ev]");
+  if (!b || evRunning()) return;
+  P.evPick = b.dataset.ev; $("ev-note").textContent = ""; renderReplay();
+});
+$("ev-play").addEventListener("click", toggleReplay);
+$("wi-read-btn").addEventListener("click", readFault);
+$("wi-go").addEventListener("click", breakIt);
+$("wi-clear").addEventListener("click", clearFault);
+$("wi-text").addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); readFault(); }
+});
 $("ask-text").addEventListener("keydown", (e) => {
   if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); sendAsk(); }
 });
-hotkeys({ e: () => $("req-text").focus(), a: () => $("ask-text").focus(), n: toggleNeighbourhood });
+hotkeys({ e: () => $("req-text").focus(), a: () => $("ask-text").focus(), b: () => $("wi-text").focus() });
 setupDictation();
 // Countdowns, compliance counters and ages tick every second even when no message arrives.
-setInterval(() => { renderPower(); renderEvents(); renderNeighbourhood(); }, 1000);
+setInterval(() => { renderPower(); renderEvents(); renderReplay(); renderWhatIf(); }, 1000);
+getJSON("/api/replay/events").then((r) => { if (r.ok) { P.cat = r.data || []; renderReplay(); } });
 window.brownout = { handle };   // the WebSocket's handler, exposed for feeding real timelines from the console
 renderSlot();
 connectWS(handle, $("conn"));

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Brownout operator</title>
+  <title>Griddy · operator</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -14,7 +14,7 @@
     <h1>Grid operator</h1>
     <p class="cap">You are the utility. Ask for power back in your own words or send an OpenADR event; the solver re-plans and the agent reads it back.</p>
     <div class="badges"><span id="conn" class="badge">connecting</span><span id="agent" class="badge">agent ?</span><span id="me" class="badge">operator ?</span></div>
-    <div class="keys"><kbd>E</kbd> request box · <kbd>A</kbd> ask box · <kbd>N</kbd> neighbourhood replay</div>
+    <div class="keys"><kbd>E</kbd> request box · <kbd>A</kbd> ask box · <kbd>B</kbd> break a part</div>
   </header>
 
   <main>
@@ -23,15 +23,31 @@
       <div class="src" id="power-src">waiting for powermetrics</div>
     </section>
 
-    <section class="panel sim" id="nb">
-      <div class="panel-head"><h2>Simulated neighbourhood</h2><span class="badge sim">SIMULATED</span></div>
-      <p class="cap" id="nb-what">Real: our sites' watts (measured). The homes follow the shape of today's real ISO load forecast. Everything else in this box is simulated.</p>
+    <section class="panel" id="ev">
+      <div class="panel-head"><h2>Replay a real emergency</h2><span class="badge ok">real data</span></div>
+      <p class="cap">The grid operator's own hourly data (U.S. EIA), fetched live when you press play. Each alert reaches the real dispatcher at the moment it was issued; our sites' watts are measured.</p>
+      <div id="ev-picks" class="btn-row" role="group" aria-label="Choose a real grid emergency"></div>
       <div class="btn-row">
-        <button id="nb-toggle" type="button" disabled>Replay the evening peak (simulated)</button>
-        <span id="nb-note" class="src" aria-live="polite"></span>
+        <button id="ev-play" type="button" class="primary" disabled>Replay it live</button>
+        <span id="ev-note" class="src" aria-live="polite"></span>
       </div>
-      <div id="nb-now" class="nb-grid"><p class="empty">waiting for the server</p></div>
-      <div class="src" id="nb-src"></div>
+      <div id="ev-now" class="nb-grid"><p class="empty">pick an event to replay</p></div>
+      <div class="src" id="ev-src"></div>
+    </section>
+
+    <section class="panel" id="wi">
+      <div class="panel-head"><h2>Break a part</h2><span class="badge warn">what-if</span></div>
+      <p class="cap">Say how part of the grid fails, in your own words. The fault is invented; its size is the grid's real output right now, and Griddy's response is live.</p>
+      <label for="wi-text" class="label">How does it break?</label>
+      <textarea id="wi-text" aria-label="How does it break?" rows="2" maxlength="500" placeholder="e.g. an ice storm freezes half the gas plants"></textarea>
+      <div class="btn-row">
+        <button id="wi-read-btn" type="button">Read it</button>
+        <button id="wi-clear" type="button" hidden>Clear the fault</button>
+      </div>
+      <div id="wi-read" aria-live="polite"></div>
+      <div class="btn-row"><button id="wi-go" type="button" class="primary" hidden>Break it like that</button></div>
+      <div id="wi-now" class="nb-grid"></div>
+      <div class="src" id="wi-src"></div>
     </section>
     <section class="panel">
       <h2>Tell it what you need</h2>
