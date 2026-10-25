@@ -13,9 +13,9 @@
 </head>
 <body class="phone operator op">
   <header class="g-top op-top">
-    <a class="g-brand" href="/" aria-label="Griddy home"><svg class="g-mark" viewBox="0 0 120 120" aria-hidden="true"><path d="M96 30H30V90H90V62H64"/><circle cx="30" cy="90" r="9"/></svg><b>Griddy</b><span class="op-role">Operator</span></a>
-    <nav class="g-nav" aria-label="Pages"><a href="/">Grid</a><a href="/info.html">Info</a><a href="/proof.html">Proof</a></nav>
+    <span class="g-brand"><svg class="g-mark" viewBox="0 0 120 120" aria-hidden="true"><path d="M96 30H30V90H90V62H64"/><circle cx="30" cy="90" r="9"/></svg><b>Griddy</b><span class="op-role">Operator</span></span>
     <div class="g-status"><span id="conn" class="badge">connecting</span><span id="agent" class="badge">agent ?</span><span id="me" class="badge">operator ?</span></div>
+    <button id="sound" type="button" class="op-icon" aria-pressed="true" aria-label="Ping when a request arrives"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="op-bell" d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20a2 2 0 0 0 4 0"/><path class="op-mute" d="M4 4l16 16"/></svg></button>
     <button id="phone-qr" type="button" class="op-phone" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM18 18h3v3h-3zM14 19h2M19 14h2"/></svg>Open on phone</button>
   </header>
 
@@ -33,93 +33,107 @@
   </div>
 
   <main class="op-main">
-    <section class="panel power-strip op-power">
-      <h2>This Mac</h2>
-      <div class="op-kpis">
-        <div class="op-kpi"><span id="power-now" class="op-big">—</span><small>W now</small></div>
-        <div class="op-kpi"><span id="power-mean" class="op-mid">—</span><small>W 10-s mean</small></div>
-      </div>
-      <div class="src" id="power-src">waiting for powermetrics</div>
-    </section>
+    <div class="op-col op-col-now">
+      <section class="panel power-strip op-power">
+        <div class="panel-head"><h2>This Mac</h2><span id="power-state" class="op-state idle">no cap in force</span></div>
+        <div class="op-kpis">
+          <div class="op-kpi"><span id="power-now" class="op-big">—</span><small>W now</small></div>
+          <div class="op-kpi"><span id="power-mean" class="op-mid">—</span><small>W 10-s mean</small></div>
+        </div>
+        <svg id="power-spark" class="op-spark" viewBox="0 0 300 64" preserveAspectRatio="none" aria-hidden="true"><path class="op-spark-area"/><line class="op-spark-cap" x1="0" x2="300"/><polyline class="op-spark-line"/></svg>
+        <div class="src" id="power-src">waiting for powermetrics</div>
+      </section>
 
-    <section class="panel op-wait">
-      <h2>Waiting for you</h2>
-      <p class="cap">When the cap can't be met without breaking a deadline the owner kept, or a grid desk asks for a cut over Fetch.ai, the operator decides: a plain yes, or no with a reason.</p>
-      <div id="op-approvals" class="board" aria-live="polite" aria-relevant="additions"></div>
-    </section>
+      <section class="panel op-caps">
+        <h2>Active cap events</h2>
+        <p class="cap">Countdown to the end of each cap, and the time from its start until the 10-s mean of measured watts is at or under the cap.</p>
+        <div id="events"><p class="empty">no cap in force or upcoming</p></div>
+        <div class="src" id="events-src"></div>
+      </section>
 
-    <section class="panel">
-      <h2>Tell it what you need</h2>
-      <p class="cap">e.g. "grid alert, I need 30% off for the next twenty minutes"</p>
-      <div id="transcript-label" class="transcript-label" hidden>transcript (browser speech recognition): check it, then send</div>
-      <textarea id="req-text" aria-label="request to the dispatcher" rows="3" maxlength="4000" placeholder="Type or dictate the request"></textarea>
-      <div class="btn-row">
-        <button id="req-send" class="primary" type="button">Send request</button>
-        <button id="mic" type="button" hidden>Dictate</button>
-        <span id="mic-note" class="src"></span>
-      </div>
-      <div id="req-result" class="result" aria-live="polite"></div>
-    </section>
+      <section class="panel op-slot">
+        <h2>Current slot</h2>
+        <div id="sched-now"><p class="empty">no schedule yet</p></div>
+      </section>
+    </div>
 
-    <section class="panel">
-      <h2>Active cap events</h2>
-      <p class="cap">Countdown to the end of each cap, and the time from its start until the 10-s mean of measured watts is at or under the cap.</p>
-      <div id="events"><p class="empty">no cap in force or upcoming</p></div>
-      <div class="src" id="events-src"></div>
-    </section>
+    <div class="op-col op-col-decide">
+      <section class="panel op-wait">
+        <div class="panel-head"><h2>Waiting for you</h2><span id="wait-count" class="op-count" hidden>0</span></div>
+        <p class="cap">A grid desk's cut over Fetch.ai, or a cap the solver can only hold by breaking a deadline. Answer with a plain yes, or no with a reason.</p>
+        <div id="op-approvals" class="board" aria-live="polite" aria-relevant="additions"></div>
+      </section>
 
-    <section class="panel" id="ev">
-      <div class="panel-head"><h2>Replay a real emergency</h2><span class="badge ok">real data</span></div>
-      <p class="cap">The grid operator's own hourly data (U.S. EIA), fetched live when you press play. Each alert reaches the real dispatcher at the moment it was issued; our sites' watts are measured.</p>
-      <div id="ev-picks" class="btn-row" role="group" aria-label="Choose a real grid emergency"></div>
-      <div class="btn-row">
-        <button id="ev-play" type="button" class="primary" disabled>Replay it live</button>
-        <span id="ev-note" class="src" aria-live="polite"></span>
-      </div>
-      <div id="ev-now" class="nb-grid"><p class="empty">pick an event to replay</p></div>
-      <div class="src" id="ev-src"></div>
-    </section>
+      <details class="panel op-archive" id="archive">
+        <summary><h2>Archive</h2><span id="archive-count" class="op-count quiet">0</span></summary>
+        <div id="op-archive" class="board"></div>
+        <p id="archive-empty" class="empty">Answered and expired requests land here.</p>
+      </details>
+    </div>
 
-    <section class="panel" id="wi">
-      <div class="panel-head"><h2>Break a part</h2><span class="badge warn">what-if</span></div>
-      <p class="cap">Say how part of the grid fails, in your own words. The fault is invented; its size is the grid's real output right now, and Griddy's response is live.</p>
-      <label for="wi-text" class="label">How does it break?</label>
-      <textarea id="wi-text" aria-label="How does it break?" rows="2" maxlength="500" placeholder="e.g. an ice storm freezes half the gas plants"></textarea>
-      <div class="btn-row">
-        <button id="wi-read-btn" type="button">Read it</button>
-        <button id="wi-clear" type="button" hidden>Clear the fault</button>
-      </div>
-      <div id="wi-read" aria-live="polite"></div>
-      <div class="btn-row"><button id="wi-go" type="button" class="primary" hidden>Break it like that</button></div>
-      <div id="wi-now" class="nb-grid"></div>
-      <div class="src" id="wi-src"></div>
-    </section>
+    <div class="op-col op-col-act">
+      <section class="panel op-tell">
+        <h2>Tell it what you need</h2>
+        <p class="cap">e.g. "grid alert, I need 30% off for the next twenty minutes"</p>
+        <div id="transcript-label" class="transcript-label" hidden>transcript (browser speech recognition): check it, then send</div>
+        <textarea id="req-text" aria-label="request to the dispatcher" rows="3" maxlength="4000" placeholder="Type or dictate the request"></textarea>
+        <div class="btn-row">
+          <button id="req-send" class="primary" type="button">Send request</button>
+          <button id="mic" type="button" hidden>Dictate</button>
+          <span id="mic-note" class="src"></span>
+        </div>
+        <div id="req-result" class="result" aria-live="polite"></div>
+      </section>
 
-    <section class="panel">
-      <h2>Ask why</h2>
-      <p class="cap">Answered from the live schedule and the solver's facts only.</p>
-      <textarea id="ask-text" aria-label="question about the plan" rows="2" maxlength="1000" placeholder="e.g. why is training paused?"></textarea>
-      <div class="btn-row"><button id="ask-send" type="button">Ask</button></div>
-      <div id="ask-result" class="result" aria-live="polite"></div>
-    </section>
+      <section class="panel op-ask">
+        <h2>Ask why</h2>
+        <p class="cap">Answered from the live schedule and the solver's facts only.</p>
+        <textarea id="ask-text" aria-label="question about the plan" rows="2" maxlength="1000" placeholder="e.g. why is training paused?"></textarea>
+        <div class="btn-row"><button id="ask-send" type="button">Ask</button></div>
+        <div id="ask-result" class="result" aria-live="polite"></div>
+      </section>
 
-    <section class="panel">
-      <h2>Current slot</h2>
-      <div id="sched-now"><p class="empty">no schedule yet</p></div>
-    </section>
+      <section class="panel op-ev" id="ev">
+        <div class="panel-head"><h2>Replay a real emergency</h2><span class="badge ok">real data</span></div>
+        <p class="cap">The grid operator's own hourly data (U.S. EIA), fetched live when you press play. Each alert reaches the real dispatcher at the moment it was issued; our sites' watts are measured.</p>
+        <div id="ev-picks" class="btn-row" role="group" aria-label="Choose a real grid emergency"></div>
+        <div class="btn-row">
+          <button id="ev-play" type="button" class="primary" disabled>Replay it live</button>
+          <span id="ev-note" class="src" aria-live="polite"></span>
+        </div>
+        <div id="ev-now" class="nb-grid"><p class="empty">pick an event to replay</p></div>
+        <div class="src" id="ev-src"></div>
+      </section>
 
-    <section class="panel op-wide">
-      <h2>OpenADR 3.1 EVENT</h2>
-      <p class="cap">Paste the EVENT object a utility's VTN sends (JSON).</p>
-      <textarea id="adr-text" aria-label="OpenADR EVENT JSON" rows="6" class="mono" spellcheck="false" placeholder='{"objectType": "EVENT", "intervalPeriod": {...}, "intervals": [...]}'></textarea>
-      <div class="btn-row"><button id="adr-send" type="button">Send OpenADR event</button></div>
-      <div id="adr-result" class="result" aria-live="polite"></div>
-    </section>
+      <section class="panel op-wi" id="wi">
+        <div class="panel-head"><h2>Break a part</h2><span class="badge warn">what-if</span></div>
+        <p class="cap">Say how part of the grid fails, in your own words. The fault is invented; its size is the grid's real output right now, and Griddy's response is live.</p>
+        <label for="wi-text" class="label">How does it break?</label>
+        <textarea id="wi-text" aria-label="How does it break?" rows="2" maxlength="500" placeholder="e.g. an ice storm freezes half the gas plants"></textarea>
+        <div class="btn-row">
+          <button id="wi-read-btn" type="button">Read it</button>
+          <button id="wi-clear" type="button" hidden>Clear the fault</button>
+        </div>
+        <div id="wi-read" aria-live="polite"></div>
+        <div class="btn-row"><button id="wi-go" type="button" class="primary" hidden>Break it like that</button></div>
+        <div id="wi-now" class="nb-grid"></div>
+        <div class="src" id="wi-src"></div>
+      </section>
+
+      <section class="panel op-adr">
+        <h2>OpenADR 3.1 EVENT</h2>
+        <p class="cap">Paste the EVENT object a utility's VTN sends (JSON).</p>
+        <textarea id="adr-text" aria-label="OpenADR EVENT JSON" rows="5" class="mono" spellcheck="false" placeholder='{"objectType": "EVENT", "intervalPeriod": {...}, "intervals": [...]}'></textarea>
+        <div class="btn-row"><button id="adr-send" type="button">Send OpenADR event</button></div>
+        <div id="adr-result" class="result" aria-live="polite"></div>
+      </section>
+    </div>
   </main>
 
   <script src="common.js"></script>
   <script src="approvals.js"></script>
+  <script src="operator-fx.js"></script>
   <script src="operator.js"></script>
-  <script src="joinqr.js"></script>
+  <script src="operator-qr.js"></script>
 </body>
 </html>
