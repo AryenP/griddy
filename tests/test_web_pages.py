@@ -17,6 +17,7 @@ CONTRACT_ROUTES = {
     "/api/chat", "/api/chat/stream", "/request", "/openadr/event", "/api/approvals",
     "/api/approvals/{}/reply", "/api/explain", "/api/ask", "/api/report", "/api/compare", "/api/runs",
     "/api/trace", "/api/runs/{}/series", "/api/neighbourhood", "/api/replay", "/api/replay/events", "/api/whatif", "/api/whatif/read", "/api/cities", "/api/cities/{}/map",
+    "/api/join-qr",
 }
 
 

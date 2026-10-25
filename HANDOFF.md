@@ -92,6 +92,7 @@ Agent and receipts routes (machine 1 wires them as machines 3 and 4 deliver; cod
 | GET | `/api/runs/{run_id}/series` | | `{"run_id", "policy", "dispatcher_enabled", "machine", "started", "ended", "power": [[t, W]], "caps": [{"id", "start", "end", "target_w", "target_pct", "source", "reason"}], "actions": [{"t", "job", ...}], "shortfalls": [{"t", "shortfall_kind", "job_id", "message"}]}`: the measured record for drawing (since Sat 03:40). Run ids only: a path is a 404 on every run route |
 | GET | `/api/trace?n=50` | | recent OpenTelemetry spans `[{"name","start","end","attributes",...}]` |
 | GET | `/join?t=<token>&next=/operator.html` | | 303 to `next` (same-site paths only) with the HttpOnly `brownout_op` cookie; wrong token 401 (since Sat 14:45) |
+| GET | `/api/join-qr?page=operator\|owner` | | since Sun 05:50: `{"svg", "base", "page"}`, the `/join` link `make qr` prints, drawn as an SVG QR for the operator page's "Open on phone" button. It carries the join token: this Mac only (403 to any phone, joined or not), `Cache-Control: no-store`; 409 with the fix when PUBLIC_URL is not an address a phone can open |
 
 At grid scale (since Sat 14:53, grid/scale.py). The snapshot carries `"scale"` (null until the first fetch) and every
 `poll_s` (60 s) the WebSocket sends `{"kind": "scale", "data": {"estimate": true, "iso" (the live grid, CAISO), "demand_mw"

@@ -1,12 +1,17 @@
 """Griddy Facility (team/2-anuraag.md FA3): this Mac's side of the deal. It accepts curtailment requests from Grid Desk
 only, stages each one in Griddy's own intake as a pending operator approval, answers with the solver's real offer,
-then waits for the operator's answer on the operator page and reports it. It never applies anything itself.
+then waits for the operator's answer and reports it. It never decides anything itself.
 
 It makes exactly two calls, on loopback, and any other raises NotAllowed before a request is built:
   - POST /request with "source": "fetch" (machine 1's contract, team/1-aryen.md "Fetch three-agent support"): the
     intake parses the request as usual but does not apply it; it becomes a pending operator approval, and the
     response carries `staged: true`, the approval id, the readback and a schedule preview.
   - GET /api/approvals?owner=<operator>&status= for that approval: pending, then approved, refused or expired.
+
+The operator answers on the operator page, or in the ASI:One chat (Fetch asks for the whole flow inside ASI:One):
+Grid Desk passes their words on as an OperatorAnswer, and a second client whose only call is
+POST /api/approvals/{id}/reply hands them, as typed, to the same reader the operator page uses. That reader takes a
+plain "yes" or "no, <reason>" by rule, never a model's reading, and only for a request staged here.
 
 A response without a staged approval means the runtime does not know the contract (it would have applied the
 request on its own): Facility says so, stops offering, and the runbook says not to run it against that runtime."""
@@ -23,12 +28,23 @@ if __package__ in (None, ""):                         # `python fetch_agents/fac
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from fetch_agents.common import (  # noqa: E402
-    NAMES, PROTOCOL, ROOT, WHO, Loopback, RateLimit, Refused, RuntimeDown, address_of, allowed, connect_on_startup,
-    models, runtime_url,
+    BADGES, NAMES, PROTOCOL, ROOT, WHO, Loopback, RateLimit, Refused, RuntimeDown, address_of, allowed,
+    answer_models, connect_on_startup, models, runtime_url,
 )
 
 NAME = NAMES["facility"]
 CALLS = frozenset({("POST", "/request"), ("GET", "/api/approvals")})
+REPLY_CALLS = frozenset({("POST", "/api/approvals/{id}/reply")})     # the operator's words from the chat, nothing else
+ANSWERED_IN = "the facility's operator, in ASI:One"
+UNCLEAR = 'Not understood: reply with a plain "yes", or "no, <reason>".'
+ABOUT = "This Mac's side of a demand-response deal: stages a cut for its operator, never applies it on its own."
+README = f"""{BADGES}
+# {NAME}
+
+This laptop's side of a demand-response deal (Griddy, Cal Hacks 13). It takes a cut request from Griddy Grid Desk
+only, stages it in Griddy's own intake, and offers what its solver can do. Nothing applies until its human operator
+answers: a plain "yes", or "no" with a reason, in the ASI:One chat or on the operator page. Talk to Griddy Grid Desk.
+"""
 POLL_S = 3.0              # how often to look for the operator's answer
 TIMEOUT_S = 15 * 60       # after this, report that no answer came
 
@@ -67,8 +83,9 @@ def offer_actions(schedule: dict | None, start: str | None) -> list[str]:
 class Facility:
     """The decisions, without uagents. `pending` maps a request id to what Facility is waiting on."""
 
-    def __init__(self, rt: Loopback, M, desk: str | None):
-        self.rt, self.M, self.desk = rt, M, desk
+    def __init__(self, rt: Loopback, M, desk: str | None, relay: Loopback | None = None):
+        self.rt, self.M, self.desk, self.relay = rt, M, desk, relay
+        self.A = answer_models(M.Offer.__base__)      # the chat-answer messages, on the same base as M
         self.pending: dict[str, dict] = {}
         self.broken = False                           # the runtime applied a request without staging it
         self.limit = RateLimit(n=6, per_s=60)
@@ -111,6 +128,30 @@ class Facility:
                             target_w=cap.get("target_w"), actions=offer_actions(r.get("schedule"), cap.get("start")),
                             needs_approval=True, approval_id=aid)
 
+    def on_answer(self, sender: str, ans):
+        """The operator's words from the ASI:One chat, handed to the runtime as typed: an AnswerResult, or None for a
+        sender that is not Grid Desk. A yes or no shows up as the Outcome on the next look (`check`)."""
+        if not allowed(sender, {self.desk}):
+            return None
+        p = self.pending.get(ans.request_id)
+        if p is None:
+            return self.A.AnswerResult(request_id=ans.request_id, ok=False,
+                                       message="there is no request waiting for the operator")
+        if self.relay is None:
+            return self.A.AnswerResult(request_id=ans.request_id, ok=False,
+                                       message="answers in the chat are not set up here: use the operator page")
+        try:
+            r = self.relay.call("POST", "/api/approvals/{id}/reply", path_args={"id": p["approval_id"]},
+                                body={"text": ans.text, "who": ANSWERED_IN, "owner": p["owner"]})
+        except Refused as e:
+            return self.A.AnswerResult(request_id=ans.request_id, ok=False, message=e.detail or f"HTTP {e.status}")
+        except RuntimeDown:
+            return self.A.AnswerResult(request_id=ans.request_id, ok=False,
+                                       message="the facility's runtime is not answering")
+        if ((r or {}).get("decision") or {}).get("decision") == "unclear":
+            return self.A.AnswerResult(request_id=ans.request_id, ok=False, message=UNCLEAR)
+        return self.A.AnswerResult(request_id=ans.request_id, ok=True)
+
     def check(self, request_id: str, now: float | None = None):
         """One look at the operator's answer: the Outcome once there is one, else None."""
         p = self.pending.get(request_id)
@@ -152,12 +193,19 @@ def main() -> int:
         print("FETCH_FACILITY_SEED is empty in .env (docs/judging/fetch-three-agents.md, setup).", file=sys.stderr)
         return 2
     M, desk = models(Model), address_of("grid_desk")
-    brain = Facility(Loopback(runtime_url(), CALLS), M, desk)
+    brain = Facility(Loopback(runtime_url(), CALLS), M, desk, relay=Loopback(runtime_url(), REPLY_CALLS))
     uagents.asgi.HOST = "127.0.0.1"
-    about = "This Mac's side of a demand-response deal: stages a cut for its operator, never applies it."
     agent = Agent(name=NAME, seed=seed, port=int(os.getenv("FETCH_FACILITY_PORT", "8003")), mailbox=True,
-                  description=about)
+                  description=ABOUT)
     proto = Protocol(name=PROTOCOL[0], version=PROTOCOL[1])
+
+    async def await_operator(ctx: Context, sender: str, request_id: str):
+        while request_id in brain.pending:
+            await asyncio.sleep(POLL_S)
+            outcome = await asyncio.to_thread(brain.check, request_id)
+            if outcome is not None:
+                ctx.logger.info(f"outcome for {request_id}: {outcome.status}")
+                await ctx.send(sender, outcome)
 
     @proto.on_message(M.CurtailmentRequest, replies=M.Offer)
     async def on_request(ctx: Context, sender: str, msg):
@@ -167,16 +215,21 @@ def main() -> int:
             return
         ctx.logger.info(f"offer for {msg.id}: {offer.status} {offer.approval_id or ''}")
         await ctx.send(sender, offer)
-        while msg.id in brain.pending:
-            await asyncio.sleep(POLL_S)
-            outcome = await asyncio.to_thread(brain.check, msg.id)
-            if outcome is not None:
-                ctx.logger.info(f"outcome for {msg.id}: {outcome.status}")
-                await ctx.send(sender, outcome)
+        # uagents handles one message at a time: wait in the background so the operator's answer can arrive
+        asyncio.get_running_loop().create_task(await_operator(ctx, sender, msg.id))
+
+    @proto.on_message(brain.A.OperatorAnswer, replies=brain.A.AnswerResult)
+    async def on_answer(ctx: Context, sender: str, msg):
+        result = await asyncio.to_thread(brain.on_answer, sender, msg)
+        if result is None:
+            ctx.logger.warning(f"dropped an answer from {sender[:16]}...: not Grid Desk")
+            return
+        ctx.logger.info(f"operator answer for {msg.request_id} from the chat: {'read' if result.ok else result.message}")
+        await ctx.send(sender, result)
 
     agent.include(proto, publish_manifest=True)
-    connect_on_startup(agent, seed, key, NAME, about)
-    print(f"{NAME} may only call: " + ", ".join(f"{m} {p}" for m, p in sorted(CALLS)))
+    connect_on_startup(agent, seed, key, NAME, ABOUT, README)
+    print(f"{NAME} may only call: " + ", ".join(f"{m} {p}" for m, p in sorted(CALLS | REPLY_CALLS)))
     print(f"{NAME} address: {agent.address}; answers only Grid Desk ({desk or 'not configured: set FETCH_GRID_DESK_SEED'})")
     agent.run()
     return 0

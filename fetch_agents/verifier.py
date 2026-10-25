@@ -24,9 +24,19 @@ from pathlib import Path
 if __package__ in (None, ""):                         # `python fetch_agents/verifier.py` from make fetch-three
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from fetch_agents.common import NAMES, PROTOCOL, ROOT, RateLimit, address_of, allowed, connect_on_startup, models  # noqa: E402
+from fetch_agents.common import (  # noqa: E402
+    BADGES, NAMES, PROTOCOL, ROOT, RateLimit, address_of, allowed, connect_on_startup, models,
+)
 
 NAME = NAMES["verifier"]
+README = f"""{BADGES}
+# {NAME}
+
+The independent check in a demand-response deal (Griddy, Cal Hacks 13). After the facility's operator approves a cut,
+it reads the laptop's measured watts (macOS powermetrics) from the run's timeline on disk and reports the mean, the
+share of samples under the cap and the time to compliance, with the run id so anyone can recompute it. It answers
+Griddy Grid Desk only; talk to Griddy Grid Desk.
+"""
 RUNS = ROOT / "runs"
 BASELINE_S = 60.0         # agent/reporter.py BASELINE_S
 ROLLING_S = 10.0          # agent/reporter.py ROLLING_S
@@ -184,7 +194,7 @@ def main() -> int:
         await ctx.send(sender, verdict)
 
     agent.include(proto, publish_manifest=True)
-    connect_on_startup(agent, seed, key, NAME, about)
+    connect_on_startup(agent, seed, key, NAME, about, README)
     print(f"{NAME} address: {agent.address}; answers only Grid Desk ({desk or 'not configured: set FETCH_GRID_DESK_SEED'})")
     agent.run()
     return 0

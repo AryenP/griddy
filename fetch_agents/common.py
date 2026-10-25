@@ -3,7 +3,8 @@ HTTP client with an exact allowlist per agent, the address allowlists and a per-
 
 The flow is the shape of a real demand-response deal. Grid Desk (the utility side, the only agent a judge talks to
 in ASI:One) sends a CurtailmentRequest to Facility (this Mac). Facility stages it in Griddy's own intake and answers
-with an Offer; nothing applies until the operator approves on the operator page, and Facility reports the Outcome.
+with an Offer; nothing applies until the operator answers, either in the same ASI:One chat (Grid Desk passes a plain
+"yes" or "no, <reason>" on as an OperatorAnswer) or on the operator page, and Facility reports the Outcome.
 Grid Desk then asks Verifier, which reads the measured watts from the run's timeline on disk, for a Verdict.
 
 Like agent/channels/fetch_agent.py, nothing here imports uagents at the top: uagents pins protobuf < 6 and the
@@ -20,7 +21,7 @@ from collections import deque
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
-from urllib.parse import urlsplit
+from urllib.parse import quote, urlsplit
 
 import httpx
 
@@ -28,6 +29,8 @@ ROOT = Path(__file__).resolve().parents[1]
 NAMES = {"grid_desk": "Griddy Grid Desk", "facility": "Griddy Facility", "verifier": "Griddy Verifier"}
 PROTOCOL = ("griddy-curtailment", "0.1.0")
 WHO = "Grid Desk (Fetch.ai)"            # how a staged request is attributed in the runtime's timeline
+BADGES = ("![tag:innovationlab](https://img.shields.io/badge/innovationlab-3D8BD3)\n"     # Fetch's Innovation Lab tags,
+          "![tag:hackathon](https://img.shields.io/badge/hackathon-5F43F1)\n")             # asked of every agent's README
 
 
 def models(Base) -> SimpleNamespace:
@@ -91,6 +94,23 @@ def models(Base) -> SimpleNamespace:
                            VerifyRequest=VerifyRequest, Verdict=Verdict)
 
 
+def answer_models(Base) -> SimpleNamespace:
+    """The operator's answer from the ASI:One chat (Grid Desk -> Facility) and Facility's word on it, on the same
+    `Base` as `models`. Kept apart from the five deal messages: a deal runs without them when the operator uses the
+    operator page."""
+
+    class OperatorAnswer(Base):
+        request_id: str
+        text: str                           # the operator's own words, typed in the ASI:One chat, passed on as typed
+
+    class AnswerResult(Base):
+        request_id: str
+        ok: bool                            # the runtime read a yes or a no; the Outcome follows on its own
+        message: str = ""                   # why not, in words the operator can act on
+
+    return SimpleNamespace(OperatorAnswer=OperatorAnswer, AnswerResult=AnswerResult)
+
+
 # ---------------------------------------------------------------------------------------------- the runtime, on loopback
 class NotAllowed(Exception):
     """A call outside this agent's allowlist. Raised before any request is built: it never reaches the runtime."""
@@ -130,11 +150,15 @@ class Loopback:
         self._http = httpx.Client(base_url=self.base_url, transport=transport, timeout=timeout_s,
                                   follow_redirects=False)
 
-    def call(self, method: str, path: str, body: dict | None = None, params: dict | None = None) -> Any:
+    def call(self, method: str, path: str, body: dict | None = None, params: dict | None = None,
+             path_args: dict | None = None) -> Any:
+        """`path` is checked as written, so a templated route ("/api/approvals/{id}/reply") is allowed as a whole and
+        `path_args` only fills its slots, each quoted as a single path segment."""
         if (method, path) not in self.allowed:
             raise NotAllowed(f"{method} {path} is not one of this agent's calls")
+        url = path.format(**{k: quote(str(v), safe="") for k, v in path_args.items()}) if path_args else path
         try:
-            r = self._http.request(method, path, json=body, params=params)
+            r = self._http.request(method, url, json=body, params=params)
         except httpx.HTTPError as e:
             raise RuntimeDown(e.__class__.__name__) from e
         if 400 <= r.status_code < 500:

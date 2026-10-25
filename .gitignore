@@ -18,3 +18,6 @@ CLAUDE.local.md
 
 # azd environments: hold the provisioned connection string; never commit
 .azure/
+
+# uagents writes its registration log here when make fetch-three runs
+uagents_core.log
