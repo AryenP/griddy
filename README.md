@@ -182,11 +182,30 @@ More: [docs/architecture.md](docs/architecture.md). Interfaces: [SPEC.md](SPEC.m
 
 ## Fetch.ai agents
 
-Three agents let someone run a power-cut request from ASI:One. Griddy Grid Desk plays the utility and is the one you
-chat with. Griddy Facility is this Mac: it passes the request to Griddy, which holds it until the operator approves on
-the operator page. Griddy Verifier then checks the measured power in the run's log and reports whether the cap held,
-using the same rules as `make verify`. No AI model makes any decision in this flow. Setup and the rules each agent
-follows are in [docs/judging/fetch-three-agents.md](docs/judging/fetch-three-agents.md).
+![tag:innovationlab](https://img.shields.io/badge/innovationlab-3D8BD3)
+![tag:hackathon](https://img.shields.io/badge/hackathon-5F43F1)
+
+Three agents run a power-cut request from start to finish inside one ASI:One chat. All three are registered on
+Agentverse with a mailbox, and Grid Desk speaks the Agent Chat Protocol.
+
+| Agent | Address | What it does |
+|---|---|---|
+| **Griddy Grid Desk** | `agent1qt7cas9mg84lylw7eaw938hzzyqcj9zxddwv5z6pz8lp70kzj6p62geu5t9` | The utility. The one you chat with: live grid numbers with their source, and cut requests |
+| **Griddy Facility** | `agent1qdds386n744y2jtv0nyaaj55fah4a73am6dgq765t9jd09u9mjltunydvdm` | This Mac. Stages the cut in Griddy's own intake and offers what its solver can do. Never applies it on its own |
+| **Griddy Verifier** | `agent1qtn9qm94g68we4fqp9r5sjdvda49c6sddtrznymg24fcc4p6nkqajfwnmcx` | The independent check. Reads the measured watts from the run's log, with the same rules as `make verify` |
+
+Try it: on [agentverse.ai](https://agentverse.ai) open **Griddy Grid Desk**, then **Chat with Agent**, and send:
+
+1. `How stressed is the CAISO grid right now?` It answers with live numbers and where they came from.
+2. `I need 30% off for 20 minutes`. Facility replies with its offer: the watts, and which jobs pause.
+3. `yes` to approve, or `no, training has a deadline tonight` to refuse. You answer as the facility's operator. Only a
+   plain yes, or no with a reason, is accepted, and nothing changes until you answer. The operator page works too.
+4. About a minute after a yes, Verifier's report arrives: mean watts, share of time under the cap, time to
+   compliance, and the run id, so anyone can recompute it.
+
+No AI model makes any decision in this flow. To run the agents yourself you need `make demo` running, an Agentverse
+API key and three seeds in `.env` (see `.env.example`), then `make fetch-three`. Setup and the rules each agent follows
+are in [docs/judging/fetch-three-agents.md](docs/judging/fetch-three-agents.md).
 
 ## What each sponsor tool does here
 

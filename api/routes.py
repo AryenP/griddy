@@ -11,7 +11,7 @@ from typing import Literal
 
 import httpx
 from fastapi import APIRouter, Header, HTTPException, Request, WebSocket
-from fastapi.responses import FileResponse, RedirectResponse, StreamingResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 from agent import faults, intake
@@ -140,6 +140,28 @@ def make_router(rt) -> APIRouter:
         resp = RedirectResponse(dest, status_code=303)
         resp.set_cookie(access.COOKIE, t, httponly=True, samesite="strict", max_age=2 * 86400)
         return resp
+
+    @r.get("/api/join-qr")
+    async def join_qr(request: Request, page: Literal["operator", "owner"] = "operator"):
+        """The QR code `make qr` prints for a phone, drawn as SVG for the operator page's "Open on phone" button (Aryen,
+        Sun 05:45: "qr code option directly built into the website"). It carries the join token, so only this Mac
+        gets it (a phone, joined or not, gets 403) and nothing may cache it."""
+        if access.role(request) != "machine":
+            raise HTTPException(403, "only this Mac shows the join code: scan it from the Mac's screen")
+        import io
+
+        import qrcode
+        import qrcode.image.svg
+
+        from scripts.qr import urls
+        try:
+            url = {name: u for name, u, _ in urls(settings.public_url)}[page]
+        except ValueError as e:
+            raise HTTPException(409, f"{e}: set PUBLIC_URL to this Mac's LAN address in .env (make preflight shows it)")
+        buf = io.BytesIO()
+        qrcode.make(url, image_factory=qrcode.image.svg.SvgPathImage, border=2).save(buf)
+        return JSONResponse({"svg": buf.getvalue().decode(), "base": settings.public_url.strip().rstrip("/"),
+                             "page": f"/{page}.html"}, headers={"Cache-Control": "no-store"})
 
     @r.websocket("/ws")
     async def ws(sock: WebSocket):

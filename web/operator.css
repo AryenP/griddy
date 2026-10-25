@@ -1,0 +1,102 @@
+/* The operator page (operator.html) in the Info page's look (Aryen, Sun 05:40: "make operator sided ui look something
+   like this type of design ... clean and presentable"): the shared top bar, dark cards with small uppercase labels,
+   light big numbers, mint for what is live and for the one action per card. One column on a phone, two from 900 px;
+   what the operator must answer sits next to the watts. Loaded after style.css; the top bar comes from chrome.css. */
+body.phone.op {
+  --bg: #07090a; --panel: #101314; --panel2: #171b1c; --line: rgba(255, 255, 255, 0.06); --line2: rgba(255, 255, 255, 0.11);
+  --text: #eef3f1; --muted: #8b9794; --faint: #5f6b68; --ok: #7df0bf;
+  --font: "Inter", "SF Pro Text", system-ui, -apple-system, "Segoe UI", sans-serif;
+  max-width: 1280px; font: 15px/1.45 var(--font); letter-spacing: -0.005em; color: var(--text); padding: 16px 28px 48px;
+  background:
+    radial-gradient(1100px 520px at 12% -12%, rgba(125, 240, 191, 0.06), transparent 60%),
+    radial-gradient(800px 420px at 100% 0%, rgba(90, 168, 255, 0.05), transparent 60%), var(--bg);
+  background-attachment: fixed;
+}
+
+/* the bar, and a line under it saying who you are */
+.op-top { position: sticky; top: 12px; z-index: 5; }
+.op-top .g-brand, .op-top .g-brand b, .op-role, body.phone.op .op-phone { flex: none; white-space: nowrap; }
+.op-top .g-status { min-width: 0; overflow: hidden; }
+.op-role { margin-left: 4px; padding: 2px 9px; border-radius: 999px; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.04em;
+  color: var(--ok); background: rgba(125, 240, 191, 0.1); border: 1px solid rgba(125, 240, 191, 0.25); }
+.op-intro { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 24px; margin: 18px 4px 16px; }
+body.op .op-intro .cap { margin: 0; max-width: 72ch; font-size: 0.9rem; color: var(--muted); }
+body.op .keys { width: auto; text-align: right; font-size: 0.75rem; color: var(--faint); }
+body.op kbd { border-color: var(--line2); color: var(--muted); }
+
+/* the cards */
+.op-main { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
+.op-wide { grid-column: 1 / -1; }
+body.phone.op .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 18px 20px; box-shadow: none; }
+body.phone.op .panel h2 { font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 0 0 10px; }
+body.op .panel-head { margin-bottom: 10px; }
+body.op .panel-head h2 { margin: 0; }
+body.op .panel > .cap { margin: 0 0 12px; font-size: 0.82rem; color: var(--muted); }
+body.op .src { color: var(--faint); font-size: 0.72rem; line-height: 1.4; }
+body.op .label { font-size: 0.8rem; color: var(--muted); display: block; margin-bottom: 6px; }
+body.op .empty { color: var(--faint); font-size: 0.85rem; font-style: normal; }
+body.op .result:not(:empty) { font-size: 0.92rem; }
+
+/* the watts: the Info page's big light number */
+.op-kpis { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 36px; margin: 4px 0 12px; }
+.op-kpi { display: flex; align-items: baseline; gap: 8px; }
+.op-kpi small { color: var(--muted); font-size: 0.9rem; font-weight: 500; }
+.op-big { font-size: clamp(2.8rem, 5vw, 4rem); font-weight: 300; letter-spacing: -0.03em; line-height: 1; color: #fff; }
+.op-mid { font-size: clamp(1.7rem, 3vw, 2.3rem); font-weight: 300; letter-spacing: -0.03em; line-height: 1; color: var(--text); }
+
+/* what waits for the operator: lit while something is pending */
+.op-wait:has(.ask:not(.closed):not(.expired)) { border-color: rgba(255, 181, 71, 0.45); box-shadow: 0 0 0 1px rgba(255, 181, 71, 0.12), 0 12px 40px rgba(255, 181, 71, 0.06); }
+body.op .ask { border: 1px solid rgba(255, 181, 71, 0.4); border-radius: 14px; padding: 14px 16px; background: var(--panel2); }
+body.op .ask.closed { border-color: var(--line2); }
+body.op .ask-head b { font-size: 1rem; font-weight: 600; }
+body.op .ask-msg { font-size: 1.02rem; line-height: 1.45; }
+body.op .ask-facts { border-left: 2px solid var(--line2); font-size: 0.88rem; color: var(--muted); }
+body.op .ask-change:not(:empty) { border-radius: 10px; background: rgba(255, 255, 255, 0.03); }
+
+/* controls: pills, one mint action per card */
+body.phone.op button { min-height: 40px; padding: 0 18px; border-radius: 999px; border: 1px solid var(--line2); background: var(--panel2);
+  color: var(--text); font: 500 0.9rem/1 var(--font); transition: background-color .15s, border-color .15s; }
+body.phone.op button:hover:not(:disabled) { background: #1f2425; border-color: rgba(255, 255, 255, 0.18); }
+body.phone.op button.primary { background: var(--ok); border-color: var(--ok); color: #05140e; font-weight: 600; }
+body.phone.op button.primary:hover:not(:disabled) { background: #9af5cf; border-color: #9af5cf; }
+body.phone.op button[aria-pressed="true"] { background: rgba(255, 255, 255, 0.1); border-color: rgba(255, 255, 255, 0.22); }
+body.op button:focus-visible, body.op textarea:focus-visible { outline: 2px solid var(--ok); outline-offset: 2px; }
+body.phone.op textarea, body.phone.op input, body.phone.op select { font: 0.95rem/1.45 var(--font); color: var(--text); background: #0b0e0f;
+  border: 1px solid var(--line2); border-radius: 12px; padding: 10px 12px; }
+body.phone.op textarea.mono { font: 0.82rem/1.5 ui-monospace, Menlo, monospace; }
+body.op textarea::placeholder { color: var(--faint); }
+
+/* badges: quiet pills */
+body.op .panel .badge { font-size: 0.7rem; font-weight: 600; padding: 2px 9px; letter-spacing: 0.02em; }
+body.op .panel .badge.ok { background: rgba(125, 240, 191, 0.1); border-color: rgba(125, 240, 191, 0.3); color: var(--ok); }
+body.op .nb-grid .value { font-size: 1.5rem; font-weight: 300; letter-spacing: -0.02em; }
+
+/* "Open on phone": a quiet pill in the bar, and the join code on white so any phone camera reads it */
+body.phone.op .op-phone { min-height: 34px; padding: 0 14px 0 10px; display: inline-flex; align-items: center; gap: 8px; font-size: 0.82rem;
+  color: var(--ok); background: rgba(125, 240, 191, 0.08); border-color: rgba(125, 240, 191, 0.3); }
+body.phone.op .op-phone:hover { background: rgba(125, 240, 191, 0.16); border-color: rgba(125, 240, 191, 0.5); }
+.op-phone svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; }
+.op-qr { width: min(380px, calc(100vw - 32px)); padding: 24px; border: 1px solid var(--line2); border-radius: 22px;
+  background: var(--panel); color: var(--text); text-align: center; box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6); }
+.op-qr::backdrop { background: rgba(4, 6, 6, 0.6); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+body.phone.op .op-qr h2 { font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 0 0 16px; }
+.op-qr-code { width: 252px; height: 252px; margin: 0 auto; padding: 14px; border-radius: 16px; background: #fff; }
+.op-qr-code:empty { display: none; }
+.op-qr-code img { display: block; width: 100%; height: 100%; }
+body.op .op-qr .cap { margin: 16px 0 6px; font-size: 0.85rem; color: var(--muted); }
+body.op .op-qr .src { margin: 0 0 18px; overflow-wrap: anywhere; }
+body.phone.op .op-qr button { width: 100%; }
+
+@media (max-width: 900px) {
+  .op-main { grid-template-columns: minmax(0, 1fr); }
+  body.phone.op { padding: 12px 16px 32px; }
+}
+/* on a phone the nav goes, the status stays: whether this phone joined as the operator matters here */
+@media (max-width: 820px) {
+  body.op .g-nav, .op-role { display: none; }
+  body.op .g-status { display: flex; margin-left: auto; padding-left: 0; border-left: 0; gap: 10px; }
+  body.op .keys { display: none; }
+}
+@media (max-width: 480px) {
+  body.op .g-status > span { max-width: 12ch; }
+}

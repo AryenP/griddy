@@ -3,13 +3,13 @@
 A demand-response deal between three uAgents, all inside ASI:One, on the live runtime on the demo Mac. A utility
 asks, a facility offers and a person approves, then an independent meter check verifies. Nothing is simulated: the
 grid numbers are the runtime's live feed, the cut is Griddy's own intake and solver, the approval is the operator's
-tap on the operator page, and the verdict is computed from watts measured by macOS powermetrics. No language model
-makes any decision anywhere in this flow.
+own plain "yes" (or "no, <reason>") typed in the same ASI:One chat or on the operator page, and the verdict is
+computed from watts measured by macOS powermetrics. No language model makes any decision anywhere in this flow.
 
 | Agent | Plays | May call (loopback only) | Talks to |
 |---|---|---|---|
 | Griddy Grid Desk (`fetch_agents/grid_desk.py`) | the utility; the only agent a judge chats with | `GET /api/state` | the judge, Facility, Verifier |
-| Griddy Facility (`fetch_agents/facility.py`) | this Mac | `POST /request` with `"source": "fetch"`, `GET /api/approvals` | Grid Desk only |
+| Griddy Facility (`fetch_agents/facility.py`) | this Mac | `POST /request` with `"source": "fetch"`, `GET /api/approvals`; a second client for the operator's chat answer: `POST /api/approvals/{id}/reply` | Grid Desk only |
 | Griddy Verifier (`fetch_agents/verifier.py`) | an independent meter check | none: it reads `runs/<id>/timeline.jsonl` from disk | Grid Desk only |
 
 Any other call raises NotAllowed in the client before a request is built. Facility and Verifier drop any message that
@@ -23,8 +23,11 @@ is not from Grid Desk's address. Each agent rate-limits each sender.
 3. Facility hands it to Griddy's own intake, which stages it as a pending operator approval and does not apply it.
    Facility answers with the Offer: the intake's readback, the target watts, and what the solver's preview does in
    that slot. Grid Desk relays it: "Waiting for the facility's operator."
-4. The operator taps approve (or refuses, in their own words) on the operator page. Facility sees the answer and
-   sends the Outcome. A refusal ends the deal and nothing is applied.
+4. The operator answers, in the same chat (Fetch asks for the whole flow inside ASI:One) or on the operator page:
+   "yes", or "no, training has a deadline tonight". In the chat, Grid Desk passes a message that starts with yes or
+   no to Facility word for word, and Facility hands it to the same rule-based reader the operator page uses; anything
+   else gets "Not understood". Facility sees the answer and sends the Outcome. A refusal ends the deal and nothing
+   is applied.
 5. On an approval the cap applies and the watts drop. A minute later Grid Desk asks Verifier. Verifier reads the run's
    measured power rows and computes, with the reporter's rules (`make verify`): the 60-s baseline before the cap, the
    mean since, the share of samples at or under the cap, and the time to compliance (the 10-s mean at or under it).

@@ -2,7 +2,9 @@
 ASI:One. It answers "how stressed is the grid?" from the live runtime (GET /api/state, with source and age), reads a
 cut request with a regex ("I need 30% off for 20 minutes"; one question back if it is unclear), sends it to Griddy
 Facility, and relays every step in plain words: sent, the facility's offer, waiting for its operator, approved or
-refused (with the operator's words), then Griddy Verifier's meter check.
+refused (with the operator's words), then Griddy Verifier's meter check. While an offer waits, a message that starts
+with "yes" or "no" is the facility operator's answer and goes to Facility word for word, so the whole deal can run
+inside one ASI:One chat (Fetch's rule); the operator page still works too.
 
 Every number it says comes from a runtime route or the Verifier, with its source. If something is down it says so
 and gives no number. It asks for nothing else: requests to pause, switch, approve or break are refused. No language
@@ -23,7 +25,7 @@ if __package__ in (None, ""):                         # `python fetch_agents/gri
 
 from agent.channels import fetch_agent as fa  # noqa: E402  (standard library and httpx only at its top)
 from fetch_agents.common import (  # noqa: E402
-    NAMES, PROTOCOL, ROOT, Loopback, RateLimit, Refused, RuntimeDown, address_of, allowed, connect_on_startup, models,
+    BADGES, NAMES, PROTOCOL, ROOT, answer_models, Loopback, RateLimit, Refused, RuntimeDown, address_of, allowed, connect_on_startup, models,
     runtime_url,
 )
 
@@ -33,18 +35,17 @@ VERIFY_AFTER_S = 60.0     # ask the Verifier this long after the cap applies: lo
 
 DESCRIPTION = ("The utility's desk for Griddy (Cal Hacks 13): ask how stressed the grid is, or ask a facility for a "
                "power cut. A second agent, the facility, offers what it can do; nothing applies until its human "
-               "operator approves; a third agent checks the facility's meter.")
+               "operator answers yes, right here in the chat; a third agent checks the facility's meter.")
 STARTERS = ["How stressed is the CAISO grid right now?", "I need 30% off for 20 minutes",
             "What is the facility drawing right now?", "Did the cut hold?"]
-README = f"""![tag:innovationlab](https://img.shields.io/badge/innovationlab-3D8BD3)
-![tag:hackathon](https://img.shields.io/badge/hackathon-5F43F1)
-
+README = f"""{BADGES}
 # {NAME}
 
 A demand-response deal between three agents, on a real laptop running Griddy (Cal Hacks 13):
 1. **{NAME}** (this agent, the utility side): ask it about the live grid, or ask for a cut.
 2. **{NAMES['facility']}** (the laptop): stages the cut in Griddy's own intake and offers what its solver can do.
-   Nothing applies until its human operator approves on the operator page.
+   Nothing applies until its human operator answers: a plain "yes", or "no" with a reason, in this chat (or on the
+   operator page).
 3. **{NAMES['verifier']}**: reads the laptop's measured watts (macOS powermetrics) from the run's timeline and
    reports whether the cap held, with the run id so anyone can recompute it.
 
@@ -52,9 +53,10 @@ Every number comes from the live runtime or the meter, with its source. No langu
 """
 HELP = (f"I'm {NAME}, the utility's side of a demand-response deal with a real laptop running Griddy. Ask me how "
         "stressed the grid is, or ask for a cut, e.g. \"I need 30% off for 20 minutes\". The facility's agent offers "
-        "what it can do, its human operator approves or refuses, and an independent agent checks the meter.")
+        "what it can do, its human operator answers yes or no right here, and an independent agent checks the meter.")
 REFUSE = ("I can only ask the facility for a power cut and report what happens. I can't pause jobs, switch grids or "
-          "approve anything: the facility's operator decides on their own page.")
+          "approve anything myself: when the facility makes an offer, its operator answers with a plain \"yes\" or "
+          "\"no, <reason>\".")
 DOWN = "Griddy's runtime is not answering, so I have no live numbers to give, and I won't make any up."
 
 _WORDS = {"one": 1, "a": 1, "an": 1, "two": 2, "three": 3, "four": 4, "five": 5, "ten": 10, "fifteen": 15,
@@ -70,6 +72,8 @@ _MIN = re.compile(rf"{_NUM}\s*(?:minutes?|mins?|m)\b", re.IGNORECASE)
 _HOUR = re.compile(rf"(?:{_NUM}\s*(?:hours?|hrs?|h)\b|\b(half)\s+an?\s+hour\b)", re.IGNORECASE)
 _VERIFY = re.compile(r"\b(?:verif\w*|verdict|meter|did (?:it|the cut|the cap) (?:hold|work)|hold)\b", re.IGNORECASE)
 _STATUS = re.compile(r"\b(?:status|update|where are we|any news|what happened)\b", re.IGNORECASE)
+_ANSWER = re.compile(r"^\s*(?:yes|no)\b", re.IGNORECASE)    # the operator's answer to a waiting offer, passed on as typed
+_MENTION = re.compile(r"^(?:\s*@agent1[0-9a-z]+[,:]?)+\s*")  # ASI:One puts "@<agent address> " before the words
 
 
 def _n(s: str) -> float:
@@ -121,8 +125,8 @@ def offer_text(o) -> str:
         acts = "; ".join(o.actions) if o.actions else "the plan preview had no slot to show"
         target = f" Target: {o.target_w:.1f} W." if o.target_w is not None else ""
         return (f"{NAMES['facility']}'s offer, from its own intake and solver: {o.readback}{target} In its plan: "
-                f"{acts}. Nothing moves until the facility's operator approves it on the operator page (approval "
-                f"{o.approval_id}). Waiting for the facility's operator.")
+                f"{acts}. Nothing moves until the facility's operator answers (approval {o.approval_id}). Waiting for "
+                "the facility's operator: reply here with \"yes\", or \"no, <reason>\" (the operator page works too).")
     if o.status == "clarify":
         return f"The facility asks: {o.message or 'please say how much and for how long'}"
     if o.status == "down":
@@ -169,13 +173,14 @@ class Desk:
     def __init__(self, rt: Loopback, M, facility: str | None, verifier: str | None,
                  verify_after_s: float = VERIFY_AFTER_S):
         self.rt, self.M, self.facility, self.verifier, self.verify_after_s = rt, M, facility, verifier, verify_after_s
+        self.A = answer_models(M.Offer.__base__)      # the chat-answer messages, on the same base as M
         self.session: dict[str, dict] = {}            # judge -> the deal in flight
         self.judge_of: dict[str, str] = {}            # request id -> judge
         self.limit = RateLimit(n=6, per_s=60)
 
     def on_judge(self, judge: str, text: str, now: float | None = None) -> list[tuple]:
         now = time.time() if now is None else now
-        text = (text or "").strip()
+        text = _MENTION.sub("", (text or "").strip())
         if not self.limit.allow(judge, now):
             return [(judge, "That's a lot of messages in a minute: give me a moment.", 0)]
         if not text or fa._HELLO.match(text):
@@ -183,6 +188,9 @@ class Desk:
         if fa._OVERRIDE.search(text):
             return [(judge, fa.REFUSE_OVERRIDE, 0)]
         deal = self.session.get(judge)
+        if deal and deal["stage"] == "offered" and _ANSWER.match(text):
+            return [(self.facility, self.A.OperatorAnswer(request_id=deal["req"].id, text=text), 0),
+                    (judge, f"Passed to {NAMES['facility']} as its operator's answer.", 0)]
         cut = parse_cut(text)
         if cut is not None and not _VERIFY.search(text):
             if "ask" in cut:
@@ -244,6 +252,13 @@ class Desk:
         deal["stage"] = "offered" if offer.status == "offered" else "done"
         deal["done"] = offer.status != "offered"
         return [(judge, offer_text(offer), 0)]
+
+    def on_answer_result(self, sender: str, result) -> list[tuple]:
+        """Facility's word on the operator's answer: silent when it was read (the Outcome follows), else why not."""
+        judge, deal = self._deal(sender, self.facility, result.request_id)
+        if deal is None or result.ok:
+            return []
+        return [(judge, f"{NAMES['facility']} could not take that answer: {result.message}", 0)]
 
     def on_outcome(self, sender: str, outcome) -> list[tuple]:
         judge, deal = self._deal(sender, self.facility, outcome.request_id)
@@ -314,6 +329,10 @@ def main() -> int:
     @deal.on_message(M.Offer)
     async def on_offer(ctx: Context, sender: str, msg):
         await send_all(ctx, desk.on_offer(sender, msg))
+
+    @deal.on_message(desk.A.AnswerResult)
+    async def on_answer_result(ctx: Context, sender: str, msg):
+        await send_all(ctx, desk.on_answer_result(sender, msg))
 
     @deal.on_message(M.Outcome)
     async def on_outcome(ctx: Context, sender: str, msg):
