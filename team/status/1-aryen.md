@@ -256,3 +256,18 @@ no-fit fallback no longer pushes further over the cap for a refused slip. 378 te
 10:00; DEMO impossible-ask wording. Krish queued K10/K11. Foundry preview read-only: 3 resources if switched on.
 Next: when sudo is back, `make calibrate` (chat curve) then `make evidence-chat`, Mac idle; then re-tag.
 Blockers / needs: Aryen — `sudo -v` (powermetrics); the other needs-Aryen lines in the brief.
+
+## 2026-10-24 17:33 PT — live replays, what-if, typed faults; main red 17:27-17:33, fixed
+Done: 2b97a0e replays fetch their hours live from api.eia.gov (0 MW off the evidence copy) and see only hours that
+have ended (a delete-the-future test on all three events); Brownout's flag is causal and asks the warning cut itself;
+judges break any part (POST /api/whatif, real-sized, labelled what-if); Without / With Griddy in the dock; the replay
+clock no longer stalls 8 s at each cut. bd6bdec judges describe a failure in words (agent/faults.py: guard, pattern,
+then Claude; confirmed before anything breaks); "Griddy acts" card; header tagline covers any fault. 09e6999 (the
+Fetch agent session's commit) reviewed: loopback-only exact allowlist of reads, 62 tests pass; no change needed.
+Fixed: main was red on test_team (agent/faults.py had no owner) from bd6bdec to 309bd80; my test-then-commit
+command hid pytest's exit code. Corrected the invented times on my 17:19 and 17:27 entries (d2c8424).
+Queues: Anuraag 27 (driver card for the new demo), Krish K16 (live data and look-ahead check), Arumalla 6 (try it).
+Teammates quiet: Anuraag's last status 06:10, Krish 14:15, Arumalla 12:46. No open PRs needing action, no issues.
+Next: Aryen's call on technician dispatch (a judge's phone gets the work order), then the city map, then Proof.
+Blockers / needs Aryen: AGENTVERSE_API_KEY in .env for the Fetch agent (docs/fetch-agent.md); optional EIA_API_KEY
+(free, eia.gov/opendata/register.php) so replays do not lean on the rate-limited DEMO_KEY.
