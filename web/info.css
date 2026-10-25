@@ -84,9 +84,71 @@ body.d.i .d-job-main .bar { margin: 10px 0 2px; height: 5px; }
 body.d.i .d-job-src { margin: 8px 0 0; }
 body.d.i .d-job-plan { font-size: 0.9rem; color: var(--muted); line-height: 1.45; }
 
+/* the replay, opened (Aryen, Sun 01:00: "too compact, make it nice to the eyes for the judges"): room between blocks,
+   one figure large per fact, the alerts on a rail, every source on its own faint line */
+body.d.i .d-replay:not([hidden]) { display: grid; gap: 28px; padding: 24px 24px 28px; }
+body.d.i .d-replay > * { margin: 0; }
+body.d.i .d-replay .panel-head { justify-content: flex-end; }
+body.d.i .d-replay .panel-head:has(> #replay-stop[hidden]) { display: none; }   /* nothing to show until a replay runs */
+body.d.i .d-replay .panel-head h2 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+body.d.i .d-replay-cards { gap: 14px; }
+body.d.i .d-replay-card { border-radius: 14px; padding: 16px 18px; gap: 8px; background: var(--panel2); transition: border-color .25s ease, background .25s ease; }
+body.d.i .d-replay-card.on { border-color: rgba(125, 240, 191, 0.45); background: rgba(125, 240, 191, 0.04); }
+body.d.i .d-replay-title { font-size: 1rem; font-weight: 600; }
+body.d.i .d-replay-hit { font-size: 0.88rem; color: var(--muted); line-height: 1.4; }
+body.d.i .d-replay-card button { margin-top: 6px; }
+body.d.i .d-replay-state { font-size: 1rem; line-height: 1.55; color: var(--muted); max-width: 78ch; min-height: 0; }
+body.d.i .d-replay-chart { height: 230px; background: var(--panel2); border-radius: 14px; }
+body.d.i .d-replay-key { margin-top: -18px; }
+
+body.d.i .r-h { font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted);
+  margin: 0 0 14px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+body.d.i .r-h .d-sim, body.d.i .r-h .d-meas { text-transform: none; letter-spacing: 0; font-size: 0.68rem; }
+body.d.i .r-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+body.d.i .r-tile { background: var(--panel2); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px;
+  display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+body.d.i .r-tile p { margin: 0; font-size: 0.9rem; line-height: 1.5; color: var(--muted); }
+body.d.i .r-tile p b { color: var(--text); font-weight: 600; }
+body.d.i .r-tile .r-h { margin-bottom: 4px; }
+body.d.i .r-tile .src { margin-top: auto; padding-top: 6px; }
+body.d.i .r-big { font-size: clamp(1.7rem, 2.4vw, 2.3rem); font-weight: 300; letter-spacing: -0.03em; line-height: 1.05;
+  color: var(--text); font-variant-numeric: tabular-nums; }
+body.d.i .r-wait { font-size: 0.95rem; padding: 10px 0 4px; }
+
+body.d.i .d-replay-grid { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 28px; margin: 0; align-items: start; }
+body.d.i .r-live { display: grid; gap: 14px; }
+/* the alerts: a rail, one dot per alert, the dot fills when the replay reaches it */
+body.d.i .d-replay-alerts { gap: 0; position: relative; padding-left: 26px; }
+body.d.i .d-replay-alerts::before { content: ""; position: absolute; left: 5px; top: 10px; bottom: 26px; width: 1px; background: rgba(255, 255, 255, 0.12); }
+body.d.i .d-replay-alerts li { position: relative; padding: 0 0 22px; border-left: 0; background: none; transition: opacity .4s ease; }
+body.d.i .d-replay-alerts li::before { content: ""; position: absolute; left: -26px; top: 4px; width: 11px; height: 11px; border-radius: 50%;
+  box-sizing: border-box; border: 2px solid var(--c, var(--muted)); background: var(--panel); transition: background .3s ease, box-shadow .3s ease; }
+body.d.i .d-replay-alerts li.warning { --c: var(--warn); }
+body.d.i .d-replay-alerts li.emergency, body.d.i .d-replay-alerts li.outage { --c: var(--bad); }
+body.d.i .d-replay-alerts li.end, body.d.i .d-replay-alerts li.brownout { --c: var(--ok); }
+body.d.i .d-replay-alerts li.fired::before { background: var(--c, var(--muted)); box-shadow: 0 0 0 4px color-mix(in srgb, var(--c, #8b9794) 18%, transparent); }
+body.d.i .d-replay.running .d-replay-alerts li:not(.fired) { opacity: 0.45; }
+body.d.i .r-when { font-size: 0.75rem; color: var(--muted); font-variant-numeric: tabular-nums; letter-spacing: 0.02em; margin-bottom: 4px; }
+body.d.i .r-what { font-size: 0.97rem; line-height: 1.45; }
+body.d.i .r-chip { display: inline-block; margin-left: 6px; padding: 1px 9px; border-radius: 999px; font-size: 0.72rem; font-weight: 600;
+  color: var(--ok); background: rgba(125, 240, 191, 0.1); white-space: nowrap; vertical-align: 1px; }
+body.d.i .d-replay-alerts .src { margin-top: 4px; }
+
+body.d.i .d-scale { margin: 0; padding: 26px 0 0; border-top: 1px solid var(--line); }
+body.d.i .d-scale .src { margin-top: 12px; }
+body.d.i .d-replay a { color: var(--muted); text-underline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  body.d.i .d-replay-card, body.d.i .d-replay-alerts li, body.d.i .d-replay-alerts li::before { transition: none; }
+}
+
 @media (max-width: 1100px) { .i-kpis { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 900px) { body.d.i .d-replay-grid { grid-template-columns: 1fr; } }
 @media (max-width: 640px) {
   body.dash.d.i { padding: 10px 12px 32px; }
+  body.d.i .receipt-pick label { display: flex; flex-direction: column; gap: 4px; min-width: 0; max-width: 100%; }
+  body.d.i .receipt-pick select { max-width: 100%; }
+  body.d.i .d-replay:not([hidden]) { padding: 18px 14px 22px; gap: 22px; }
+  body.d.i .r-tile { padding: 16px; }
   .i-kpis { grid-template-columns: 1fr; }
   .i-bar .d-knobs { margin-left: 0; }
 }
