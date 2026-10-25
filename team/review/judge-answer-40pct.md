@@ -37,8 +37,8 @@ Suggestion for README.md "Impact" and docs/devpost.md: keep 40 % (it is what the
 Emerald AI's measured 25 %, about 1,000 MW and 230,000 people", so the headline has a field-tested anchor.
 
 ## What we do not know (say so if asked)
-- How fast a real GPU cluster sheds: checkpoint-and-preempt at megawatt scale takes minutes, not seconds, and the
-  repo has no measurement of it (Emerald's result is a held 25 %, not a ramp time).
+- How fast a real GPU cluster sheds: the repo has no measurement of how long checkpoint-and-preempt takes at megawatt
+  scale (Emerald's result is a 25 % cut held for three hours, not a ramp time).
 - What share of ERCOT's 4.1 GW of large loads is flexible AI compute: the repo cites the total, not its make-up.
 - Whether inference SLAs hold at site scale under a 40 % cut: measured only on this Mac (D 14:16).
 - How a utility's 5 to 15 min interval meter would score a seconds-scale response: our meter is 1 Hz on the SoC.
