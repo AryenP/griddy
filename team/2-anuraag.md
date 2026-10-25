@@ -360,3 +360,7 @@ is tests/test_web_operator.py). For your driver card (task 27): the operator hot
 - Sat 21:34 from machine 1: the humanizer pass (Aryen: "run it over all the github files") reached docs/judging/*.md
   (your lane): no em dashes, ranges as "to", no decorative bold, the criteria title without the arrow. Every number
   and source is unchanged and make verify still passes 74/74. Write new judging text the same way.
+- Sat 21:59 from machine 1: Krish's K17 found that `python -m evals` rewrote docs/judging/evals.md (your lane) with
+  stale numbers. I regenerated it (116 / 22) and the README now runs it with `--no-write`. In evals/__main__.py's
+  markdown(), please drop the bold (mode, total) and print the time as "21:57 PT" instead of the zone's long name, so
+  the next regeneration matches the humanizer style.
