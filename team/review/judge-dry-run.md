@@ -63,3 +63,36 @@ published measured numbers. "84 % of capped seconds" (docs/devpost.md) differs f
    `uv run pytest -q`, `uv run python -m evals` (all no network, no keys).
 3. README: one labelled impact sentence from a replay (freed MW and people at the event's own ratio, "estimate").
 4. README: "Nothing on screen is invented" instead of "simulated"; say the evals line is the 02:33 live run.
+
+## Second run, Sat 21:47 PT: fresh clone at 2bc9acc (after demo-stable-6), README "Check it without a Mac" only
+Same Surface Pro 11 (Windows 11 ARM64), a new folder, the five commands in the README block, in order.
+
+| Command | Result |
+|---|---|
+| `pip install uv` | installs, but **`uv` is still "command not found"**: pip put `uv.exe` in the per-user Scripts folder (%APPDATA%\Python\Python313\Scripts), which is not on PATH. Every following line of the block fails as written. Worked around with `python -m uv ...`. |
+| `uv sync --extra dev` | ok, 7 s |
+| `uv run python scripts/verify.py` | **74 of 74 checks pass, from 10 raw timelines**, 3 s |
+| `uv run pytest -q` | **collects now** (was zero tests): 498 passed, 3 skipped, **1 failed**: `tests/test_meter.py::test_only_one_run_measures_power_at_a_time` (ModuleNotFoundError: fcntl). 58 s. |
+| `uv run python -m evals` | 138 cases offline: 116 pass, 0 fail, 22 need an LLM; injection 19/19; fault_reader 9 pass, 5 need an LLM. 2 s. **It rewrote `docs/judging/evals.md`** in the clone (`git status`: modified). |
+
+Fixed since the first run: tests collect on Windows; the README has a no-Mac block; the README has an impact line
+(Uri, DECISIONS 18:38: 28.2 W -> 10.9 W measured, credited at the 40 % asked: up to 1,653 MW, about 8 % of the
+20,000 MW shed, about 372,000 people; the arithmetic checks); "Nothing on screen is invented"; the evals line names the
+20:33 live run (135/138).
+
+Still open, in order of judge impact:
+1. **`pip install uv` does not put `uv` on PATH on Windows** (user install). Use `python -m pip install uv` then
+   `python -m uv sync --extra dev` / `python -m uv run ...` in the block, or the official installer line, which adds
+   PATH.
+2. **`docs/judging/evals.md` is stale and the README command overwrites it.** Committed: 115 pass / 23 need LLM
+   (fault_reader 8 / 6, "Run 2026-10-24 20:35 PDT"); today's code gives 116 / 22 (fault_reader 9 / 5). A judge who runs
+   the README line sees a number the doc does not show, and gets a dirty working tree; the generator also writes the
+   bold and "Pacific Daylight Time" the 21:34 humanizer pass removed. Regenerate and commit, and make the README line
+   `uv run python -m evals --no-write` (or have `python -m evals` print only unless asked to write).
+3. **One test still fails on Windows**: `test_only_one_run_measures_power_at_a_time` needs a skip when `fcntl` is
+   missing, like the others now have.
+4. **The README's impact line is the one headline number `verify.py` cannot recompute**: the 18:38 replay's raw
+   timeline is not among the 10 in docs/evidence/runs/. Commit it (and a claims entry) so 28.2 W -> 10.9 W recomputes
+   like the rest. DECISIONS 18:38 also says that replay ran on the evidence copy (EIA answered 429), not the live fetch;
+   the README sentence "Replayed through the live software" is true, but should say the data came from the stored copy.
+Score after these fixes: reproducibility without a Mac 4 (was 2); the rest unchanged.
