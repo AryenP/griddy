@@ -145,6 +145,13 @@ async function loadReplayEvents() {
 }
 const gwOf = (mw) => (mw == null ? "—" : `${fixed(mw / 1000, 1)} GW`);
 function eventClock(iso) { return iso ? iso.slice(11, 16) : ""; }
+function eventDay(day) {
+  const [y, m, d] = day.slice(0, 10).split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
+}
+// the figure that leads a cited fact, shown large above the full sentence (which keeps its "more than", "at least")
+function wholeMw(mw) { return mw == null || !isFinite(mw) ? "—" : Math.round(mw).toLocaleString(); }
+function leadFigure(text) { const m = /\d(?:[\d,]*\d)?(?:\.\d+)?(?: (?:million|MW|GW))?/.exec(text); return m ? m[0] : null; }
 function replayRunning() { const d = S.replayLast; return !!(d && d.event && nowS() - d.t < 5); }
 
 function renderReplay() {
@@ -193,17 +200,31 @@ function renderReplay() {
     ${head != null ? html`<line class="r-head" x1="${head}" x2="${head}" y1="0" y2="180"/>` : ""}
     <text class="r-label" x="4" y="178">${eventClock(ev.window[0])}</text><text class="r-label" x="560" y="178">${eventClock(ev.window[1])}</text>`);
   $("replay-chart").setAttribute("aria-label", `${ev.title}: demand served and the day-ahead forecast, ${gwOf(lo)} to ${gwOf(hi)}`);
+  box.classList.toggle("running", running);
   setHTML($("replay-alerts"), html`${ev.alerts.map((a) => html`<li class="${a.kind}${fired.has(a.label) ? " fired" : ""}">
-      <b>${a.before_window ? (a.day ? `days before (${a.day})` : "before the window") : eventClock(a.at)}</b> ${a.label}${a.cut_pct ? html` <span class="d-meas">our sites: −${a.cut_pct}%</span>` : ""}
+      <div class="r-when">${a.before_window ? (a.day ? `${eventDay(a.day)} · days before` : "before the window") : `${eventDay(a.at)} · ${eventClock(a.at)}`}</div>
+      <div class="r-what">${a.label}${a.cut_pct ? html` <span class="r-chip">our sites −${a.cut_pct}%</span>` : ""}</div>
       <div class="src">${a.source}</div></li>`)}`);
+  setHTML($("replay-impact"), html`<h3 class="r-h">What happened</h3>
+    <div class="r-tiles">${ev.impact.map((i) => {
+      const fig = leadFigure(i.text);
+      return html`<div class="r-tile">${fig ? html`<div class="r-big">${fig}</div>` : ""}<p>${i.text}</p><div class="src">${i.source}</div></div>`;
+    })}</div>`);
   const sc = running && d ? d.scale : null;
-  setHTML($("replay-impact"), html`<h3>What happened</h3>
-    <ul>${ev.impact.map((i) => html`<li>${i.text} <span class="src">(${i.source})</span></li>`)}</ul>
-    <h3>This Mac, live <span class="d-meas">measured</span></h3>
-    <p>${running && d && d.baseline_w ? html`Baseline ${fixed(d.baseline_w, 1)} W before the replay; now ${d.ours_w == null ? "—" : `${fixed(d.ours_w, 1)} W`}${d.measured_cut_pct != null ? html`, <b>${fixed(d.measured_cut_pct, 0)}% below</b>` : ""}.` : "Starts when you press Replay."}</p>
-    <h3>At the operator's scale <span class="d-sim">estimate</span></h3>
-    <p>${sc ? html`The ${fixed(sc.share_pct, 0)}% cut the grid asked, which this Mac delivered (measured), on ${gwOf(sc.flexible_mw)} of flexible load frees about <b>${fixed(sc.freed_mw, 0)} MW</b>${sc.share_of_shed_pct != null ? html`, <b>${fixed(sc.share_of_shed_pct, 1)}%</b> of the ${fixed(ev.shed_mw, 0)} MW in this event` : ""}${sc.people != null ? html`: about <b>${Math.round(sc.people).toLocaleString()}</b> ${sc.people_unit} at this event's own ratio` : ""}.` : "Appears once our sites have cut."}</p>
-    <div class="src">${ev.flexible_source}. Arithmetic on the event's published numbers and one laptop's measured cut.</div>`);
+  setHTML($("replay-live"), html`<div class="r-tile">
+      <h3 class="r-h">This Mac, live <span class="d-meas">measured</span></h3>
+      ${running && d && d.baseline_w ? html`<div class="r-big">${d.ours_w == null ? "—" : `${fixed(d.ours_w, 1)} W`}</div>
+        <p>${d.measured_cut_pct != null ? html`<b>${fixed(d.measured_cut_pct, 0)}% below</b> ` : ""}its baseline of ${fixed(d.baseline_w, 1)} W before the replay</p>`
+        : html`<p class="r-wait">${running ? "Measuring this Mac's baseline…" : "Starts when you press Replay."}</p>`}
+    </div>
+    <div class="r-tile">
+      <h3 class="r-h">At the operator's scale <span class="d-sim">estimate</span></h3>
+      ${sc ? html`<div class="r-big">about ${wholeMw(sc.freed_mw)} MW</div>
+        <p>freed if ${gwOf(sc.flexible_mw)} of flexible load cut ${fixed(sc.share_pct, 0)}%, the cut the grid asked and this Mac delivered (measured)</p>
+        ${sc.share_of_shed_pct != null || sc.people != null ? html`<p>${sc.share_of_shed_pct != null ? html`<b>${fixed(sc.share_of_shed_pct, 1)}%</b> of the ${fixed(ev.shed_mw, 0)} MW shed in this event` : ""}${sc.share_of_shed_pct != null && sc.people != null ? " · " : ""}${sc.people != null ? html`about <b>${Math.round(sc.people).toLocaleString()}</b> ${sc.people_unit} at this event's own ratio` : ""}</p>` : ""}`
+        : html`<p class="r-wait">Appears once our sites have cut.</p>`}
+      <div class="src">${ev.flexible_source}. Arithmetic on the event's published numbers and one laptop's measured cut.</div>
+    </div>`);
   setHTML($("replay-src"), html`Data: ${ev.data_source}. Alerts and impact: <a href="${ev.report_url}" target="_blank" rel="noopener">the official report</a> (pages cited per line).`);
 }
 
@@ -214,10 +235,15 @@ function renderScale() {
   box.hidden = !x;
   if (!x) return;
   const gw = (mw) => `${fixed(mw / 1000, 1)} GW`;
-  setHTML(box, html`<h3>ERCOT right now <span class="d-sim">estimate from public data</span></h3>
-    <p>ERCOT's large loads draw up to <b>${gw(x.large_loads_running_mw)}</b> (the sum of each one's own monthly peak, not what
-      runs at once). If they cut the ${fixed(x.our_cut_pct, 0)}% this Mac cut under the same call, that frees up to about <b>${fixed(x.freed_mw, 0)} MW</b>${x.share_of_demand_pct != null ? html`, <b>${fixed(x.share_of_demand_pct, 1)}%</b> of ERCOT's demand right now (${gw(x.demand_mw)}, live)` : ""}.
-      Another ${fixed(x.queue_gw, 0)} GW of large loads, mostly data centers, are asking to connect.</p>
+  setHTML(box, html`<h3 class="r-h">ERCOT right now <span class="d-sim">estimate from public data</span></h3>
+    <div class="r-tiles">
+      <div class="r-tile"><div class="r-big">up to ${gw(x.large_loads_running_mw)}</div>
+        <p>drawn by ERCOT's large loads: each one's own monthly peak, summed, not what runs at once</p></div>
+      <div class="r-tile"><div class="r-big">about ${wholeMw(x.freed_mw)} MW</div>
+        <p>freed if they cut the ${fixed(x.our_cut_pct, 0)}% this Mac cut under the same call${x.share_of_demand_pct != null ? html`: <b>${fixed(x.share_of_demand_pct, 1)}%</b> of ERCOT's demand right now (${gw(x.demand_mw)}, live)` : ""}</p></div>
+      <div class="r-tile"><div class="r-big">${fixed(x.queue_gw, 0)} GW</div>
+        <p>more large loads, mostly data centers, asking to connect</p></div>
+    </div>
     <div class="src">Running and approved (${gw(x.large_loads_approved_mw)}) large loads: <a href="${x.large_loads_url}" target="_blank" rel="noopener">${x.large_loads_source}</a>.
       Queue: <a href="${x.queue_url}" target="_blank" rel="noopener">${x.queue_source}</a>. Demand: ERCOT real-time system conditions${x.demand_t ? `, ${localClock(Date.parse(x.demand_t) / 1000)}` : ""}.
       The cut: ${x.our_cut_source}. It scales one laptop's measured cut with public numbers, so read it as an estimate.</div>`);
