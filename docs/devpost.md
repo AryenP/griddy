@@ -8,6 +8,16 @@ RESEARCH.md. Remove this paragraph before submitting.
 ## Tagline
 When the grid runs short, the plan for AI data centers is diesel generators. This is the alternative.
 
+## For the Microsoft Challenge ("Built for the Real World")
+- **Real world:** the request arrives the way utilities send it (plain words or OpenADR 3.1), and the job's owner
+  answers on their phone in their own words.
+- **Measurable:** same request, three policies, measured by macOS powermetrics: Griddy kept 93 % of the call under
+  the cap with training still running (~83x the work of pausing everything); `make verify` recomputes it.
+- **Responsible:** the solver decides, the AI explains and negotiates, a person approves anything risky; reviewed
+  with Microsoft's HVE Core Responsible AI and Architecture reviewers, every finding fixed.
+- **Path to production:** the same loop at site scale, with Teams approvals and an Entra Agent ID per agent as the plan.
+- One page mapping each criterion and Microsoft's six Responsible AI principles to the proof: docs/microsoft.md.
+
 ## The problem (one sentence)
 When the grid is short of power, operators have two crude options for AI compute, run everything or
 switch to diesel, because nothing decides which work can wait, asks the people who own it, and proves
@@ -19,6 +29,8 @@ the result in watts.
 - Texas PUCT Docket 59220 (24 Jul 2026): co-located data centers must fully curtail on ERCOT instruction.
 - PJM Board (16 Jan 2026): new large loads of 50 MW or more are curtailed before pre-emergency demand response.
 - EPRI DCFlex: 10 to 30 % peak-reduction potential from flexible data centers (Reuters, 8 Oct 2026).
+- Microsoft plans to grow from about 12 GW to about 38 GW of data-center capacity by 2032 (Bloomberg News via
+  Reuters, 10 Sep 2026; Microsoft did not comment), and is one of nearly 40 participants in EPRI's DCFlex (Latitude Media).
 
 ## What it does
 Griddy is a grid-aware compute dispatcher. It reads the live grid (CAISO and ERCOT prices, day-ahead
