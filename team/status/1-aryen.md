@@ -331,3 +331,11 @@ Blockers / needs Aryen: EIA_API_KEY in .env (a helper script prompts for it with
 Done: Aryen added EIA_API_KEY to .env (19:43); after a restart a Uri replay fetched 124 hours live from api.eia.gov
 with his key, 0 MW from the evidence copy. 105a22c: the logo loader on the judge's page. 489 tests pass.
 Blockers / needs Aryen: the EIA key is resolved; the technician-dispatch decision is still open.
+
+## 2026-10-24 20:10 PT — operator phone page, 1:1 city view, demo-stable-4
+Done: operator.html replays real emergencies and breaks parts in words (the neighbourhood panel and its removed route
+are gone; web/operator* now machine 1's). The city view is one real square of each event's city from OpenStreetMap
+(Texas Medical Center; downtown LA), drawn 1:1 with a fly-in. Cold-start rehearsal 19:52-19:56 passed (ready in 31 s;
+send one chat message first: the first reply after a cold start takes ~3 s). Tagged demo-stable-4 (493 tests pass).
+Next: Microsoft's second HVE Core review once Aryen saves it to Downloads (the artifact can't be read from here).
+Blockers / needs Aryen: review 2 as a PDF or pasted; the technician-dispatch decision.
