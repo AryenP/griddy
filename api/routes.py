@@ -18,6 +18,7 @@ from agent import faults, intake
 from agent.negotiator import CAP_JOB
 from core.config import available_isos, settings
 from core.types import CapEvent
+from response.engine import kind_for
 from workloads.base import WL
 
 from . import access
@@ -80,6 +81,21 @@ class SiteCalibration(BaseModel):
     measured_at: float
     machine: str
     meter: str
+
+
+class ResponseIn(BaseModel):
+    kind: str = Field("", pattern=r"^(|substation|line|ev_surge|solar_backfeed|demand_surge|clear)$")
+    cause: str = Field("", max_length=120)
+    line: int = Field(0, ge=0, le=8)
+    who: str = "operator"
+
+
+class CrewIn(BaseModel):
+    order: str = Field(max_length=40)
+    crew: str = Field(max_length=40)
+    status: str = Field(pattern=r"^(assigned|en_route|on_site|repaired)$")
+    eta_s: float | None = Field(None, ge=0, le=86400)
+    bids: list[dict] | None = Field(None, max_length=10)
 
 
 class WhatIfIn(BaseModel):
@@ -198,13 +214,59 @@ def make_router(rt) -> APIRouter:
         rt.tl.log("policy", reason=f"what-if {body.target}", who=who)
         if body.target == "clear":
             rt.whatif.end()
+            rt.response.end(why="cleared by the judge")
+            return {"cleared": True}
+        if body.cause and (rej := intake.guard(body.cause, {"instructions", "secrets"})):
+            raise HTTPException(400, f"cause not used: {rej.reason}")
+        kind = kind_for(body.target, body.cause)
+        if kind in ("ev_surge", "solar_backfeed"):          # a feeder event in the city, not a grid-wide shortfall
+            st = rt.response.start(kind, cause=body.cause)
+            return {"whatif": False, "label": st["what"], "shortfall_mw": 0, "asked_cut_pct": 0, "response": st}
+        try:
+            out = rt.whatif.start(body.target, share_pct=body.share_pct, cause=body.cause)
+        except KeyError:
+            raise HTTPException(404, f"nothing called {body.target!r} to break")
+        except ValueError as e:
+            raise HTTPException(409, str(e))
+        return {**out, "response": rt.response.start(kind, cause=body.cause)}   # Griddy responds on its own
+
+    @r.post("/api/response")
+    async def response(body: ResponseIn, request: Request):
+        """Start Griddy's automatic emergency response for an incident in the city (response/engine.py): it isolates,
+        islands the hospitals, reroutes, sheds what can wait and sends a crew, on its own. Labelled simulated where it is."""
+        who = by(body.who, request)
+        rt.tl.log("policy", reason=f"incident {body.kind or 'clear'}", who=who)
+        if body.kind in ("", "clear"):
+            rt.response.end(why=f"cleared by {who}")
             return {"cleared": True}
         if body.cause and (rej := intake.guard(body.cause, {"instructions", "secrets"})):
             raise HTTPException(400, f"cause not used: {rej.reason}")
         try:
-            return rt.whatif.start(body.target, share_pct=body.share_pct, cause=body.cause)
-        except KeyError:
-            raise HTTPException(404, f"nothing called {body.target!r} to break")
+            return rt.response.start(body.kind, cause=body.cause, line=body.line)
+        except (KeyError, ValueError) as e:
+            raise HTTPException(409, str(e))
+
+    @r.get("/api/response")
+    async def response_state():
+        """The incident Griddy is handling, its steps with what is real and what is simulated, and the crew."""
+        return rt.response.last or {"active": False}
+
+    @r.get("/api/response/orders")
+    async def response_orders(request: Request):
+        """Open work orders, for the crew agents on this Mac (agent/channels/crews.py) only."""
+        if not access.is_this_machine(request):
+            raise HTTPException(403, "work orders go to the crew agents on this machine only")
+        return {"orders": rt.response.open_orders()}
+
+    @r.post("/api/response/crew")
+    async def response_crew(body: CrewIn, request: Request):
+        """A crew agent's bid result or status (assigned, en route, on site, repaired), from this Mac only."""
+        if not access.is_this_machine(request):
+            raise HTTPException(403, "crew updates come from the crew agents on this machine only")
+        try:
+            return rt.response.crew_update(body.order, body.crew, body.status, body.eta_s, body.bids)
+        except KeyError as e:
+            raise HTTPException(404, f"no open work order or crew {e}")
         except ValueError as e:
             raise HTTPException(409, str(e))
 

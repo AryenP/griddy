@@ -1,0 +1,35 @@
+# The city network Griddy's emergency response acts on (response/, Aryen, Sat 22:30: "it takes over automatically in
+# an emergency to prevent damages and casualties ... fix the plants and substations ... send repair crews").
+#
+# REAL, from OpenStreetMap (docs/evidence/city/<id>-map.json): the substation, the two central plants, the 138 kV lines
+# into the substation, the hospitals, every building's footprint and height, and the streets the crews drive.
+# SIMULATED, and labelled "simulated" on every screen and in every timeline line: the feeders and switches and their
+# ratings, the neighbouring feed, the EV chargers and rooftop solar, the crews, their depots, speed and repair times.
+# No public source lists these feeders or the utility's switching plan, and Griddy has no access to a real utility's
+# switches or crews; in production these commands go to the utility's distribution management and outage systems.
+# The AI-compute cut is the one real actuation: this Mac's measured watts, through the real dispatcher.
+networks:
+  houston:
+    substation: "Grant Substation"                     # real (OSM power=substation)
+    backup:                                            # real plants (OSM); that they can island the hospitals is simulated
+      - "Thermal Energy Cooporation Central Plant"     # sic: OpenStreetMap's spelling
+      - "Houston Methodist - Central Plant"
+    rating_pct: 130          # simulated: each feeder can carry 130 % of its normal load for an emergency hour
+    second_feed:             # simulated: a neighbouring substation's feed, reached by closing a tie switch
+      name: "the neighbouring substation's feed"
+      spare_pct: 35          # simulated: of the square's normal load
+    line_loss_pct: 50        # simulated: with one of its two 138 kV lines down, the substation carries half
+    flexible:                # simulated shares of the square's normal load (the AI share's cut is this Mac's, measured)
+      ai_pct: 10             # data centers on these feeders
+      ev_pct: 12             # home EV charging that can wait (evening)
+    ev_surge_pct: 40         # simulated: everyone plugs in at 6 p.m.: +40 % on the feeders
+    solar_export_pct: 22     # simulated: midday rooftop solar pushed back into the feeders
+    solar_limit_pct: 12      # simulated: what the feeders can take back before voltage runs high
+    crews:                   # simulated crews (Fetch.ai agents, agent/channels/crews.py) and depots at the square's edges
+      - {id: crew-1, name: "Crew 1 (substations)", skills: [substation], depot: ne}
+      - {id: crew-2, name: "Crew 2 (lines)", skills: [line], depot: nw}
+      - {id: crew-3, name: "Crew 3 (any job)", skills: [substation, line], depot: se}
+    speed_mps: 8.3           # simulated: 30 km/h through town
+    repair_s: {substation: 5400, line: 3600}           # simulated: 90 and 60 minutes
+    travel_scale: 10         # the demo shows the drive 10x faster and the repair 60x, and the page says so
+    repair_scale: 60

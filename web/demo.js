@@ -2,10 +2,10 @@
 // through the live software (replay/engine.py, its hours fetched live from api.eia.gov). Numbers only, each with its
 // source in small type; the detail and every graph live on info.html. A click on a plant, the substation or the city
 // breaks it (replay/whatif.py: the fault is invented, its size is real). Contract: snapshot and WebSocket events from
-// HANDOFF.md, /api/replay*, /api/whatif.
+// HANDOFF.md, /api/replay*, /api/whatif, /api/response (Griddy's automatic emergency response, response/engine.py).
 "use strict";
 
-const D = { grid: null, power: null, replay: null, last: null, whatif: null, cat: [], pick: "live", scale: null, fetching: false,
+const D = { grid: null, power: null, replay: null, last: null, whatif: null, response: null, cat: [], pick: "live", scale: null, fetching: false,
   cities: [], city: null, maps: {},
   shown: new Set(), peaks: {}, specs: {}, jobs: {} };
 
@@ -13,6 +13,7 @@ const gw = (mw) => (mw == null ? "—" : `${fixed(mw / 1000, 1)} GW`);
 const compact = (n) => (n >= 1e6 ? `${fixed(n / 1e6, 1)}M` : n >= 1e3 ? `${Math.round(n / 1e3)}k` : String(Math.round(n)));
 const running = () => !!(D.last && D.last.event && nowS() - D.last.t < 12);     // ticks 1/s; 12 s rides out a slow link
 const faulted = () => !!(D.whatif && D.whatif.target && nowS() - D.whatif.t < 12);
+const responding = () => !!(D.response && D.response.id && nowS() - D.response.t < 12);
 
 function liveNeeded(sig) {
   // the ISO's own load forecast at this hour (GridSignal.load_forecast: [[time, MW]])
@@ -44,6 +45,7 @@ function handle(msg) {
     case "snapshot":
       hideLoader();
       D.grid = d.grid; D.power = d.power; D.replay = d.replay || null; D.scale = d.scale || null; D.whatif = d.whatif || null;
+      if (d.response && d.response.id) { D.response = d.response; onIncident(d.response); }
       D.specs = d.job_specs || {}; D.jobs = d.jobs || {};
       if (D.replay && D.replay.last) D.last = D.replay.last;
       break;
@@ -52,7 +54,8 @@ function handle(msg) {
     case "grid": if (d.feed === "signal") D.grid = d; break;
     case "replay": D.last = d; D.pick = d.event; onAlerts(d); break;
     case "whatif": D.whatif = d; break;
-    case "action": if (running() || faulted()) onAction(d); return;
+    case "response": pollResponse(); return;
+    case "action": if (running() || faulted() || responding()) onAction(d); return;
     case "scale": D.scale = d; break;
     default: return;
   }
@@ -118,8 +121,8 @@ function render() {
   for (const b of $("w-picks").children) b.setAttribute("aria-pressed", String(b.dataset.pick === D.pick));
   $("w-play-btn").hidden = live;
   $("w-play-btn").textContent = running() ? "Stop" : D.fetching ? "Fetching from the EIA…" : "Replay it live";
-  $("w-break-btn").textContent = faulted() ? "Clear the fault" : "Break a part";
-  $("w-break-btn").setAttribute("aria-pressed", String(faulted()));
+  $("w-break-btn").textContent = faulted() || responding() ? "Clear the fault" : "Break a part";
+  $("w-break-btn").setAttribute("aria-pressed", String(faulted() || responding()));
   const train = D.jobs.train;
   $("w-work-btn").hidden = running() || !train || train.state === "running" || train.state === "done";
   const g = D.grid, p = D.power;
@@ -195,6 +198,7 @@ function citySources() {
 // A judge's what-if on top of whatever the world shows: the broken part, the grid's real numbers after it, our cut.
 function overlayFault() {
   citySources();
+  renderResponse();                                             // after the headline, so the incident's wins
   if (!faulted()) { World.set({ tripped: null, tripped_mw: null, fault: null }); return; }
   const w = D.whatif, sc = w.scale;
   World.set({ tripped: w.target === "city" ? null : w.fuel, tripped_mw: w.lost_mw, fault: w.target, served: w.served_after, needed: w.needed_after,
@@ -296,19 +300,83 @@ async function breakIt(id, share = 100, cause = "") {
   closePop();
   const r = await postJSON("/api/whatif", { target: id, share_pct: share, cause, who: "judge" });
   if (!r.ok) { toast("emergency", "what-if", `Could not break it: ${routeError("/api/whatif", r)}`, ""); return; }
-  D.whatif = r.data;
+  D.whatif = r.data.whatif === false ? null : r.data;
+  if (r.data.response) { D.response = r.data.response; onIncident(r.data.response); }
   render();
   toast("emergency", "what-if", r.data.label, r.data.shortfall_mw > 0
     ? `the grid is ${gw(r.data.shortfall_mw)} short: Griddy asks our sites for a ${fixed(r.data.asked_cut_pct, 0)}% cut`
-    : "the grid still covers demand: no cut needed");
+    : r.data.response ? "Griddy responds on its own: see the city" : "the grid still covers demand: no cut needed");
+}
+
+// ---------------------------------------------------------------- Griddy's automatic emergency response
+// When a part of the city's grid fails or overloads, Griddy acts on its own (response/engine.py): it isolates the fault,
+// islands the hospitals on the medical center's own plants, reroutes, sheds the work that can wait (this Mac's AI work,
+// measured) and sends a repair crew (Fetch.ai crew agents bid for the work order). Each step says what is real and
+// what is simulated, and the city shows who is lit with Griddy and without it.
+const INCIDENTS = [["substation", "Substation fire · Grant Substation"], ["line", "A 138 kV line goes down"],
+  ["ev_surge", "Evening EV charging surge"], ["solar_backfeed", "Rooftop solar floods the feeders"]];
+const STEP = { detect: "Detected", isolate: "Isolated", protect: "Hospitals protected", reroute: "Rerouted", shed: "Load that can wait",
+  curtail: "Solar curtailed", dispatch: "Crew dispatched", "crew assigned": "Crew assigned", "crew en_route": "Crew on the way",
+  "crew on_site": "Crew on site", "crew repaired": "Repaired", "no crew": "Crews", restore: "Restored" };
+let respBusy = false;
+async function pollResponse() {
+  if (respBusy) return;
+  respBusy = true;
+  const r = await getJSON("/api/response");
+  respBusy = false;
+  if (!r.ok) return;
+  const was = D.response && D.response.id;
+  D.response = r.data && r.data.id ? r.data : null;
+  if (D.response && D.response.id !== was) onIncident(D.response);
+  render();
+}
+async function onIncident(st) {                                 // the camera flies into the city where it happens
+  const city = D.cities.find((c) => c.id === st.city);
+  if (city && (!D.city || D.city.id !== city.id)) await openCity(city);
+}
+async function startIncident(kind) {
+  closePop();
+  const r = await postJSON("/api/response", { kind, who: "judge" });
+  if (!r.ok) { toast("emergency", "incident", `Could not start it: ${routeError("/api/response", r)}`, ""); return; }
+  D.response = r.data; onIncident(r.data); render();
+}
+function crewText(c, st) {
+  const k = st.order ? st.order.travel_scale : 1, rk = st.order ? st.order.repair_scale : 1, km = c.m != null ? `${fixed(c.m / 1000, 1)} km on real streets` : "";
+  if (c.status === "assigned" || c.status === "en_route") {
+    const left = Math.max(0, (c.eta_s || 0) - (c.status === "en_route" ? (nowS() - c.t_status) * k : 0));
+    return `${c.name}: driving, ${km}, about ${Math.max(1, Math.ceil(left / 60))} min to go (shown ${k}× faster; simulated crew)`;
+  }
+  if (c.status === "on_site") return `${c.name}: on site, repairing (shown ${rk}× faster; simulated crew)`;
+  return `${c.name}: repair done`;
+}
+function renderResponse() {
+  const st = responding() ? D.response : null;
+  $("w-resp").hidden = !st;
+  World.set({ response: st });
+  if (!st) return;
+  const t0 = st.steps.length ? st.steps[0].t : st.t;
+  $("w-resp-age").textContent = `${fixed(st.age_s, 0)} s`;
+  $("w-resp-what").textContent = st.what;
+  $("w-resp-with").textContent = `${Math.round(100 * st.lit_with)}%`;
+  $("w-resp-without").textContent = `${Math.round(100 * st.lit_without)}%`;
+  $("w-resp-with-bar").style.width = `${(100 * st.lit_with).toFixed(1)}%`;
+  $("w-resp-without-bar").style.width = `${(100 * st.lit_without).toFixed(1)}%`;
+  $("w-resp-hosp").textContent = st.hospitals === "central plants" ? "Hospitals: islanded on the medical center's own central plants (real plants, simulated switching)"
+    : st.hospitals === "own generators" ? "Hospitals: on their own emergency generators" : "Hospitals: on the grid";
+  $("w-resp-crew").textContent = st.crew ? crewText(st.crew, st)
+    : st.order ? `Work order sent to the crew agents: ${st.bids.length ? `${st.bids.length} bids` : "waiting for bids"}` : "";
+  setHTML($("w-resp-steps"), html`${st.steps.map((s) => html`<li class="${s.kind.replace(/[^a-z]/g, "")}"><b>${STEP[s.step] || s.step}</b><span>${s.text}</span><small>+${fixed(s.t - t0, 1)} s · ${s.kind}</small></li>`)}`);
+  $("w-resp-src").textContent = `Real: ${st.real}. Simulated: ${st.simulated}.`;
+  $("w-head").textContent = st.done ? "Restored. Griddy hands the grid back." : `${st.what}. Griddy is responding on its own.`;
 }
 
 World.onPick((h, pt) => confirmBreak(h, pt));
 $("w-break-btn").addEventListener("click", async (e) => {
-  if (faulted()) { await postJSON("/api/whatif", { target: "clear", who: "judge" }); D.whatif = null; render(); return; }
+  if (faulted() || responding()) { await postJSON("/api/whatif", { target: "clear", who: "judge" }); D.whatif = null; D.response = null; render(); return; }
   const r = e.currentTarget.getBoundingClientRect();
   openPop("Break a part of the grid", "What-if: you invent the fault. Its size comes from the grid at this moment.",
     [...World.targets().map((t) => [t.mw ? `${t.title} · ${gw(t.mw)}` : t.title, "", () => confirmBreak(t, { x: r.left + r.width / 2, y: r.top })]),
+      ...INCIDENTS.map(([kind, label]) => [label, "", () => startIncident(kind)]),
       ["Cancel", "", closePop]], { x: r.left + r.width / 2, y: r.top }, { target: null });
 });
 document.addEventListener("keydown", (e) => { if (e.key !== "Escape") return; if (!$("w-pop").hidden) closePop(); else if (D.city) closeCity(); });
@@ -343,13 +411,13 @@ $("w-play-btn").addEventListener("click", async () => {
 });
 
 World.mount($("world"));
-const keepClear = () => World.safeArea($("conn").closest("header").getBoundingClientRect().bottom + 8,
+const keepClear = () => (document.documentElement.style.setProperty("--dock-h", `${Math.round(innerHeight - document.querySelector(".w-dock").getBoundingClientRect().top)}px`), World.safeArea($("conn").closest("header").getBoundingClientRect().bottom + 8,
   innerHeight - document.querySelector(".w-dock").getBoundingClientRect().top + 8,
-  innerWidth > 900 && $("w-alerts").children.length ? innerWidth - $("w-alerts").getBoundingClientRect().left + 8 : 0);
+  innerWidth > 900 && $("w-alerts").children.length ? innerWidth - $("w-alerts").getBoundingClientRect().left + 8 : 0));
 new ResizeObserver(keepClear).observe(document.querySelector(".w-dock"));
 new MutationObserver(keepClear).observe($("w-alerts"), { childList: true });
 addEventListener("resize", keepClear);
 getJSON("/api/replay/events").then((r) => { if (r.ok) { D.cat = r.data; render(); } });
 getJSON("/api/cities").then((r) => { if (r.ok) D.cities = r.data; });
-setInterval(render, 1000);
+setInterval(() => { if (responding()) pollResponse(); else render(); }, 1000);
 connectWS(handle, $("conn"));
