@@ -356,3 +356,8 @@ Blockers / needs Aryen: Prompt Shields decision; an operator or FDE quote.
 ## 2026-10-24 20:49 PT — merged Krish's reviews (#25-#27); queued K17 and K18
 Done: PRs #25, #26, #27 merged (review files only, CI green); 499 tests pass on main. Krish's queue: K17 (Windows dry
 run again with the fixes), K18 (two phones, two roles). Anuraag and Arumalla still quiet.
+
+## 2026-10-24 21:21 PT — a quieter site
+Done (d65906e): one top bar on Grid, Info and Proof (G mark, wordmark, status dots); Info cut from 2,801 words to 486
+(four numbers, the power chart, the map and the jobs; the rest folded); page transitions; the humanizer's rules applied
+to every page's wording, no fact changed. 502 tests pass. Next: the docs' wording if Aryen wants it. Teammates quiet.
