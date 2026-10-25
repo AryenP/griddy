@@ -450,3 +450,8 @@ to every page's wording, no fact changed. 502 tests pass. Next: the docs' wordin
 ## Sat 23:55
 - SF city view (Mission District, real OSM), CAISO priced at DLAP_PGAE, Proof and Info redesigned, nav prerender, local
   deadlines (DECISIONS 23:55). make test 502, verify 82/82. Needs Aryen: restart the demo for the new price.
+
+## Sun 00:20
+- SF square B (SoMa to Mission Bay, 365 Main St, Embarcadero substation, UCSF Mission Bay); city view smooth (worst
+  frame 142 ms to 17 ms, watts not up); the data center gives power back visibly from live state. make test 503,
+  verify 82/82. Next: restart from cold (Aryen's password), full demo path check, gallery, tag demo-stable-8.

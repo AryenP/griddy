@@ -16,7 +16,8 @@ cities:
     name: San Francisco
     iso: CAISO                 # Cal Hacks is here; its load pays PG&E's default load price, DLAP_PGAE (config/isos.yaml)
     viewbox: [-122.52, 37.81, -122.35, 37.70]
-    map:
-      name: Mission District, from PG&E's Mission substation to SF General
-      center: [37.7662, -122.4085]
-      half_m: 1200
+    map:                       # chosen Sun 00:05 from three candidates (A 577, B 2,306, C 3,465 buildings): B holds a real
+                               # data center building (365 Main St), PG&E's Embarcadero substation and UCSF Mission Bay
+      name: SoMa to Mission Bay
+      center: [37.7771, -122.3905]
+      half_m: 1400

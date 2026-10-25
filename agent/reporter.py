@@ -29,6 +29,9 @@ import statistics
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import get_args
+
+from pydantic import ValidationError
 
 from core import config
 from core.types import Comparison, Report, TimelineEvent
@@ -48,6 +51,9 @@ def _ts(v) -> float | None:
     return datetime.fromisoformat(str(v)).timestamp()
 
 
+KNOWN_KINDS = set(get_args(TimelineEvent.model_fields["kind"].annotation))
+
+
 def _read(path: Path) -> list[TimelineEvent]:
     """Timeline events in time order. A live run may be mid-write: a torn last line is skipped. A `.gz` timeline is
     a committed evidence run (docs/evidence/runs/<id>/timeline.jsonl.gz), read as it was logged."""
@@ -59,6 +65,9 @@ def _read(path: Path) -> list[TimelineEvent]:
             out.append(TimelineEvent(**json.loads(ln)))
         except json.JSONDecodeError:
             if i != len(lines) - 1:
+                raise
+        except ValidationError:                     # an event kind this version does not log (a run made on another branch)
+            if json.loads(ln).get("kind") in KNOWN_KINDS:
                 raise
     out.sort(key=lambda e: e.t)
     return out
