@@ -436,3 +436,13 @@ to every page's wording, no fact changed. 502 tests pass. Next: the docs' wordin
 ## Sat 23:31
 - Reverted main to 22:07 (1040599) on Aryen's word; the later work is under tag before-revert-to-2207 (DECISIONS 23:31).
   Krish's K20/K21/K22 reviews stay in team/review on his branches; their README fixes are undone with the rest.
+
+## Sat 23:37: back to as built
+- Revert commit 4e0f129 on main ("Back to as built"): every product file is exactly as at 411f36c (the dispatcher
+  with Krish's K17 to K22 fixes); it supersedes bea1e67. The pivot is parked on branch incident-response (1ff5d76,
+  with docs/incident-response/sf-research.md) and under tag before-revert-to-2207. No pivot text left on main.
+- make test: 502 passed (same as 411f36c). make verify: 82/82. Demo up from cold (started 23:32 on this code):
+  live CAISO, measured watts, Break a part, the three replays (Uri fetched live, 124 h), Give training a deadline,
+  and the owner flow (30 % request read back, ml-team asked, refusal in words, re-plan) all checked.
+- Found, not fixed (pre-existing): the owner's slip message prints the deadline in UTC (agent/negotiator.py:22), so
+  a 00:46 deadline reads "07:46" on the phone.
