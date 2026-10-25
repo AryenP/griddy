@@ -36,6 +36,8 @@ members:
   - web/world.js
   - web/world.css
   - web/info.css
+  - web/chrome.css
+  - web/seen.js
   - web/demo.js
   - web/app.js
   - web/map.js

@@ -10,21 +10,18 @@
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="dashboard.css">
   <link rel="stylesheet" href="info.css">
+  <link rel="stylesheet" href="chrome.css">
 </head>
-<body class="dash d">
-  <div class="i-nav"><b>Griddy</b><nav aria-label="Pages"><a href="/">Grid</a><a href="/info.html" aria-current="page">Info</a><a href="/proof.html">Proof</a></nav></div>
-  <header class="d-top">
-    <div class="d-claim">
-      <h1>Griddy</h1>
-      <p>When the grid runs short, the plan for AI data centers is diesel generators. This is the alternative.</p>
+<body class="dash d i">
+  <header class="g-top i-top">
+    <a class="g-brand" href="/" aria-label="Griddy home"><svg class="g-mark" viewBox="0 0 120 120" aria-hidden="true"><path d="M96 30H30V90H90V62H64"/><circle cx="30" cy="90" r="9"/></svg><b>Griddy</b></a>
+    <nav class="g-nav" aria-label="Pages"><a href="/">Grid</a><a href="/info.html" aria-current="page">Info</a><a href="/proof.html">Proof</a></nav>
+    <div class="g-status"><span id="feed-age" class="badge">no feed</span><span id="agent" class="badge">agent</span><span id="conn" class="badge">connecting</span></div>
+  </header>
+
+  <main class="d-main i-main">
+    <div class="i-bar">
       <div id="quote" class="quote"></div>
-    </div>
-    <div class="d-controls">
-      <div class="d-badges">
-        <span id="conn" class="badge">connecting</span>
-        <span id="agent" class="badge">agent ?</span>
-        <span id="feed-age" class="badge">no feed</span>
-      </div>
       <div class="d-knobs">
         <label class="d-iso">Grid <select id="iso"></select></label>
         <div class="d-seg" id="objective" role="group" aria-label="What the solver minimises">
@@ -36,86 +33,64 @@
           <span class="d-knob" aria-hidden="true"></span><span id="dispatcher-label">Dispatcher</span>
         </button>
       </div>
-      <div class="keys"><kbd>D</kbd> dispatcher <kbd>1</kbd> cost <kbd>2</kbd> carbon <kbd>3</kbd> balanced <kbd>R</kbd> receipts</div>
     </div>
-  </header>
 
-  <main class="d-main">
-    <section class="panel d-load" aria-labelledby="load-h">
-      <div class="d-readout">
-        <h2 id="load-h">This machine, now</h2>
+    <section class="i-kpis" aria-label="Right now">
+      <article class="panel i-kpi">
+        <h2 id="load-h">This Mac</h2>
+        <div class="d-watts" id="watts">—</div>
         <p id="cap-state" class="d-state" aria-live="polite">Waiting for the meter</p>
         <p id="cap-detail" class="d-state-sub"></p>
         <p id="cap-ratio" class="d-ratio" hidden></p>
-        <div class="d-watts" id="watts">—</div>
         <div class="src" id="watts-src">waiting for powermetrics</div>
         <ul id="fleet" class="d-fleet" aria-label="laptops in the fleet"></ul>
-        <dl class="d-dl">
-          <div>
-            <dt>Cost at the live price</dt>
-            <dd class="d-num" id="cost">—</dd>
-            <dd class="src" id="cost-src">waiting for grid feed</dd>
-          </div>
-          <div>
-            <dt>Carbon at the live mix</dt>
-            <dd class="d-num" id="carbon">—</dd>
-            <dd class="src" id="carbon-src">waiting for grid feed</dd>
-          </div>
-          <div>
-            <dt id="ttft-label">Chat time to first token, p95 over 60 s</dt>
-            <dd class="d-num" id="ttft">—</dd>
-            <dd class="sub" id="total-p95"></dd>
-            <dd class="src" id="ttft-src">waiting for chat proxy</dd>
-          </div>
-        </dl>
-      </div>
-      <div class="d-chart">
-        <div class="d-chart-head">
-          <h2>Measured power against the cap</h2>
-          <div class="d-seg d-small" id="trace-window" role="group" aria-label="How much history to show">
-            <button type="button" data-window="300" aria-pressed="true">5 min</button>
-            <button type="button" data-window="900" aria-pressed="false">15 min</button>
-            <button type="button" data-window="3600" aria-pressed="false">1 h</button>
-          </div>
-        </div>
-        <div id="load-trace" class="d-trace">
-          <div class="d-plot"></div>
-          <div class="d-hover" hidden><span class="d-hover-text"></span></div>
-        </div>
-        <div class="legend">
-          <span><i class="sw d-sw-meas"></i>measured</span>
-          <span><i class="sw d-sw-plan"></i>current plan (calibrated)</span>
-          <span><i class="sw d-sw-cap"></i>the utility's cap</span>
-          <span><i class="sw d-sw-over"></i>over the cap</span>
-          <span><i class="sw d-sw-mark"></i>what changed the plan</span>
-        </div>
-        <div class="src" id="load-src">macOS powermetrics, combined CPU + GPU + ANE watts, one sample a second</div>
-      </div>
+      </article>
+      <article class="panel i-kpi">
+        <h2>Cost now</h2>
+        <div class="d-num" id="cost">—</div>
+        <div class="src" id="cost-src">waiting for grid feed</div>
+      </article>
+      <article class="panel i-kpi">
+        <h2>Carbon now</h2>
+        <div class="d-num" id="carbon">—</div>
+        <div class="src" id="carbon-src">waiting for grid feed</div>
+      </article>
+      <article class="panel i-kpi">
+        <h2 id="ttft-label">Chat, first token</h2>
+        <div class="d-num" id="ttft">—</div>
+        <div class="sub" id="total-p95"></div>
+        <div class="src" id="ttft-src">waiting for chat proxy</div>
+      </article>
     </section>
 
-    <section class="panel d-replay" id="replay" aria-labelledby="replay-h" hidden>
-      <div class="panel-head">
-        <h2 id="replay-h">Replay a real grid emergency <span class="d-meas">recorded grid data · live response</span></h2>
-        <button id="replay-stop" type="button" hidden>Stop the replay</button>
+    <section class="panel i-trace" aria-labelledby="trace-h">
+      <div class="d-chart-head">
+        <h2 id="trace-h">Power against the cap</h2>
+        <div class="d-seg d-small" id="trace-window" role="group" aria-label="How much history to show">
+          <button type="button" data-window="300" aria-pressed="true">5 min</button>
+          <button type="button" data-window="900" aria-pressed="false">15 min</button>
+          <button type="button" data-window="3600" aria-pressed="false">1 h</button>
+        </div>
       </div>
-      <div id="replay-cards" class="d-replay-cards" role="list"></div>
-      <p id="replay-state" class="d-replay-state" aria-live="polite"></p>
-      <svg id="replay-chart" class="d-replay-chart" viewBox="0 0 600 180" preserveAspectRatio="none" role="img" aria-label="demand served and the day-ahead forecast"></svg>
-      <div class="src d-replay-key"><span class="k-dem">demand served</span> <span class="k-fc">operator's day-ahead forecast</span> <span class="k-gap">gap: load that went unserved</span></div>
-      <div class="d-replay-grid">
-        <ol id="replay-alerts" class="d-replay-alerts"></ol>
-        <div id="replay-impact" class="d-replay-impact"></div>
+      <div id="load-trace" class="d-trace">
+        <div class="d-plot"></div>
+        <div class="d-hover" hidden><span class="d-hover-text"></span></div>
       </div>
-      <div class="src" id="replay-src"></div>
-      <div class="d-scale" id="live-scale" hidden aria-live="polite"></div>
+      <div class="legend">
+        <span><i class="sw d-sw-meas"></i>measured</span>
+        <span><i class="sw d-sw-plan"></i>plan</span>
+        <span><i class="sw d-sw-cap"></i>cap</span>
+        <span><i class="sw d-sw-over"></i>over the cap</span>
+        <span><i class="sw d-sw-mark"></i>plan changed</span>
+      </div>
+      <div class="src" id="load-src">macOS powermetrics, combined CPU + GPU + ANE, 1 Hz</div>
     </section>
 
     <section class="d-day">
       <div class="panel d-map-panel">
         <div class="panel-head">
-          <h2>The next 24 hours: what runs when, and why</h2>
+          <h2>Next 24 hours</h2>
         </div>
-        <p class="cap">Each row is a job: bright where the solver runs it, dark where it waits. The amber line is the grid price, red bands are the utility's caps. Click a slot, or focus the map and use the arrow keys, to see why.</p>
         <div id="map" class="map" tabindex="0" aria-label="24-hour dispatch map; arrow keys move between slots, Escape returns to now"><p class="empty">no schedule yet: the map appears when the solver publishes one</p></div>
         <div class="legend">
           <span><i class="sw price"></i>price $/MWh</span>
@@ -136,14 +111,35 @@
     </section>
 
     <section class="panel d-rack" aria-labelledby="jobs-h">
-      <h2 id="jobs-h">The jobs</h2>
+      <h2 id="jobs-h">Jobs</h2>
       <div id="jobs" class="d-jobs"></div>
     </section>
 
+    <details class="panel i-more">
+      <summary>Replay a real grid emergency <span class="src">recorded grid data, live response</span></summary>
+    <section class="panel d-replay" id="replay" aria-labelledby="replay-h" hidden>
+      <div class="panel-head">
+        <h2 id="replay-h">Replay a real grid emergency <span class="d-meas">recorded grid data · live response</span></h2>
+        <button id="replay-stop" type="button" hidden>Stop the replay</button>
+      </div>
+      <div id="replay-cards" class="d-replay-cards" role="list"></div>
+      <p id="replay-state" class="d-replay-state" aria-live="polite"></p>
+      <svg id="replay-chart" class="d-replay-chart" viewBox="0 0 600 180" preserveAspectRatio="none" role="img" aria-label="demand served and the day-ahead forecast"></svg>
+      <div class="src d-replay-key"><span class="k-dem">demand served</span> <span class="k-fc">operator's day-ahead forecast</span> <span class="k-gap">gap: load that went unserved</span></div>
+      <div class="d-replay-grid">
+        <ol id="replay-alerts" class="d-replay-alerts"></ol>
+        <div id="replay-impact" class="d-replay-impact"></div>
+      </div>
+      <div class="src" id="replay-src"></div>
+      <div class="d-scale" id="live-scale" hidden aria-live="polite"></div>
+    </section>
+    </details>
+
+    <details class="panel i-more">
+      <summary>Why this plan, and the event log</summary>
     <section class="d-why">
       <div class="panel">
         <h2>Why this plan</h2>
-        <p class="cap">The solver's facts, worded by the agent when it is online; the agent may not add a number.</p>
         <div id="explain" class="explain"></div>
         <div class="src" id="explain-src"></div>
         <h2 class="sub-h">Current slot</h2>
@@ -162,17 +158,19 @@
             <button type="button" data-filter="grid" aria-pressed="false">Grid</button>
           </div>
         </div>
-        <p class="cap">Everything the runtime logged, newest first.</p>
         <ol id="log" class="log d-log" data-filter="all" aria-live="polite"><li class="empty">no events yet</li></ol>
       </div>
     </section>
+    </details>
 
+    <details class="panel i-more" id="receipts-box">
+      <summary>Receipts and audit trail</summary>
     <section class="receipts panel" id="receipts">
       <div class="panel-head">
         <h2>Receipts: what the meter says happened</h2>
         <span class="src" id="runs-src">runs not loaded yet</span>
       </div>
-      <p class="cap">Computed afterwards from the recorded timelines: measured watts, not the plan. The same utility call under all three policies, side by side: <a href="proof.html">the proof page</a>.</p>
+      <p class="cap">Measured, from the recorded timelines. <a href="proof.html">Proof</a> has the three policies side by side.</p>
       <div class="receipt-pick">
         <label>Event report for run <select id="rc-run"></select></label>
         <label>Dispatched run <select id="rc-dispatched"></select></label>
@@ -198,6 +196,7 @@
       <div id="trace"><p class="empty">not loaded yet</p></div>
       <div class="src" id="trace-src"></div>
     </section>
+    </details>
   </main>
 
   <script src="common.js"></script>

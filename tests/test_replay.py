@@ -44,13 +44,13 @@ def test_alerts_reach_the_dispatcher_at_their_real_times_and_end(tmp_path):
     r, ex, t0 = rig(tmp_path)
     r.start("caiso-2022-09", now=t0)
     assert r.baseline_w == pytest.approx(20.0) and not r.nothing_to_shed
-    st = r.tick(now=t0 + 0.5)                       # the Flex Alert days before and Brownout's flag fire at once
+    st = r.tick(now=t0 + 0.5)                       # the Flex Alert days before and Griddy's flag fire at once
     assert st["demand_mw"] and st["forecast_mw"] and st["carbon_g_kwh"] > 0
     assert st["mix_mw"]["Natural Gas"] > 10000 and {"Solar", "Wind", "Nuclear"} <= set(st["mix_mw"])   # EIA-930, real
     warn = r.pending_caps.pop()                     # Brownout's own flag asks the warning cut, replacing the Flex Alert's
     flex = r.pending_caps.pop()
     assert "Flex Alert" in flex.reason and r.pending_withdraw == [flex.id]
-    assert warn.source == "replay" and warn.target_w == pytest.approx(16.0) and "Brownout's flag" in warn.reason
+    assert warn.source == "replay" and warn.target_w == pytest.approx(16.0) and "Griddy's flag" in warn.reason
     r.pending_withdraw.clear()
     eea3 = next(a for a in r.catalog()[2]["alerts"] if "EEA 3" in a["label"] and a["kind"] == "emergency")
     r.tick(now=t0 + eea3["replay_s"] + 0.1)

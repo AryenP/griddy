@@ -355,3 +355,5 @@ is tests/test_web_operator.py). For your driver card (task 27): the operator hot
   docs/judging/criteria.md and responsible.md. Your tests/test_evals.py is untouched; my assertions are in test_whatif.py.
 - Sat 20:45 from machine 1 (Krish's K14/K16 findings): scripts/preflight.py has a new check_eia_key (FAIL without
   EIA_API_KEY), and evals/cases.yaml's fault case "too-much" is now refused by rule. Both in your lane; keep them.
+- Sat 21:20 from machine 1: renamed the chat and owner page titles from Brownout to Griddy (web/chat.html, web/owner.html;
+  your lane). Task 26 restyle: use web/chrome.css's .g-top bar on chat, owner and operator so all pages match.
