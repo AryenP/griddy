@@ -141,6 +141,9 @@ members:
   - scripts/preflight.py
   - tests/test_preflight.py
   - team/status/2-anuraag.md
+  # the Fetch.ai three-agent flow (Aryen, Sun 01:05; team/2-anuraag.md FA1-FA7)
+  - fetch_agents/**
+  - tests/test_fetch_three*.py
 - number: 3
   name: Krish
   role: 'Reviewer: deep reviews, number audits, judge Q and A (docs/qa); never edits machine 1 or 2 code. Machine 4 does the 10-minute checks since Sat 05:40'

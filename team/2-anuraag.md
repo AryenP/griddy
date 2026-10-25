@@ -20,6 +20,112 @@ Live routes: everything in HANDOFF.md except `/api/ask` (arrives soon). `/api/re
 One branch per task (`anurag/<task>`), PR into main titled "2 Anuraag: <task>", CI green, a status entry before
 each PR. Machine 1 merges on its own loop. Krish's Claude reviews your PRs as supervisor; answer its comments.
 
+## Start now (Sun 01:05, from Aryen): the Fetch.ai three-agent flow, before anything else below
+
+**Why.** Fetch.ai's prize wants the main workflow to happen inside ASI:One with a real multi-agent flow. Today
+Griddy has one read-only Chat Protocol agent (`agent/channels/fetch_agent.py`, `make fetch-agent`,
+docs/fetch-agent.md). You build the three-agent version on branch `anurag/fetch-three-agents`. It is the shape of
+a real demand-response deal: a utility asks, a facility offers and complies, an independent meter check
+verifies. Everything is real: the live runtime on the demo Mac, the operator's real approval, and watts measured
+by powermetrics. Nothing simulated.
+
+**The flow a judge sees, all inside ASI:One:**
+1. The judge chats with **Griddy Grid Desk** (the utility side). They ask "how stressed is the grid?" and get the
+   live answer, then "I need 30% off for 20 minutes".
+2. Grid Desk sends a curtailment request to **Griddy Facility** (this Mac). Facility passes it into Griddy's own
+   intake and answers with the solver's real offer: target watts, what pauses or slows, what needs approval.
+3. Nothing moves until a person taps approve on the operator phone page. Grid Desk tells the judge "waiting for
+   the facility's operator".
+4. After the approval the cap applies and the watts drop. Facility reports the cap's start.
+5. Grid Desk asks **Griddy Verifier** for a verdict. Verifier reads the measured `power` events straight from
+   `runs/<id>/timeline.jsonl` and computes the baseline, the 10-s rolling mean, the time to compliance and the
+   share of the window under the cap itself. It uses no dispatcher number and runs no runtime code. Grid Desk
+   relays the verdict with the run id and file so anyone can recompute it.
+
+**Machine 1 does first (see team/1-aryen.md, "Fetch three-agent support"):**
+- The roster gives you the files below.
+- `POST /request` with `"source": "fetch"` stages the parsed request as a pending operator approval instead of
+  applying it, and returns the approval id.
+- `make fetch-three` and the new .env.example lines.
+
+Until those land, build against that contract with fakes in `tests/`.
+
+### FA1. Shared message models: `fetch_agents/common.py`
+- uagents `Model` classes:
+  - `CurtailmentRequest`: id, target_pct or target_w, start, duration_s, reason, requested_by.
+  - `Offer`: request id, readback, target_w, actions, needs_approval, approval_id.
+  - `Outcome`: request id, accepted or refused, the operator's words, cap start, run_id.
+  - `VerifyRequest` and `Verdict`.
+- The loopback-only HTTP client pattern from fetch_agent.py (an exact allowlist of routes per agent).
+- Address allowlists from `.env`.
+
+Done when: models round-trip in tests.
+
+### FA2. Grid Desk: `fetch_agents/grid_desk.py` (the only agent judges talk to)
+- Chat Protocol, mailbox mode, registered on Agentverse with the innovationlab and hackathon badges, a description
+  and starter prompts.
+- Live grid answers come from `GET /api/state`, with source and age, like fetch_agent.py does.
+- Parse the cut ask with a regex first (CLAUDE.md: "could a regex do this?"). If unclear, ask one question.
+- Send the `CurtailmentRequest` and relay each step to the judge in plain words: sent, offer, waiting for
+  approval, applied or refused (with the operator's words), then the verdict.
+- Every number is quoted from a route or the Verifier, with its source. If something is down, it says so and gives
+  no number.
+
+### FA3. Facility: `fetch_agents/facility.py`
+- Accepts only Grid Desk's address. Anything else is dropped and logged.
+- Calls `POST /request` on loopback with `source: "fetch"` and who = "Grid Desk (Fetch.ai)".
+- Replies with the `Offer` built from the intake readback and the schedule.
+- Polls `GET /api/approvals?owner=<operator>` for that approval id, then sends the `Outcome`.
+- Only these two calls. Any other route raises the ReadOnly-style error before a request is built.
+
+### FA4. Verifier: `fetch_agents/verifier.py`
+- Accepts only Grid Desk's address. Reads the run's `timeline.jsonl` from disk (standard library only) and
+  computes:
+  - the pre-cap 60-s mean;
+  - the 10-s rolling mean of `power.combined_w`;
+  - the time to compliance (seconds from the cap start until the rolling mean is at or under target_w);
+  - the share of the window under the cap.
+- No power rows means "not measured" with no number.
+- The same math as `make verify`: on a committed evidence timeline it must match the published numbers.
+
+### FA5. Safety and tests (`tests/test_fetch_three*.py`, fakes only in tests)
+- A non-allowlisted sender is ignored.
+- Nothing applies without the operator's yes: Facility never calls an apply route.
+- Requests to do anything else are refused.
+- The runtime being down means no numbers.
+- Verifier math matches `make verify` on an evidence run.
+- Rate limits are respected.
+- The existing read-only agent is unchanged.
+
+### FA6. Run, register, document
+- `make fetch-three` (machine 1 adds it) starts all three agents in the pinned uagents environment, the same as
+  `make fetch-agent`.
+- The first run prints the three agent addresses.
+- `docs/judging/fetch-three-agents.md`: the flow in words, setup (seeds, the Agentverse key the human puts in .env
+  themselves), and what each agent may and may not do.
+- Send machine 1 the README block (badges, the three names and addresses) and the Devpost Fetch line, for it to
+  paste. Machine 1 owns README and Devpost.
+
+### FA7. Live check on the demo Mac
+- With `make demo` running, run the whole flow from ASI:One (Agentverse, Grid Desk, "Chat with Agent"):
+  1. grid status;
+  2. "30% off for 20 minutes";
+  3. the offer;
+  4. the operator taps approve on the phone;
+  5. the watts drop on the dashboard;
+  6. the Verifier's verdict appears in ASI:One.
+- Run it once more with the operator refusing.
+- Put the evidence in your status file: the run id, the addresses and the verdict numbers.
+
+Done when: the PR "2 Anuraag: Fetch three-agent flow" is merged, CI is green and FA7 passes on the Mac.
+
+**Rules:**
+- Don't touch `agent/channels/fetch_agent.py`, `api/**` or anything outside your roster entry
+  (`uv run python scripts/team.py check`).
+- No keys in the repo or in chat.
+- Plain commit messages, no co-author lines.
+- The LLM never touches a knob; here no LLM is needed at all.
+
 ## Start now (Sat 02:25), in order
 
 ### F1. Operator console: finish `anurag/operator-console`
