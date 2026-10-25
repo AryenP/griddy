@@ -326,3 +326,8 @@ browser had kept an hours-old index.html); at a 1000 x 650 window the header sta
 the 3D scene centres between the bars. Gave Aryen a Gemini prompt for an intro screen (real numbers only, one HTML
 file, Inter, the app's palette); I wire it in once he brings it back. Teammates still quiet.
 Blockers / needs Aryen: EIA_API_KEY in .env (a helper script prompts for it without showing it); dispatch decision.
+
+## 2026-10-24 19:44 PT — EIA key in; replays fetch live again; logo loader shipped
+Done: Aryen added EIA_API_KEY to .env (19:43); after a restart a Uri replay fetched 124 hours live from api.eia.gov
+with his key, 0 MW from the evidence copy. 105a22c: the logo loader on the judge's page. 489 tests pass.
+Blockers / needs Aryen: the EIA key is resolved; the technician-dispatch decision is still open.
