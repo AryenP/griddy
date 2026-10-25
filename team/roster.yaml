@@ -53,6 +53,7 @@ members:
   - scripts/fetch_city.py
   - docs/evidence/city/**
   - tests/test_city*.py
+  - tests/test_app_pages*.py
   - tests/test_fleet*.py
   - scripts/team.py
   - scripts/check_runtime.py
