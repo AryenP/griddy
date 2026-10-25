@@ -420,3 +420,10 @@ to every page's wording, no fact changed. 502 tests pass. Next: the docs' wordin
   README and Devpost impact lines. Krish has K22 (is "job owner" explained before it appears?). No PRs besides #23, no issues.
 - Next: answer Aryen's question about the job owner; the Uri replay timeline with a claims entry.
 - Blockers: needs-Aryen items unchanged.
+
+## Sat 23:13
+- Done: Griddy's automatic emergency response committed (4419913): isolate, island the hospitals, reroute, shed what
+  can wait, Fetch.ai crew agents bid and repair, restore; simulated layer labelled on every step (CLAUDE.md amended,
+  DECISIONS). README and Devpost now open with Aryen's framing (EVs, rooftop solar and data centers on a grid not built
+  for them) and explain the job owner (Krish K22). pytest 507, verify 82/82. The recurring tick is stopped (Aryen).
+- Needs Aryen: restart the demo on the new code in his own terminal (`sudo -v && make demo`), then `make crews`.

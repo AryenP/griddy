@@ -2,18 +2,29 @@
 
 *Built at Cal Hacks 13 under the working name Brownout; the code, the repository and some identifiers keep it.*
 
-When the grid runs short, the plan for AI data centers is diesel generators. This is the alternative.
+The grid was not built for what is now plugged into it: cars charging in every garage at six in the evening, rooftop
+solar pushing power back into feeders built to carry it one way, and AI data centers asking for gigawatts. When it
+gives way, the result is outages, surges, blackouts and fires.
 
-Griddy is a grid-aware compute dispatcher. It watches the live grid (real ISO prices, day-ahead
-curve, load forecast, fuel mix, alerts), schedules every AI job over the next 24 hours with a CP-SAT
-solver, executes the current slot on real hardware, asks job owners before breaking their deadlines,
-and proves the result with measured power. Built at Cal Hacks 13.0 for the Microsoft Challenge.
+Griddy is the grid's shock absorber. It watches the live grid, and when a part fails or overloads it takes over on its
+own: it cuts the fault off so it cannot spread, keeps the hospitals powered, reroutes around the damage, pauses the AI
+work that can wait, and sends a repair crew. Every step says what is real and what is simulated.
 
-Nothing on screen is invented. Every price, watt and dollar about the real sites is live or measured, with its source
+Under it is a grid-aware compute dispatcher. Think of this laptop as a small data center: teams run AI work on it (a
+model training run, a nightly batch, a chat service), and each job has an owner, the person on that team who set its
+deadline. Griddy watches the live grid (real ISO prices, day-ahead curve, load forecast, fuel mix, alerts), schedules
+every AI job over the next 24 hours with a CP-SAT solver, executes the current slot on real hardware, asks the owner
+before breaking a deadline, and proves the result with measured power. When the grid runs short, the plan for AI data
+centers today is diesel generators; this is the alternative. Built at Cal Hacks 13.0 for the Microsoft Challenge.
+
+What is real and what is not. Every price, watt and dollar about the real sites is live or measured, with its source
 and age; the grid emergencies a judge can replay through the live software are the grid operators' own recorded data
 (U.S. EIA Form EIA-930), with every alert and impact cited to the official report's page; a fault a judge invents is
 labelled "what-if" and sized from the grid's real numbers at that moment; estimates at grid scale are labelled
-"estimate". Every published measured number recomputes from the raw timelines: `make verify`.
+"estimate". The emergency response acts on a real map (OpenStreetMap: the substation, its 138 kV lines, the plants,
+the hospitals, the streets) through a simulated layer, the feeders, switches, EV chargers, rooftop solar and repair
+crews, labelled "simulated" on every step, because no public source lists a city's feeders and Griddy has no access
+to a utility's switches. Every published measured number recomputes from the raw timelines: `make verify`.
 
 ### Impact, from one replay
 
@@ -84,6 +95,26 @@ everything, and asks the owner about the ~19-minute slip instead of breaking the
 > while the work still gets done. The live run of a request, the owner's refusal and the operator's approval is in
 > [docs/evidence/demo-flow-live-20261024.md](docs/evidence/demo-flow-live-20261024.md), and the responsible-design
 > evals (135/138 live on Sat 20:33, all 19 injection attempts rejected, the judge's fault reader 14/14) in [docs/evidence/evals-live-20261024-2033.md](docs/evidence/evals-live-20261024-2033.md); the first live run (02:33) passed 86/90.
+
+## When a part of the grid fails: Griddy's response
+Open the Grid page, press Break a part and pick "Substation fire · Grant Substation" (or a 138 kV line down, an
+evening EV charging surge, rooftop solar flooding the feeders), or describe the failure in your own words. The camera
+flies into the Texas Medical Center square, and Griddy acts on its own, about a second per step
+(response/engine.py, config/networks.yaml):
+
+1. Isolate: open the breakers around the fault, so a fault or a fire cannot spread.
+2. Protect: island the hospitals onto the medical center's own central plants.
+3. Reroute: close a tie switch to a neighbouring feed and pick up what it can carry.
+4. Shed: pause the AI work that can wait (this Mac, measured; the owner is still asked before a deadline slips) and
+   stagger home EV charging.
+5. Dispatch: send a work order to the crews. Three Fetch.ai crew agents (`make crews`, agent/channels/crews.py) bid
+   with their skills and their drive on real streets; the soonest able crew wins, drives there and repairs it.
+6. Restore: when the crew reports the repair, close the breakers and give everything back.
+
+For an EV or solar surge it sheds or curtails first and switches only if the feeders are still short. A replayed
+emergency alert (Uri's EEA 3) starts the same response. The panel shows each step, how much of the square stays lit
+with Griddy and without it (a substation fire: 80 % against 0 %), and what is real and what is simulated. Software
+cannot repair a transformer; the crew does, and Griddy keeps the lights on around the fault until it is fixed.
 
 ## Who controls what
 - The utility asks, in plain words or as an OpenADR 3.1 event. The request is parsed, read back with real
