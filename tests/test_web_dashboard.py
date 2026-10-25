@@ -89,12 +89,8 @@ def test_the_judge_page_is_the_3d_world_and_its_dock():
     """index.html (Sat 16:30): the grid as a 3D world drawn without a library, four choices and four numbers."""
     assert re.findall(r'<script src="([^"]+)"', WORLD_HTML) == ["common.js", "seen.js", "world.js", "demo.js"]
     assert '<canvas id="world"' in WORLD_HTML and 'href="/info.html"' in WORLD_HTML
-    # Sat 22:45 (Aryen): the emergency response's switching, EV chargers and crews are simulated, and say so; nothing
-    # else on the judge's page is (the 16:01 rule, kept for everything outside the response)
-    block = DEMO_JS.split("// ---------------------------------------------------------------- Griddy's automatic emergency response")[1].split("World.onPick")[0]
-    outside = WORLD_HTML.lower() + DEMO_JS.lower().replace(block.lower(), "")
-    assert "simulated" not in outside and "simulated" in block
-    assert set(re.findall(r'postJSON\(\s*[`"](/api/[\w/${}]+)', DEMO_JS)) <= {"/api/replay", "/api/jobs/${job}", "/api/whatif", "/api/whatif/read", "/api/response"}
+    assert "simulated" not in WORLD_HTML.lower() + DEMO_JS.lower()
+    assert set(re.findall(r'postJSON\(\s*[`"](/api/[\w/${}]+)', DEMO_JS)) <= {"/api/replay", "/api/jobs/${job}", "/api/whatif", "/api/whatif/read"}
     assert "prefers-reduced-motion" in WORLD_JS and "REDUCE" in WORLD_JS          # no motion for those who ask
     assert "ev.data_source" in DEMO_JS and "ev.report_url" in DEMO_JS and "estimate" in DEMO_JS
     assert "measured by powermetrics" in WORLD_HTML + DEMO_JS

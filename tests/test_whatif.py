@@ -1,7 +1,6 @@
 """What-if faults (replay/whatif.py): the fault is invented, its size comes from the real grid at that moment. The
 replayed event data is REAL (EIA-930 files in docs/evidence/events/); the executor and the live signal here are labelled
 test doubles."""
-from pathlib import Path
 import time
 from collections import deque
 from datetime import datetime, timedelta
@@ -117,9 +116,7 @@ def test_the_route_breaks_only_named_parts_from_a_joined_device(tmp_path, monkey
     from api.routes import make_router
     monkeypatch.setattr(access.settings, "operator_token", "t")
     w, _, _, _ = rig(tmp_path)                              # no grid signal yet: nothing to size a fault from
-    from response.engine import Response
-    resp = Response(w.tl, w.ex, w.replay, w, Path(__file__).resolve().parents[1])
-    rt = type("RT", (), {"tl": w.tl, "whatif": w, "response": resp})()   # TEST DOUBLE runtime: what the route uses
+    rt = type("RT", (), {"tl": w.tl, "whatif": w})()      # TEST DOUBLE runtime: the two attributes the route uses
     app = FastAPI()
     app.include_router(make_router(rt))
     stranger, joined = TestClient(app), TestClient(app, headers={access.HEADER: "t"})

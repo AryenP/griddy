@@ -432,3 +432,7 @@ to every page's wording, no fact changed. 502 tests pass. Next: the docs' wordin
 - Done: emergency response checked live on the restarted demo with the crew agents: substation fire, line fault and
   EV surge all ran end to end (DECISIONS 23:25). The demo runs from ~/brownout (a link to the project) in Terminal 2.
 - Next: rehearse the new demo beat once and add it to DEMO.md.
+
+## Sat 23:31
+- Reverted main to 22:07 (1040599) on Aryen's word; the later work is under tag before-revert-to-2207 (DECISIONS 23:31).
+  Krish's K20/K21/K22 reviews stay in team/review on his branches; their README fixes are undone with the rest.

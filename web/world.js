@@ -24,7 +24,7 @@ const World = (() => {
     cv: null, ctx: null, w: 0, h: 0, dpr: 1, yaw: -0.62, pitch: 0.6, scale: 18, cx: 0, cy: 0, baseYaw: -0.62,
     drag: null, last: 0, t: 0, running: false, labels: [], smoke: [], smokeAcc: 0, safe: { top: 72, bottom: 230, right: 0 },
     data: { mix: {}, served: null, needed: null, ours_w: null, baseline_w: null, cut_pct: null, alert: null, campus: null, peaks: {},
-      tripped: null, tripped_mw: null, fault: null, with_mw: null, city: null, response: null },
+      tripped: null, tripped_mw: null, fault: null, with_mw: null, city: null },
     hits: [], hover: null, onPick: null, down: null, city: null, cityMap: null, cam: null, trans: null,
     v: { served: 0, needed: 0, lit: 1, ours: 0.5, mix: {}, tint: { gen: [...C.lineOk], city: [...C.lineCity] } },
   };
@@ -464,8 +464,6 @@ const World = (() => {
   // The city's state this moment: which zones are dark, which Griddy relit (from the grid's real numbers).
   function cityState() {
     const d = S.data, N = ZONES * ZONES;
-    const R = incident();                                             // Griddy's response decides each zone (response/engine.py)
-    if (R) return { dark: 1 - R.lit_with, relit: 0, zone: R.zones, R, key: `R|${R.zones.join("")}|${R.hospitals}` };
     const dark = d.needed ? Math.max(0, 1 - (d.served || 0) / d.needed) : 0;
     const relit = d.with_mw && d.needed ? Math.min(dark, d.with_mw / d.needed) : 0;
     const turn = REDUCE ? 0 : Math.floor(S.t / 8);
@@ -526,35 +524,6 @@ const World = (() => {
       g.fillStyle = "rgba(255,70,70,0.95)"; g.fillRect(c[0] - r, c[1] - r / 3, 2 * r, (2 * r) / 3); g.fillRect(c[0] - r / 3, c[1] - r, (2 * r) / 3, 2 * r);
     }
   }
-  const incident = () => (S.data.response && S.city && S.data.response.city === S.city.id ? S.data.response : null);
-  // The incident on the map, drawn every frame: the faulted substation or 138 kV line, the crew's drive on real streets.
-  function drawIncident(R) {
-    const g = S.ctx, beat = REDUCE ? 1 : 0.6 + 0.4 * Math.sin(S.t * 5);
-    const sx = R.substation.x * MU, sz = R.substation.z * MU, down = R.substation.ok < 1 && !R.done;
-    if (R.line_pts) {
-      const pp = R.line_pts.map(([x, z]) => P(x * MU, 0.9, z * MU));
-      g.save(); g.lineCap = "round"; g.shadowColor = "rgba(255,90,90,0.95)"; g.shadowBlur = 12;
-      g.strokeStyle = `rgba(255,90,90,${0.45 + 0.55 * beat})`; g.lineWidth = 3;
-      g.beginPath(); pp.forEach((p, i) => (i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]))); g.stroke(); g.restore();
-    }
-    const bad = down && R.kind === "substation";
-    glowDot(sx, 1.4, sz, bad ? 16 + 6 * beat : 10, bad ? C.lineBad : C.mint, bad ? 0.9 : 0.75);
-    label(sx, 3.6, sz, R.done ? "Substation · back on" : bad ? "Substation · isolated" : R.kind === "line" && !R.done ? "Substation · on one line" : "Substation · real",
-      R.substation.name, bad ? "fault cut off, crew on the way" : "OpenStreetMap", 1.4);
-    const c = R.crew;
-    if (c && c.route && c.route.length > 1) {
-      const pts = c.route.map(([x, z]) => [x * MU, 0.45, z * MU]);
-      g.save(); g.setLineDash([3, 4]); g.strokeStyle = "rgba(255,190,70,0.55)"; g.lineWidth = 1.6;
-      const pp = pts.map((v) => P(...v));
-      g.beginPath(); pp.forEach((p, i) => (i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]))); g.stroke(); g.restore();
-      const k = (R.order && R.order.travel_scale) || 1;
-      const f = c.status === "assigned" ? 0 : c.status === "en_route" ? Math.min(1, (Date.now() / 1000 - c.t_status) * k / Math.max(1, c.eta_s || 1)) : 1;
-      const q = along(pts, f);
-      glowDot(q[0], 0.8, q[2], 11, C.lineWarn, 0.95);
-      label(q[0], 2.4, q[2], `${c.name}`, c.status === "on_site" ? "repairing" : c.status === "repaired" ? "done" : "on the way",
-        "simulated crew · real streets", 0.8);
-    }
-  }
   function drawCity(dt) {
     const M = S.cityMap, d = S.data, v = S.v, g = S.ctx;
     if (!M) return;
@@ -584,16 +553,6 @@ const World = (() => {
       g.restore();
     }
     const hf = M.half, lit = 1 - st.dark;
-    if (st.R) {
-      drawIncident(st.R);
-      label(-hf, 4.5, -hf, `${S.city.name} · ${M.area}`, `${Math.round(st.R.lit_with * 100)}% lit with Griddy`,
-        `${Math.round(st.R.lit_without * 100)}% without it`, 0.4);
-      const hs = M.hospitals.filter((hh) => Math.abs(hh.x) < hf && Math.abs(hh.z) < hf).slice(0, 2);
-      for (const hh of hs) label(hh.x, 5.5, hh.z, st.R.hospitals === "central plants" ? "Hospital · on the central plant" : "Hospital · kept on",
-        hh.name.length > 30 ? `${hh.name.slice(0, 29)}…` : hh.name, "critical load, OpenStreetMap", 1.4);
-      drawLabels();
-      return;
-    }
     label(-hf, 4.5, -hf, `${S.city.name} · ${M.area}`, d.needed ? `${Math.round(lit * 100)}% of homes lit` : "—",
       st.relit ? `${Math.round((lit + st.relit) * 100)}% with Griddy's ${Math.round(d.with_mw)} MW` : d.needed ? `${(d.served / 1000).toFixed(1)} of ${(d.needed / 1000).toFixed(1)} GW served` : "", 0.4);
     const hs = M.hospitals.filter((hh) => Math.abs(hh.x) < hf && Math.abs(hh.z) < hf).slice(0, 3);
