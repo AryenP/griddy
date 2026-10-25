@@ -31,3 +31,11 @@ broken. Pick one: call the grid side "the utility" everywhere (page title "Utili
 "operator" for the data center's person; or the reverse, but never both. The three people in the story are then:
 **the utility** (asks for the cut), **the data center's operator** (decides whether to go over it), **the job owner**
 (the team whose job would slip).
+
+**In code it is one role, not just one word.** api/access.py's docstring: the OPERATOR token "makes it the utility's
+device (requests, caps, replays, what-ifs, the dispatcher, the over-cap approval)". So the phone that sends the
+utility's cut is also the phone that approves going over it, while config/policy.yaml names the over-cap approver as
+the data center's `operator: ops`. For the demo (one judge, one operator phone) this works, but the story a judge
+hears is "the utility asked for 30 % and then approved not getting it". Either give the over-cap approval to a third
+role (the data center operator, on this Mac or its own QR), or say plainly at 1:30 that the operator phone plays the
+data center's operator, not the utility, once the cut has been sent.
