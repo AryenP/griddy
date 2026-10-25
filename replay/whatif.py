@@ -1,4 +1,4 @@
-"""What-if: a judge breaks a part of the grid, and the live software reacts (Aryen, Sat 17:00: "where judges can break
+"""What-if: a judge breaks a part of the grid, and the live software reacts (Aryen, Sat evening: "where judges can break
 the project wherever they select and it still reacts").
 
 The fault is invented, and the page says "what-if". Its SIZE is real: tripping a plant removes that fuel's real output

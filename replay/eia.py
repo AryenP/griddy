@@ -1,8 +1,8 @@
-"""The event's hours, fetched live from the U.S. EIA's Open Data API when a judge presses play (Aryen, Sat 17:15: "it's
+"""The event's hours, fetched live from the U.S. EIA's Open Data API when a judge presses play (Aryen, Sat evening: "it's
 really important that the software is getting the data live").
 
 api.eia.gov v2 serves the same EIA-930 numbers as the six-month files in docs/evidence/events/ (hour-ending UTC; checked
-equal for Uri on Sat 17:20). The key is EIA_API_KEY from .env (free from eia.gov/opendata), else the public DEMO_KEY
+equal for Uri on Sat evening). The key is EIA_API_KEY from .env (free from eia.gov/opendata), else the public DEMO_KEY
 (rate-limited by api.data.gov), so a fetch is reused for `refetch_s`. If the API cannot be reached the replay runs on the
 evidence copy and the page says so.
 """

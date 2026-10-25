@@ -104,7 +104,7 @@ def test_world_draws_only_what_it_is_given():
 
 
 def test_a_judge_can_break_any_part_and_the_page_says_what_if():
-    """Sat 17:30: a click on a plant, the substation or the city opens a confirm card; the fault is labelled what-if,
+    """Sat 17:19: a click on a plant, the substation or the city opens a confirm card; the fault is labelled what-if,
     sized from the grid at that moment, and also reachable from the keyboard (the Break a part menu)."""
     assert "World.onPick" in DEMO_JS and "onPick" in WORLD_JS and "targets()" in WORLD_JS
     assert 'id="w-break-btn"' in WORLD_HTML and 'id="w-pop"' in WORLD_HTML and 'role="dialog"' in WORLD_HTML
@@ -113,14 +113,14 @@ def test_a_judge_can_break_any_part_and_the_page_says_what_if():
 
 
 def test_the_replay_says_where_its_hours_came_from():
-    """Sat 17:30 (Aryen: the data must be live, not a canned replay): fetched live from api.eia.gov, or the evidence
+    """Sat 17:19 (Aryen: the data must be live, not a canned replay): fetched live from api.eia.gov, or the evidence
     copy and why; and the software sees each hour only once it has ended."""
     assert "api.eia.gov" in DEMO_JS and "evidence copy" in DEMO_JS and "once it has ended" in DEMO_JS
     assert "d.hour_ending" in DEMO_JS
 
 
 def test_a_judge_can_say_how_it_breaks_and_confirms_the_reading_first():
-    """Sat 17:50: words go to /api/whatif/read (a pattern, then the model); the page shows the reading with its real
+    """Sat 17:27: words go to /api/whatif/read (a pattern, then the model); the page shows the reading with its real
     size and breaks nothing until the judge confirms. Griddy's executed actions show as they happen."""
     assert 'id="w-pop-in"' in WORLD_HTML and "/api/whatif/read" in DEMO_JS and "Break it like that" in DEMO_JS
     assert 'case "action"' in DEMO_JS and "Griddy acts" in DEMO_JS

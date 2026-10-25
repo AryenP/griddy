@@ -6,7 +6,7 @@ copy in docs/evidence/events/<id>.csv only if the API cannot be reached, and the
 time the official report gives. Brownout's side is LIVE: the replay hands each alert to the real dispatcher as a cap on
 this Mac's sites at the moment it was issued, and the Mac's measured watts are what they are.
 
-Nothing here knows what comes next (Aryen, Sat 17:15: "if it's trained on this data and is just replaying, it defeats
+Nothing here knows what comes next (Aryen, Sat evening: "if it's trained on this data and is just replaying, it defeats
 the whole purpose"). Brownout is not trained on any event: the solver is deterministic and sees only its inputs. At
 each moment of the replayed clock the software sees the hours that have ENDED (never a later hour), and day-ahead
 forecasts only for the hours of the current day (the operator published them the day before). Brownout's own flag is
