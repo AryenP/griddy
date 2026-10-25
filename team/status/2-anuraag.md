@@ -139,3 +139,14 @@ what to say, the optional neighbourhood replay with its "simulated" line, and a 
 (stale feed, Ollama, agent offline, no meter, odd input, Application Insights lag). No numbers beyond what the
 screen shows. PR "2 Anuraag: driver card" (the N hotkey arrives with PR #20).
 Next: 12 failure drills.
+
+## 2026-10-25 01:16 PT — Fetch.ai three-agent flow (FA1-FA6)
+Done: fetch_agents/{common,grid_desk,facility,verifier}.py on anurag/fetch-three-agents. Grid Desk reads a cut by
+rule and relays each step; Facility makes only POST /request (source "fetch") and GET /api/approvals, never applies,
+and stops if a response is not staged; Verifier reads the run's timeline with the standard library and matches
+agent/reporter.py exactly on all 10 committed evidence runs (run of record: 14.34 W, 93 %, 12 s). No LLM anywhere.
+tests/test_fetch_three.py (54 tests, fakes only); docs/judging/fetch-three-agents.md. Checked on real uagents 0.26.1
+in the pinned env: addresses from seeds, message digests identical across agents, protocols build.
+pytest 555 passed. PR "2 Anuraag: Fetch three-agent flow".
+Next: FA7 on the demo Mac once machine 1's staged POST /request and make fetch-three land.
+Blockers / needs: machine 1 (staged /request contract, make fetch-three, .env.example lines); Aryen (Agentverse key).
