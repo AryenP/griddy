@@ -18,7 +18,7 @@ the result in watts.
   generators, citing 35 GW of diesel; no request to shed compute was reported (Fortune, 4 Feb 2026).
 - Texas PUCT Docket 59220 (24 Jul 2026): co-located data centers must fully curtail on ERCOT instruction.
 - PJM Board (16 Jan 2026): new large loads of 50 MW or more are curtailed before pre-emergency demand response.
-- EPRI DCFlex: 10–30 % peak-reduction potential from flexible data centers (Reuters, 8 Oct 2026).
+- EPRI DCFlex: 10 to 30 % peak-reduction potential from flexible data centers (Reuters, 8 Oct 2026).
 
 ## What it does
 Griddy is a grid-aware compute dispatcher. It reads the live grid (CAISO and ERCOT prices, day-ahead
@@ -31,7 +31,7 @@ When a utility asks for a cut, in OpenADR JSON or plain words, the agent reads i
 re-plans, and if a deadline would slip the job's owner is asked on their phone. They can refuse in their
 own words ("this has to finish by 9 AM Monday") and the solver re-plans around the refusal, saying
 exactly how much of the cut it can still deliver. If the ask is impossible, it says so and shows the
-minimal relaxation instead of pretending.
+smallest relaxation that would work.
 
 ## The four numbers (measured on the demo Mac, from timelines)
 Same jobs, same live grid, same request (a cap 30 % below the measured baseline for 5 min, training due in
@@ -62,7 +62,7 @@ owner about the ~19-minute slip. Two earlier attempts are void and say why (DECI
 
 Calibration on qwen3:4b-instruct (03:10, Mac otherwise idle): idle 0.51 W; chat +25.6 W at concurrency 4;
 training +22.9 W on GPU (18.3 steps/s), +13.3 W on CPU (4.8 steps/s); batch embeddings +24.1 W on GPU.
-The solver put training in Saturday 14:00–16:00 at an average $5.32/MWh against $36.33/MWh in the slots it
+The solver put training in Saturday 14:00 to 16:00 at an average $5.32/MWh against $36.33/MWh in the slots it
 skipped (CAISO SP15 day-ahead, live), OPTIMAL in 0.06 s; ERCOT solved in 0.04 s. A 15 W cap at a slot
 boundary: measured 18.5 W → 2.17 W within ~4 s and back to 17.5 W when it ended, with no input in between.
 
@@ -79,7 +79,7 @@ ERCOT's large loads draw up to 4.1 GW (ERCOT Monthly Operational Overview, Septe
 peak of 4,132 MW, the sum of each load's own monthly peak, of 9,456 MW approved to energize), and 474 GW more, about 90 % data centers, are asking to connect (Utility
 Dive, 5 Aug 2026). If they cut the 31 % this Mac cut under the same call, that frees up to about 1.3 GW, up to
 about 2 % of ERCOT's live demand, on demand and in seconds, instead of a diesel plant. The dashboard computes it live from
-ERCOT's demand feed and says it is arithmetic on public numbers, not a measurement.
+ERCOT's demand feed and labels it as arithmetic on public numbers.
 
 ## Honest scope
 One MacBook (Apple M2 Pro), about 0.5 W idle to about 26 W for the busiest job (DECISIONS 02:28, 03:10). The feeds, the solver, the approvals and the audit trail
@@ -87,10 +87,10 @@ are the same loop at 50 MW; the knobs at that scale are cluster schedulers and p
 process on a laptop. Watts are SoC power (CPU + GPU + ANE) as `powermetrics` reports it, not a wall
 meter. The 24-hour carbon curve is the live mix held flat (only price varies across slots), and the
 dashboard says so. Chat total latency p95 measured 9.67 s at concurrency 4 with 256-token replies on
-Friday night (plain qwen3:4b), against the 2 s SLA we had written down. We changed the promise, not the measurement:
-replies stream, and the SLA is time to first token p95 <= 1.0 s. On qwen3:4b-instruct the worst TTFT
-p95 measured 0.29 s idle and 0.24 s with training on the GPU; total p95 for 256 tokens is 5.0–8.9 s
-idle and 8.3–15.7 s with training, reported beside it and not promised.
+Friday night (plain qwen3:4b), against the 2 s SLA we had written down. We kept measuring the same way and changed
+the promise: replies stream, and the SLA is time to first token p95 <= 1.0 s. On qwen3:4b-instruct the worst TTFT
+p95 measured 0.29 s idle and 0.24 s with training on the GPU; total p95 for 256 tokens is 5.0 to 8.9 s
+idle and 8.3 to 15.7 s with training, reported beside it and not promised.
 Chat during a cap: our first measured run with real chat traffic during the cap failed (run 20261024-094941,
 docs/evidence/20261024-094941.md): power never got under the 19.68 W cap (mean 26.46 W) and time to first token
 p95 rose from 0.20 s to 4.56 s. On this Mac one streaming reply draws most of the GPU, so busy chat alone is above
@@ -103,9 +103,9 @@ the Mac was also in use (counted as outside load; DECISIONS 14:16, not in the re
 ## Responsible design
 - The solver decides, the LLM explains and negotiates, the controller executes. The LLM has no code
   path to any knob.
-- Nothing is simulated. Every price, watt and dollar about the real sites is live or measured, with source and age;
+- Nothing is invented. Every price, watt and dollar about the real sites is live or measured, with source and age;
   replayed grid emergencies are the operators' recorded data (EIA-930), fetched live from the EIA's API when a replay
-  starts and seen one hour at a time, never a later one, with each alert and impact cited by page; a judge's what-if
+  starts and seen one hour at a time, each only once it has ended, with each alert and impact cited by page; a judge's what-if
   faults are labelled what-if and sized from the grid's real numbers at that moment;
   grid-scale figures are labelled "estimate".
 - A human owner approves any deadline slip; refusals are respected and logged with name and time.

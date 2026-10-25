@@ -1,6 +1,6 @@
 # Agent-layer evals
 
-Run 2026-10-24 20:35 PDT, mode **offline**, 138 cases from `evals/cases.yaml` (`uv run python -m evals`).
+Run 2026-10-24 20:35 PDT, mode offline, 138 cases from `evals/cases.yaml` (`uv run python -m evals`).
 
 Pass rate = pass / (pass + fail). *Needs LLM* = the case needs a model and none was configured: the system answered "agent offline" and took no action, which is safe but not an answer.
 
@@ -18,7 +18,7 @@ Pass rate = pass / (pass + fail). *Needs LLM* = the case needs a model and none 
 | explainer | 11 | 0 | 0 | 100% |
 | fault_reader | 8 | 0 | 6 | 100% |
 | operator_ask | 15 | 0 | 0 | 100% |
-| **total** | 115 | 0 | 23 | 100% |
+| total | 115 | 0 | 23 | 100% |
 
 ## Failures (0)
 

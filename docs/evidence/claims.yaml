@@ -42,7 +42,7 @@ comparisons:
       baseline.time_to_compliance_s: 4
       baseline.train_steps: 19
     quoted_in:
-      README.md: ["0.80 W", "**1575**"]
+      README.md: ["0.80 W", "1575 (315 s"]
       docs/devpost.md: ["0.80 W", "1575"]
 
   - name: "First two-policy run, 02:28 (DECISIONS 02:28)"

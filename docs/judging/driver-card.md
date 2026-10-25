@@ -34,17 +34,17 @@ screen; never say a number that is not on it.
 | Time | Do | Say |
 |---|---|---|
 | 0:00 | Point at the header. | "When the grid runs short, the plan for AI data centers is diesel generators. This is the alternative." Then the operator quote if it is on screen; if not, skip it, never paraphrase one. |
-| 0:15 | Judge picks **Grid** (the select) and an objective (`1` `2` `3`). | "Live prices from the ISO with their interval time; the solver repaints all 24 hours." Read the two-sentence explanation off the screen. |
+| 0:15 | Judge picks Grid (the select) and an objective (`1` `2` `3`). | "Live prices from the ISO with their interval time; the solver repaints all 24 hours." Read the two-sentence explanation off the screen. |
 | 0:45 | Judge scans the chat QR and asks anything. | "The chat stays up. The tile shows time to first token against its SLA, measured on this Mac." |
-| 1:15 | Operator page, `E`, judge types or dictates "grid alert, I need 30% off for the next twenty minutes". **Send request**. | "It reads the request back with real watts before anything moves." |
+| 1:15 | Operator page, `E`, judge types or dictates "grid alert, I need 30% off for the next twenty minutes". Send request. | "It reads the request back with real watts before anything moves." |
 | 1:45 | Owner page on the judge's phone: they refuse in words ("no, this has to finish by 9 AM Monday"). | "A refusal makes the deadline hard. The cap is held while the operator decides." Point at the time-to-compliance counter on the operator page. |
 | 2:30 | Switch objective or ISO on the dashboard. | "Same jobs, new live curve: the plan and the Mac follow." |
 | 3:00 | Operator page: "cut 90% for 20 minutes". | "It says what it can't do: the floor with chat protected, in watts, from the solver." |
-| 3:30 | `R` on the dashboard, then **Show these runs** on the proof page. | "Recorded runs, not live: the same call ignored, everything paused, and Brownout. Measured by powermetrics." Then one decision in Application Insights. |
+| 3:30 | `R` on the dashboard, then Show these runs on the proof page. | "Recorded runs, not live: the same call ignored, everything paused, and Brownout. Measured by powermetrics." Then one decision in Application Insights. |
 | 3:50 | Close. | "This is a laptop's watts. The feeds, the solver, the approvals and the audit trail are the same at 50 megawatts, and the request came in the format utilities already send." |
 
-Optional, only if there is time and the judge asks about the wider grid: operator page, **Replay the evening peak
-(simulated)** (`N`). Say first: "This box is simulated: the homes follow today's real forecast shape, our own
+Optional, only if there is time and the judge asks about the wider grid: operator page, Replay the evening peak
+(simulated) (`N`). Say first: "This box is simulated: the homes follow today's real forecast shape, our own
 watts stay measured, and the utility's cut it sends is a real cap to the real dispatcher."
 
 ## When something breaks: say it, don't hide it

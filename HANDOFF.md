@@ -1,10 +1,10 @@
-# Brownout — handoff (updated Sat 24 Oct, 1:00 AM PT)
+# Brownout: handoff (updated Sat 24 Oct, 1:00 AM PT)
 
 Two machines, one repo (`github.com/AryenP/abc`, private). Read `CLAUDE.md`, `PLAN.md`, `SPEC.md`,
 `DECISIONS.md` first; this file says where things stand and who owns what.
 
 ## Where it stands
-M0–M4 are done and verified on the demo Mac (`demo-stable-1`). Every machine starts from KICKOFF.md,
+M0 to M4 are done and verified on the demo Mac (`demo-stable-1`). Every machine starts from KICKOFF.md,
 then the "Start now" block in its `team/<n>-<name>.md`. Machines 3 and 4 have finished phase 1 on
 branches; their first job is a rebased PR each.
 
@@ -13,14 +13,14 @@ branches; their first job is a rebased PR each.
 | M0 probe | powermetrics fields CPU/GPU/ANE/Combined, MPS ok, CAISO SP15 RT5 $50.33 @ 22:50 (DECISIONS.md) |
 | M1 grid + meter | `runs/<id>/timeline.jsonl` with `grid` + `power` (1 Hz); `scripts/verify_feed.py` re-pulls OASIS raw: $48.67721 = $48.67721 MATCH |
 | M2 workloads + calibrate | idle 1.35 W; chat +24.8 W (conc 4); train GPU +19.5 W / CPU +13.0 W; batch GPU +22.8 W / CPU +18.7 W |
-| M3 dispatcher | `make solve`: OPTIMAL 0.06 s; train in Sat 14:00–16:00 at ~$5/MWh vs ~$36 skipped; chat conc 4 in all 96 slots |
+| M3 dispatcher | `make solve`: OPTIMAL 0.06 s; train in Sat 14:00 to 16:00 at ~$5/MWh vs ~$36 skipped; chat conc 4 in all 96 slots |
 
 Chat SLA settled Sat 00:15: time to first token p95 <= 1.0 s (`policy.sla.chat_ttft_p95_s`), replies stream
 (`/api/chat/stream`); measured worst 0.23 s. Open problems: emission factors in `config/isos.yaml` are uncited; batch is minutes of real work (18,794 man-page
 passages), not 45 min; no operator/FDE quote yet (Sat 10 AM workshop).
 
 ## The split
-Four machines. **`team/README.md` is the source of truth**: who is who (`team/roster.yaml`), each
+Four machines. `team/README.md` is the source of truth: who is who (`team/roster.yaml`), each
 machine's assignment (`team/<n>-<name>.md`), the rules, and the one prompt every machine pastes.
 `uv run python scripts/team.py whoami` tells a machine who it is; `... check` refuses edits to files it
 does not own. Machine 1 (this Mac, Aryen) is runtime and integration; 2 Anuraag frontend; 3 Krish
@@ -30,7 +30,7 @@ receipts, telemetry, Azure and submission; 4 Arumalla the agent layer.
 Server: `make demo` → `python -m api.app` on `HOST:PORT` from `.env` (default `0.0.0.0:8080`). Static
 files served from `web/` at `/`, so `web/index.html` is `/` and `web/chat.html` is `/chat`.
 
-**WebSocket `GET /ws`.** First message is a snapshot, then every timeline event as it is logged:
+WebSocket `GET /ws`. First message is a snapshot, then every timeline event as it is logged:
 ```json
 {"kind": "snapshot", "data": {
   "grid": GridSignal | null, "schedule": Schedule | null, "plan": Plan-for-current-slot | null,
@@ -55,7 +55,7 @@ objects are what the workloads write to `runs/control/<job>.status.json` (see `w
 train has `step`, `loss`, `rate` (steps/s); batch has `items_done`, `total`, `fraction`, `rate` (items/s);
 chat has `concurrency`, `inflight`, `p95_60s` (total latency), `ttft_p95_60s` (time to first token), `n_60s`, `busy_60s` (avg requests in service, the traffic the plan uses), `max_tokens`, `model`. All have `state`, `device`, `t`.
 
-**HTTP**
+HTTP
 | Method | Path | Body | Returns |
 |---|---|---|---|
 | GET | `/api/state` | | the snapshot `data` above |
@@ -65,9 +65,9 @@ chat has `concurrency`, `inflight`, `p95_60s` (total latency), `ttft_p95_60s` (t
 | POST | `/api/jobs/{id}` | `{"deadline": iso8601 \| null}` | new Schedule (owner/negotiator changed a deadline) |
 | POST | `/api/event` | `{"start": iso8601, "duration_s": int, "target_w"?: W, "target_pct"?: % of measured baseline, "reason"}` | new Schedule with the cap |
 | POST | `/api/chat` | `{"messages": [{"role","content"}], "max_tokens"?: int}` | `{"reply", "latency_s", "ttft_s", "tokens", "max_tokens"}` |
-| POST | `/api/chat/stream` | same | NDJSON: `{"delta": str}` lines as tokens arrive, then `{"done": true, "latency_s", "ttft_s", "tokens", "max_tokens"}`; `{"error"}` on failure. **Use this for the phone chat page.** |
+| POST | `/api/chat/stream` | same | NDJSON: `{"delta": str}` lines as tokens arrive, then `{"done": true, "latency_s", "ttft_s", "tokens", "max_tokens"}`; `{"error"}` on failure. Use this for the phone chat page. |
 
-**Agent and receipts routes** (machine 1 wires them as machines 3 and 4 deliver; code against them now):
+Agent and receipts routes (machine 1 wires them as machines 3 and 4 deliver; code against them now):
 | Method | Path | Body | Returns |
 |---|---|---|---|
 | POST | `/request` | `{"text": str, "who"?: str}` free text or a voice transcript | `{"intake": IntakeResult, "schedule": Schedule \| null}` |
@@ -91,26 +91,26 @@ chat has `concurrency`, `inflight`, `p95_60s` (total latency), `ttft_p95_60s` (t
 | GET | `/api/trace?n=50` | | recent OpenTelemetry spans `[{"name","start","end","attributes",...}]` |
 | GET | `/join?t=<token>&next=/operator.html` | | 303 to `next` (same-site paths only) with the HttpOnly `brownout_op` cookie; wrong token 401 (since Sat 14:45) |
 
-**At grid scale (since Sat 14:53, grid/scale.py).** The snapshot carries `"scale"` (null until the first fetch) and every
+At grid scale (since Sat 14:53, grid/scale.py). The snapshot carries `"scale"` (null until the first fetch) and every
 `poll_s` (300 s) the WebSocket sends `{"kind": "scale", "data": {"estimate": true, "iso": "ERCOT", "demand_mw" (ERCOT's live
 actual system demand), "demand_t", "large_loads_running_mw", "large_loads_approved_mw", "large_loads_source", "large_loads_url",
 "queue_gw", "queue_source", "queue_url", "our_cut_pct", "our_cut_source", "freed_mw", "share_of_demand_pct"}}`. It is an
 ESTIMATE (arithmetic on cited public numbers and this Mac's measured cut): label it so on every page; only `demand_mw` is live.
 
-**Who may act (since Sat 14:45, Microsoft HVE Core review; api/access.py).** Every POST that moves a knob, a cap or an
+Who may act (since Sat 14:45, Microsoft HVE Core review; api/access.py). Every POST that moves a knob, a cap or an
 approval (`/api/policy`, `/api/iso`, `/api/dispatcher`, `/api/jobs/{id}`, `/api/event`, `/api/replay`, `/request`,
-`/openadr/event`, `/api/approvals/{id}/reply`, `/api/ask`) answers **401** unless the caller is this Mac (loopback or its own
+`/openadr/event`, `/api/approvals/{id}/reply`, `/api/ask`) answers 401 unless the caller is this Mac (loopback or its own
 LAN address) or a device that joined: the `brownout_op` cookie from `/join`, or the token in `X-Brownout-Token`. The token
 is `OPERATOR_TOKEN` (.env), else `api.access.operator_token()` (runs/.operator_token). Reads (`/api/state`, approvals,
-runs, reports, `/ws`) and chat stay open. `/request` and `/api/ask` also answer **429** past 10 calls a minute from one
+runs, reports, `/ws`) and chat stay open. `/request` and `/api/ask` also answer 429 past 10 calls a minute from one
 device. Every switch body takes an optional `"who"` (default "operator"); the timeline records it as
 `"<who> (this Mac | joined operator device <ip> | joined owner device <ip>)"`. The `power_cap` approval is decided by
 rules only: a plain yes approves, a no holds the cap, anything else comes back `unclear` and stays pending.
-**Roles (since Sat 20:28, HVE Core re-check 20:16).** Two join tokens: `OPERATOR_TOKEN` (runs/.operator_token) joins a phone
+Roles (since Sat 20:28, HVE Core re-check 20:16). Two join tokens: `OPERATOR_TOKEN` (runs/.operator_token) joins a phone
 as the utility, `OWNER_TOKEN` (runs/.owner_token) as a job owner; `make qr` puts each in its page's QR code. An
 operator device may use every route above except a job owner's approval; an owner device may answer its own job's
 approvals (`/api/approvals/{id}/reply` for a request whose `job_id` is not `power_cap`), set a job's deadline
-(`/api/jobs/{id}`) and `/api/ask`, and gets **403** elsewhere (the dispatcher, policy, caps, requests, replays, what-ifs,
+(`/api/jobs/{id}`) and `/api/ask`, and gets 403 elsewhere (the dispatcher, policy, caps, requests, replays, what-ifs,
 the `power_cap` approval). This Mac may do everything.
 
 WebSocket adds `{"kind": "approval", "data": ApprovalRequest}` whenever a request is created or changes

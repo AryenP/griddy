@@ -24,4 +24,4 @@ setup in team/README.md (clone, `.env`, `make setup`, `claude update`, `/model`)
 Machine 1 merges PRs, keeps HANDOFF.md (the API contract) and adds new phases to the plan files. Pull
 main before every task: your plan may have grown.
 
-Machine 1's original Friday-night kickoff (M0–M3) is in git history: `git show 640bd86:KICKOFF.md`.
+Machine 1's original Friday-night kickoff (M0 to M3) is in git history: `git show 640bd86:KICKOFF.md`.

@@ -357,3 +357,6 @@ is tests/test_web_operator.py). For your driver card (task 27): the operator hot
   EIA_API_KEY), and evals/cases.yaml's fault case "too-much" is now refused by rule. Both in your lane; keep them.
 - Sat 21:20 from machine 1: renamed the chat and owner page titles from Brownout to Griddy (web/chat.html, web/owner.html;
   your lane). Task 26 restyle: use web/chrome.css's .g-top bar on chat, owner and operator so all pages match.
+- Sat 21:34 from machine 1: the humanizer pass (Aryen: "run it over all the github files") reached docs/judging/*.md
+  (your lane): no em dashes, ranges as "to", no decorative bold, the criteria title without the arrow. Every number
+  and source is unchanged and make verify still passes 74/74. Write new judging text the same way.
