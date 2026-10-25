@@ -367,3 +367,11 @@ to every page's wording, no fact changed. 502 tests pass. Next: the docs' wordin
   CLAUDE.md, KICKOFF, docs/judging, docs/qa, fetch-agent, .court). make verify 74/74, pytest 502 passed. Pushed d48de7e.
 - Next: rehearse the full demo once more and tag demo-stable-7; keep merging Anuraag's task 26 restyle when it lands.
 - Blockers (needs-Aryen, asked before): technician dispatch yes/no; operator or FDE quote; Agentverse key for the Fetch agent.
+
+## Sat 21:36 tick
+- Done: no new teammate commits since 20:22, no open PR to merge (#23 stays superseded), no [supervisor] issues.
+  Arumalla's queue had one task; added task 7 (check every number names its source, docs/briefing/sources-check.md).
+- Next: one runtime session for the rehearsal, demo-stable-7 and the Devpost gallery screenshots (item I, still none
+  of the live pages in the repo). The "neighbourhood panel" item in the tick prompt is obsolete: it was replaced by
+  the real-event replay and Break a part.
+- Blockers: none new.
