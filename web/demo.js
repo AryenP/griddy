@@ -291,7 +291,7 @@ function citySources() {
   if (!D.city) return;
   if (D.city.dc) {
     const m = D.dcMap;
-    setHTML($("w-sources"), html`Data centers in ${m.area} as mapped in OpenStreetMap (${m.license}), fetched ${m.fetched_at.slice(0, 10)}: what volunteers have mapped, not a census; addresses only. Each is joined to its nearest named PG&E substation as the crow flies: feeders are not public. Substations, lines, shoreline and streets: OpenStreetMap${m.missing && m.missing.length ? ` (not fetched yet: ${m.missing.join(", ")})` : ""}. This Mac's watts: measured by powermetrics, standing in for each.`);
+    setHTML($("w-sources"), html`Data centers in ${m.area} as mapped in OpenStreetMap (${m.license}), fetched ${m.fetched_at.slice(0, 10)}: what volunteers have mapped, not a census; addresses and footprints only. Each is drawn from its nearest named PG&E substation (OpenStreetMap; the real feeders are not public). The racks are this Mac's, measured by powermetrics, standing in for each.`);
     return;
   }
   const m = D.maps[D.city.id], h = (m && m.heights) || {};
@@ -367,14 +367,14 @@ async function openCity(city) {
   }
   D.city = city; World.openCity(city, D.maps[city.id]); $("w-back").hidden = false; render();
 }
-// A click on either data center opens San Francisco's, each joined to its substation, in the city view's camera
-// (Aryen, Sun 03:00: "data center needs to expand when clicked"; 04:00: "the datacenters connected to sf").
+// A click on either data center opens San Francisco's, side by side, each fed from its substation (Aryen, Sun 03:00:
+// "data center needs to expand when clicked"; 04:00: "the datacenters connected to sf"; 04:20: "next to each other").
 function openDataCenters() {
   if (!D.dcMap) { toast("emergency", "data centers", "The data centers' map is not loaded: run scripts/fetch_datacenters.py", ""); return; }
   D.city = { id: DC_MAP, name: `${D.dcMap.area}'s data centers`, dc: true };
   World.openCity(D.city, D.dcMap); $("w-back").hidden = false; render();
 }
-function closeCity() { D.city = null; World.closeCity(); $("w-back").hidden = true; render(); }
+function closeCity() { D.city = null; World.closeCity(); World.glide(D.pick); $("w-back").hidden = true; render(); }
 $("w-back").addEventListener("click", closeCity);
 
 // ---------------------------------------------------------------- breaking a part: a confirm card, then the server
@@ -441,10 +441,7 @@ async function breakIt(id, share = 100, cause = "") {
     : "the grid still covers demand: no cut needed");
 }
 
-World.onPick((h, pt) => {
-  if (h.id === "datacenters") openDataCenters();
-  else if (!h.id.startsWith("dc:")) confirmBreak(h, pt);                // a pillar in the data centers' view: hover only
-});
+World.onPick((h, pt) => (h.id === "datacenters" ? openDataCenters() : confirmBreak(h, pt)));
 function breakable() { return World.targets().filter((t) => t.id.startsWith("plant:") || t.id === "hub" || t.id === "city"); }
 $("w-break-btn").addEventListener("click", async (e) => {
   if (faulted()) { await postJSON("/api/whatif", { target: "clear", who: "judge" }); D.whatif = null; render(); return; }
