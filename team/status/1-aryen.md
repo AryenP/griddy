@@ -346,3 +346,9 @@ the demo"); make qr's owner and operator codes now carry their join links (task 
 live evals 135/138, injections 19/19 (docs/evidence/evals-live-20261024-2033.md); "AM or PM?" asked by rule; pending
 approvals and refusals survive a restart; PR #24 ruled on and closed. Tagged the next demo-stable.
 Still open in the review, not ours to close alone: Prompt Shields (Azure, Aryen's call), an operator or FDE quote.
+
+## 2026-10-24 20:47 PT — Krish's K12-K16 reviews: all machine-1 findings fixed; demo-stable-6
+Done: 7088195 (citations and "up to 4.1 GW"; replay chart clipped at the head, checked live; preflight EIA check;
+tests collect on Windows; README no-Mac block and impact line; /join and token hardening). Opened PRs #25-#27 for
+Krish's review branches; they merge when CI is green. Krish is active again (status 20:34); Anuraag and Arumalla quiet.
+Blockers / needs Aryen: Prompt Shields decision; an operator or FDE quote.
