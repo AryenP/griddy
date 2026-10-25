@@ -46,3 +46,13 @@ krish/k6-k10. Worst: preflight passes a calibration without chat streams_w, so t
 the 09:49 pricing; README.md:25 claims Brownout meets the deadline, the run of record says 0/1.
 Note: this loop did not run 09:12-14:12 (the session was idle); everything since 09:12 was reviewed at 14:12.
 Next: K9 step 1 when team/3-krish.md says the demo is up. Blockers / needs: none.
+
+## 2026-10-24 20:34 PT — K16, K14, K12, K13, K15 done
+Done: K16 krish/k16-live-data (team/review/1730-live-data.md: the decision path never sees a later hour, test passes;
+the page draws the full actual-demand curve ahead of the replay head). K14 krish/judge-dry-run (fresh clone on
+Windows: verify 74/74 in 2 s; `pytest -q` runs zero tests on Windows because of meter's `import fcntl`; uv and make
+not on a fresh machine; README has no impact number). K12 + K13 + K15 here on krish/k15-citations (includes
+krish/k12-k13): access guard covers every action route; owner identity is self-declared, so any joined phone can
+approve going over the cap; ERCOT figure is on p. 9 and is a non-simultaneous monthly peak; replay citations all match
+their PDF pages except EEA 3 (p. 136) and "at least 210"; EIA-930 spot check 9/9 identical.
+Note: the loop did not run 14:32-20:17 (session idle). Next: K9 when the demo is up. Blockers / needs: none.
