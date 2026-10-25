@@ -20,6 +20,7 @@ refetch_s: 600                # reuse a live fetch for this long (the public DEM
 whatif:                       # a judge breaks a part (replay/whatif.py): the fault is invented, its size is real
   seconds: 60                 # how long the fault lasts
   emergency_cut_pct: 40       # the cut asked of our sites while the grid is short
+  min_surge_mw: 500           # the city surge needs today's forecast peak at least this far above demand now
 
 events:
   - id: uri-2021

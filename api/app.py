@@ -171,11 +171,21 @@ class Runtime:
                 "quote": config.site.get("quote")}
 
 
+class FreshFiles(StaticFiles):
+    """The pages, always revalidated (ETag): without a Cache-Control header browsers kept an hours-old page and
+    stylesheet on Aryen's screen (Sat 19:07). On loopback the check costs nothing."""
+
+    async def get_response(self, path, scope):
+        resp = await super().get_response(path, scope)
+        resp.headers["Cache-Control"] = "no-cache"
+        return resp
+
+
 def make_app(rt: Runtime) -> FastAPI:
     app = FastAPI(title="Griddy")
     app.include_router(make_router(rt))
     if Path(WEB).is_dir():
-        app.mount("/", StaticFiles(directory=WEB, html=True), name="web")
+        app.mount("/", FreshFiles(directory=WEB, html=True), name="web")
     return app
 
 

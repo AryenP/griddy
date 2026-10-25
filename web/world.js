@@ -36,6 +36,7 @@ const World = (() => {
     const d = S.data, v = S.v;
     if (S.cxTo != null) S.cx = ease(S.cx, S.cxTo, dt, 2);           // the scene slides aside for the alert cards
     if (S.fitTo != null) S.fit = ease(S.fit || 1, S.fitTo, dt, 2);
+    if (S.cyTo != null) S.cy = ease(S.cy, S.cyTo, dt, 2);
     v.served = ease(v.served, d.served || 0, dt);
     v.needed = ease(v.needed, d.needed || 0, dt);
     const lit = d.needed ? Math.max(0, Math.min(1, (d.served || 0) / d.needed)) : 1;
@@ -55,7 +56,7 @@ const World = (() => {
     const xr = x * c - z * s, zr = x * s + z * c;
     const depth = zr * cp + y * sp;
     const k = (S.city ? S.scale * 0.7 : S.scale) * (S.fit || 1) / (1 - depth / 120);   // the city map is wider: pull the camera back
-    return [S.cx + xr * k, (S.city ? S.cy - S.h * 0.07 : S.cy) - (y * cp - zr * sp) * k, depth];
+    return [S.cx + xr * k, (S.city ? S.cy - S.h * 0.04 : S.cy) - (y * cp - zr * sp) * k, depth];
   }
   const rgb = (a, al = 1) => `rgba(${a[0] | 0},${a[1] | 0},${a[2] | 0},${al})`;
   const mix = (a, b, f) => [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f];
@@ -521,8 +522,9 @@ const World = (() => {
     S.dpr = Math.min(2, window.devicePixelRatio || 1);
     S.w = r.width; S.h = r.height;
     S.cv.width = Math.round(r.width * S.dpr); S.cv.height = Math.round(r.height * S.dpr);
-    S.cx = S.cxTo = (S.w - S.safe.right) * 0.5; S.cy = S.h * 0.43;
-    S.fit = S.fitTo = fitFor(S.safe.right); S.scale = Math.min(S.w / 60, S.h / 46);
+    S.cx = S.cxTo = (S.w - S.safe.right) * 0.5;
+    S.cy = S.cyTo = S.safe.top + (S.h - S.safe.top - S.safe.bottom) * 0.46;
+    S.fit = S.fitTo = fitFor(S.safe.right, S.safe.top, S.safe.bottom); S.scale = Math.min(S.w / 60, S.h / 46);
     if (!S.running) { step(1); draw(); }
   }
   function mount(canvas) {
@@ -573,12 +575,15 @@ const World = (() => {
   }
   // the page's bars, in CSS pixels from the top and bottom edges: labels stay between them
   // `right`: the alert cards' column, so the scene centres in what is left and no label slides under a card
-  const fitFor = (right) => (S.w && S.h ? Math.max(0.5, Math.min((S.w - right) / 60, S.h / 46) / Math.min(S.w / 60, S.h / 46)) : 1);
+  // The room between the page's bars: the scene centres in it and scales to it (it is about 60 x 26 units on screen).
+  const fitFor = (right, top, bottom) => (S.w && S.h
+    ? Math.max(0.5, Math.min(1.6, Math.min((S.w - right) / 60, (S.h - top - bottom) / 26) / Math.min(S.w / 60, S.h / 46))) : 1);
   function safeArea(top, bottom, right = 0) {
     S.safe = { top, bottom, right };
     S.cxTo = (S.w - right) * 0.5;
-    S.fitTo = fitFor(right);                                          // shrink to the room left
-    if (!S.running) { S.cx = S.cxTo; S.fit = S.fitTo; draw(); }
+    S.cyTo = top + (S.h - top - bottom) * 0.46;
+    S.fitTo = fitFor(right, top, bottom);
+    if (!S.running) { S.cx = S.cxTo; S.cy = S.cyTo; S.fit = S.fitTo; draw(); }
   }
   function hitAt(e) {
     const r = S.cv.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;

@@ -34,11 +34,25 @@ def _now_value(points, now: float) -> float | None:
     return best[1] if best and best[0] < 7200 else None
 
 
+def _live_day_peak(points, now: float) -> tuple[float | None, str | None]:
+    """The highest point of the ISO's load forecast for the current local day (published the day before)."""
+    pts = [(t if hasattr(t, "timestamp") else datetime.fromisoformat(str(t)), float(mw)) for t, mw in points or []]
+    if not pts:
+        return None, None
+    today = datetime.fromtimestamp(now, pts[0][0].tzinfo).date()
+    day = [(t, mw) for t, mw in pts if t.date() == today]
+    if not day:
+        return None, None
+    t, mw = max(day, key=lambda x: x[1])
+    return mw, t.isoformat()
+
+
 class WhatIf:
     def __init__(self, tl: Timeline, executor, replay, cfg: dict | None = None):
         self.tl, self.ex, self.replay = tl, executor, replay
         self.cfg = cfg or {}
         self.seconds = float(self.cfg.get("seconds", 60))
+        self.min_surge = float(self.cfg.get("min_surge_mw", 500))   # a smaller surge reads as "+0.0 GW": refuse it
         self.fault: dict | None = None
         self.cap_id: str | None = None
         self.last: dict | None = None
@@ -53,7 +67,7 @@ class WhatIf:
             ev = r.event
             return {"source": f"{ev['title']}, {ev['when']} (EIA-930, {ev['ba']})", "mix": dict(r.last.get("mix_mw") or {}),
                     "served": r.last.get("demand_mw"), "needed": r.last.get("forecast_mw"),
-                    "peak_needed": self._day_peak(now), "flexible_mw": ev.get("flexible_mw"),
+                    "peak_needed": (pk := self._day_peak(now))[0], "peak_at": pk[1], "flexible_mw": ev.get("flexible_mw"),
                     "flexible_source": ev.get("flexible_source"), "event": ev["id"],
                     "people_per_mw": ev["people_out"] / ev["shed_mw"] if ev.get("people_out") and ev.get("shed_mw") else None,
                     "people_unit": ev.get("people_unit", "people")}
@@ -61,20 +75,20 @@ class WhatIf:
         mix = dict(sig.fuel_mix_mw) if sig else {}
         served = sum(v for v in mix.values() if v > 0) or None
         needed = _now_value(sig.load_forecast if sig else [], now)
-        today = [float(mw) for t, mw in (sig.load_forecast if sig else [])]
+        peak, peak_at = _live_day_peak(sig.load_forecast if sig else [], now)
         return {"source": f"{sig.iso} live (gridstatus)" if sig else "no grid feed", "mix": mix, "served": served,
-                "needed": needed or served, "peak_needed": max(today) if today else None,
+                "needed": needed or served, "peak_needed": peak, "peak_at": peak_at,
                 "flexible_mw": 1000.0, "flexible_source": "per 1 GW of data centers (illustrative unit)", "event": None,
                 "people_per_mw": None, "people_unit": None}
 
-    def _day_peak(self, now: float) -> float | None:
-        """The highest day-ahead forecast for the rest of the replayed day: published the day before, so known then."""
+    def _day_peak(self, now: float) -> tuple[float | None, str | None]:
+        """The highest day-ahead forecast of the replayed day: published the day before, so known then."""
         r = self.replay
         t = pd.Timestamp(r.sim_time(now))
         fc = r.data(r.event["id"])["demand_forecast_mw"].dropna()
         day = pd.Series((fc.index - pd.Timedelta(hours=1)).date, index=fc.index)
-        ahead = fc[(fc.index > t) & (day == t.date())]
-        return float(ahead.max()) if len(ahead) else None
+        today = fc[day == t.date()]
+        return (float(today.max()), today.idxmax().isoformat()) if len(today) else (None, None)
 
     # ------------------------------------------------------------------ break something
     def fleet_mw(self, mix: dict, name: str) -> float:
@@ -89,7 +103,7 @@ class WhatIf:
         out = {f"plant:{n}": mw for n, _ in FUELS if (mw := self.fleet_mw(g["mix"], n)) > 0}
         if out:
             out["hub"] = max(out.values())
-        if g["peak_needed"] and g["needed"] and g["peak_needed"] > g["needed"]:
+        if g["peak_needed"] and g["needed"] and g["peak_needed"] - g["needed"] >= self.min_surge:
             out["city"] = g["peak_needed"] - g["needed"]
         return out
 
@@ -120,11 +134,13 @@ class WhatIf:
             label = (f"What-if: the main substation fails and cuts off the {fuel.lower()} fleet, -{lost / 1000:.1f} GW (its real output)"
                      if share == 1 else f"What-if: the main substation fails and cuts off {share:.0%} of the {fuel.lower()} fleet, -{lost / 1000:.1f} GW")
         elif target == "city":
-            if not g["peak_needed"] or g["peak_needed"] <= g["needed"]:
-                raise ValueError("demand is already at the day's forecast peak")
-            surge = (g["peak_needed"] - g["needed"]) * share
-            label = (f"What-if: demand jumps to the day's forecast peak, +{surge / 1000:.1f} GW (the operator's real forecast)" if share == 1
-                     else f"What-if: demand jumps {share:.0%} of the way to the day's forecast peak, +{surge / 1000:.1f} GW")
+            gap = (g["peak_needed"] or 0) - (g["needed"] or 0)
+            if gap < self.min_surge:
+                raise ValueError(f"demand is within {max(gap, 0) / 1000:.1f} GW of today's forecast peak: nothing to surge; trip a plant instead")
+            surge = gap * share
+            at = f" ({g['peak_at'][11:16]})" if g.get("peak_at") else ""
+            label = (f"What-if: demand jumps to today's forecast peak{at}, +{surge / 1000:.1f} GW (the operator's real forecast)" if share == 1
+                     else f"What-if: demand jumps {share:.0%} of the way to today's forecast peak{at}, +{surge / 1000:.1f} GW")
         else:
             raise KeyError(target)
         if cause:

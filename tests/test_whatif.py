@@ -55,8 +55,8 @@ def test_the_hub_cuts_off_the_largest_fleet_and_the_city_surges_to_the_days_real
     big = max(("Gas", "Solar", "Nuclear", "Wind", "Hydro"), key=lambda n: w.fleet_mw(real["mix_mw"], n))
     assert w.start("hub", now=t0 + 5)["fuel"] == big
     st = w.start("city", now=t0 + 6)                        # a second fault replaces the first and withdraws its cap
-    assert st["needed_after"] == pytest.approx(51144.0)     # the rest of 6 Sep's published forecast peaks at 18:00
-    assert st["surge_mw"] > 0 and st["lost_mw"] == 0
+    assert st["needed_after"] == pytest.approx(51144.0)     # 6 Sep's published forecast peaks at 18:00
+    assert st["surge_mw"] > 0 and st["lost_mw"] == 0 and "(18:00)" in st["label"]
 
 
 def test_a_fault_ends_by_itself_or_on_clear_and_withdraws_its_cut(tmp_path):
@@ -74,15 +74,28 @@ def test_a_fault_ends_by_itself_or_on_clear_and_withdraws_its_cut(tmp_path):
 
 
 def test_live_grid_uses_the_isos_fuel_mix_and_forecast(tmp_path):
-    now = datetime.now().astimezone()
+    noon = datetime.now().astimezone().replace(hour=12, minute=0, second=0, microsecond=0)
     sig = type("Sig", (), {"iso": "CAISO",                # TEST DOUBLE: shaped like core.types.GridSignal
                            "fuel_mix_mw": {"Natural Gas": 9000.0, "Biogas": 200.0, "Solar": 12000.0, "Imports": 4000.0},
-                           "load_forecast": [(now, 25000.0), (now + timedelta(hours=3), 31000.0)]})()
+                           "load_forecast": [(noon, 25000.0), (noon + timedelta(hours=3), 31000.0),
+                                             (noon + timedelta(hours=14), 40000.0)]})()   # tomorrow: not today's peak
     w, _, _, _ = rig(tmp_path, signal=sig)
-    st = w.start("plant:Gas")
+    st = w.start("plant:Gas", now=noon.timestamp())
     assert st["lost_mw"] == 9000.0                          # natural gas only: biogas is not the gas fleet
     assert st["served_before"] == 25200.0 and st["needed_before"] == 25000.0 and "live" in st["source"]
-    assert w.start("city")["needed_after"] == 31000.0
+    city = w.start("city", now=noon.timestamp())
+    assert city["needed_after"] == 31000.0 and "(15:00)" in city["label"]
+
+
+def test_a_surge_smaller_than_half_a_gigawatt_is_refused_in_words(tmp_path):
+    """Seen live at 19:07: today's peak was a few MW above demand and the page read '+0.0 GW'."""
+    noon = datetime.now().astimezone().replace(hour=12, minute=0, second=0, microsecond=0)
+    sig = type("Sig", (), {"iso": "CAISO", "fuel_mix_mw": {"Natural Gas": 9000.0},   # TEST DOUBLE
+                           "load_forecast": [(noon, 24900.0), (noon - timedelta(hours=1), 24930.0)]})()
+    w, _, _, _ = rig(tmp_path, signal=sig)
+    with pytest.raises(ValueError, match="nothing to surge"):
+        w.start("city", now=noon.timestamp())
+    assert "city" not in w.parts(now=noon.timestamp())
 
 
 def test_nothing_to_break_or_nothing_running_says_so(tmp_path):
