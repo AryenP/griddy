@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 import hmac
 import json
+import re
 from datetime import datetime
 from pathlib import Path
 from typing import Literal
@@ -237,6 +238,17 @@ def make_router(rt) -> APIRouter:
             out.append({**c, "hospitals": d["hospitals"], "source": d["source"], "license": d["license"],
                         "fetched_at": d["fetched_at"]})
         return out
+
+    @r.get("/api/cities/{city_id}/map")
+    async def city_map(city_id: str):
+        """One real square of the city, 1:1 (docs/evidence/city/<id>-map.json from scripts/fetch_city_map.py):
+        buildings with heights, streets, parks, water, mapped power lines and sites, hospitals. OpenStreetMap, ODbL."""
+        if not re.fullmatch(r"[a-z-]+", city_id):
+            raise HTTPException(404, "no such city")
+        p = Path(__file__).resolve().parents[1] / "docs/evidence/city" / f"{city_id}-map.json"
+        if not p.is_file():
+            raise HTTPException(404, f"no map for {city_id!r}: run scripts/fetch_city_map.py")
+        return FileResponse(p, media_type="application/json")
 
     @r.get("/api/replay/events")
     async def replay_events():
