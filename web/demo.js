@@ -164,7 +164,7 @@ function onAction(d) {
 // The data centers' block on the overview: San Francisco's, as OpenStreetMap maps them; a click opens them.
 function campus() {
   const m = D.dcMap;
-  return m ? { title: `${m.area}'s data centers`, value: `${m.counts.data_centers} mapped`, sub: "each joined to its substation · click to see them" }
+  return m ? { title: `${m.area}'s data centers`, value: `${m.counts.data_centers} mapped`, sub: "each beside its nearest PG&E substation · click to see them" }
     : { title: "Data centers", value: "—", sub: "loading the map" };
 }
 function provenance(ev, data) {
@@ -193,15 +193,24 @@ function versus(no, yes) {
   const bars = !!no.gap && yes.pct != null, pct = bars ? Math.max(0, Math.min(100, yes.pct)) : 0;
   $("w-without-bar").hidden = !bars; $("w-with-bar").hidden = !bars;
   $("w-with-fill").style.width = `${pct > 0 ? Math.max(1, pct).toFixed(1) : 0}%`;   // a sliver stays visible
-  $("w-with-bar").setAttribute("aria-label", `${fixed(pct, 0)}% of the gap closed`);
+  $("w-with-bar").setAttribute("aria-label", `each GW of data centers closes ${fixed(pct, 1)}% of the gap`);
 }
-// the With side from a scale estimate: people kept on when the event gives a ratio, else the megawatts freed
-function withSide(sc, pct, ofWhat, waiting, src) {
+// The With side is a RATE, never a fleet (Aryen, Sun 04:30: "no invented fleet total anywhere"): what every 1 GW of data
+// centers cutting like this Mac frees, and how many GW of them would cover the gap.
+function coverGw(sc, gapMw) { return sc && sc.freed_mw > 0 && gapMw > 0 ? (gapMw / sc.freed_mw) * (sc.flexible_mw / 1000) : null; }
+function withSide(sc, pct, gapMw, waiting, src) {
   if (!sc) return { fig: "", text: waiting, pct: 0, src };
-  const share = pct != null ? `: ${fixed(pct, pct < 10 ? 1 : 0)}% of ${ofWhat}` : "";
-  return sc.people != null
-    ? { fig: bigCount(sc.people), text: `${sc.people_unit} kept on, ${wholeMw(sc.freed_mw)} MW freed${share}`, pct, src }
-    : { fig: `${wholeMw(sc.freed_mw)} MW`, text: `freed by data centers cutting like this Mac${share}`, pct, src };
+  const cover = coverGw(sc, gapMw), per = sc.flexible_mw === 1000 ? "every 1 GW" : `every ${gw(sc.flexible_mw)}`;
+  return { fig: `${wholeMw(sc.freed_mw)} MW`, pct, src,
+    text: `freed by ${per} of data centers cutting like this Mac${cover != null ? `; ${fixed(cover, cover < 10 ? 1 : 0)} GW of them would cover the gap` : ""}${sc.people != null ? ` · about ${Math.round(sc.people).toLocaleString()} ${sc.people_unit} kept on per GW` : ""}` };
+}
+// the fourth tile in an emergency: how many GW of data centers cutting like this Mac would cover the gap
+function impactTile(sc, gapMw, cutWords) {
+  const cover = coverGw(sc, gapMw);
+  if (cover != null) { setNum($("s-impact"), `${fixed(cover, cover < 10 ? 1 : 0)} GW`); $("s-impact-k").textContent = "of data centers like this Mac would cover the gap"; }
+  else if (sc) { setNum($("s-impact"), `${wholeMw(sc.freed_mw)} MW`); $("s-impact-k").textContent = "freed by every 1 GW of data centers"; }
+  else { setNum($("s-impact"), "—"); $("s-impact-k").textContent = "data centers like this Mac"; }
+  $("s-impact-src").textContent = sc ? `estimate, a rate · each GW frees ${wholeMw(sc.freed_mw)} MW at ${cutWords}` : "appears once this Mac cuts";
 }
 function bigCount(n) { return n >= 1e6 ? `${fixed(n / 1e6, 1)} million` : Math.round(n).toLocaleString(); }
 // the cited sentence a figure comes from (config/events.yaml impact), else the first
@@ -234,25 +243,23 @@ function render() {
       cut_pct: d.measured_cut_pct, alert: d.cut_kinds.includes("emergency") ? "emergency" : d.cut_kinds.includes("warning") ? "warning" : null,
       peaks: { wind: D.peaks.wind, solar: D.peaks.solar }, with_mw: sc ? sc.freed_mw : null, city: ev ? ev.region : null,
       iso: ev ? ev.iso : null, places: ev ? D.places[ev.iso] || null : null, stand_in: standInNow(), campus: campus() });
-    $("w-clock").textContent = `${ev ? ev.title : d.title} · ${isoLabel(d.hour_ending || d.sim_time)}`;
+    $("w-clock").textContent = `${ev ? ev.title : d.title}${ev && ev.simulated ? " (simulated)" : ""} · ${isoLabel(d.hour_ending || d.sim_time)}`;
     $("w-progress").style.width = `${(100 * d.progress).toFixed(1)}%`;
     $("w-head").textContent = "";
-    setNum($("s-served"), gw(d.demand_mw)); $("s-served-src").textContent = `EIA-930 · ${ev ? ev.ba : ""} · hour ending ${isoClock(d.hour_ending)}`;
+    setNum($("s-served"), gw(d.demand_mw));
+    $("s-served-src").textContent = `${ev && ev.simulated ? `simulated · ${ev.ba}'s forecast × Texas's share served (EIA-930)` : `EIA-930 · ${ev ? ev.ba : ""}`} · hour ending ${isoClock(d.hour_ending)}`;
     setNum($("s-needed"), gw(d.forecast_mw)); $("s-needed-src").textContent = "the operator's day-ahead forecast";
     setNum($("s-mac"), d.ours_w == null ? "—" : `${fixed(d.ours_w, 1)} W`);
     const cut = d.measured_cut_pct;
     $("s-mac-src").textContent = d.nothing_to_shed ? "nothing running to shed" : cut != null
       ? `${fixed(Math.abs(cut), 0)}% ${cut >= 0 ? "below" : "above"} its baseline · measured` : "measured by powermetrics";
-    if (sc && sc.people != null) { setNum($("s-impact"), compact(sc.people)); $("s-impact-k").textContent = `${sc.people_unit} kept on`; }
-    else if (sc) { setNum($("s-impact"), `${wholeMw(sc.freed_mw)} MW`); $("s-impact-k").textContent = "freed at grid scale"; }
-    else { setNum($("s-impact"), "—"); $("s-impact-k").textContent = "at grid scale"; }
-    $("s-impact-src").textContent = sc ? `estimate · ${fixed(sc.share_pct, 0)}% cut asked, on ${gw(sc.flexible_mw)}` : "appears once this Mac cuts";
+    impactTile(sc, ev ? ev.shed_mw : null, sc ? `the ${fixed(sc.share_pct, 0)}% the alert asked` : "");
     if (ev) {
       const fig = ev.people_out ? bigCount(ev.people_out) : `${wholeMw(ev.shed_mw)} MW`, c = cited(ev, fig);
       versus({ fig, text: ev.people_out ? `${ev.people_unit || "people"} ${ev.simulated ? "lose power (simulated)" : "lost power"}` : "the grid had to find at the peak",
         src: `${c.text} · ${c.source}`, gap: ev.shed_mw > 0 },
-        withSide(sc, sc ? sc.share_of_shed_pct : null, `the ${wholeMw(ev.shed_mw)} MW it had to find`, waitingText(d.asked_cut_pct, d.nothing_to_shed),
-          sc ? `estimate · this Mac's measured cut, as far as asked (${fixed(sc.share_pct, 0)}%), on ${gw(sc.flexible_mw)} of ${sc.flexible_source}${sc.people != null && ev.people_basis ? `; ${ev.people_basis}` : ""}` : "measured on this Mac, live"));
+        withSide(sc, sc ? sc.share_of_shed_pct : null, ev.shed_mw, waitingText(d.asked_cut_pct, d.nothing_to_shed),
+          sc ? `estimate, a rate: this Mac's measured cut, as far as the alert asked (${fixed(sc.share_pct, 0)}%), on every 1 GW of data centers; no fleet total is assumed${sc.people != null && ev.people_basis ? `; ${ev.people_basis}` : ""}` : "measured on this Mac, live"));
     }
     setHTML($("w-sources"), html`${provenance(ev, d.data)} ${ev ? html`Alerts and impact: <a href="${ev.report_url}" target="_blank" rel="noopener">official report</a>, page on each.` : html``}`);
     overlayFault();
@@ -280,8 +287,8 @@ function render() {
   setNum($("s-mac"), p ? `${fixed(p.combined_w, 1)} W` : "—");
   $("s-mac-src").textContent = p ? `measured by powermetrics · ${age(p.t)}` : "waiting for the meter";
   setNum($("s-impact"), D.scale ? `${wholeMw(D.scale.freed_mw)} MW` : "—");
-  $("s-impact-k").textContent = "per GW of data centers cutting like this Mac";
-  $("s-impact-src").textContent = D.scale ? `estimate · ${fixed(D.scale.share_of_demand_pct, 1)}% of ${D.scale.iso} now` : "estimate";
+  $("s-impact-k").textContent = "freed by every 1 GW of data centers cutting like this Mac";
+  $("s-impact-src").textContent = D.scale ? `estimate, a rate · ${fixed(D.scale.our_cut_pct, 1)}% measured cut · ${fixed(D.scale.share_of_demand_pct, 1)}% of ${D.scale.iso} now` : "estimate";
   setHTML($("w-sources"), html`Live grid data: ${g ? g.iso : "—"} via gridstatus. This Mac: macOS powermetrics. Detail and every graph: <a href="/info.html">Info</a>.`);
   overlayFault();
 }
@@ -291,7 +298,7 @@ function citySources() {
   if (!D.city) return;
   if (D.city.dc) {
     const m = D.dcMap;
-    setHTML($("w-sources"), html`Data centers in ${m.area} as mapped in OpenStreetMap (${m.license}), fetched ${m.fetched_at.slice(0, 10)}: what volunteers have mapped, not a census; addresses and footprints only. Each is drawn from its nearest named PG&E substation (OpenStreetMap; the real feeders are not public). The racks are this Mac's, measured by powermetrics, standing in for each.`);
+    setHTML($("w-sources"), html`Data centers in ${m.area} as mapped in OpenStreetMap (${m.license}), fetched ${m.fetched_at.slice(0, 10)}: what volunteers have mapped, not a census; addresses and footprints only. Each is shown beside its nearest PG&E substation (OpenStreetMap); which substation feeds it is not public, and neither are their sizes. The racks are this Mac's, measured by powermetrics, standing in for each.`);
     return;
   }
   const m = D.maps[D.city.id], h = (m && m.heights) || {};
@@ -310,16 +317,13 @@ function overlayFault() {
   $("s-served-src").textContent = `what-if: ${w.lost_mw ? `−${gw(w.lost_mw)}` : "no supply lost"} from ${w.source}`;
   setNum($("s-needed"), gw(w.needed_after));
   $("s-needed-src").textContent = w.surge_mw ? `what-if: +${gw(w.surge_mw)}, the published forecast peak` : "the operator's forecast";
-  if (sc) {
-    setNum($("s-impact"), `${wholeMw(sc.freed_mw)} MW`); $("s-impact-k").textContent = "freed at grid scale";
-    $("s-impact-src").textContent = `estimate · ${fixed(sc.share_of_shortfall_pct, 1)}% of the shortfall`;
-  }
+  if (sc) impactTile(sc, w.shortfall_mw, "this Mac's measured cut");
   $("w-head").textContent = `${w.label}. ${Math.round(w.remaining_s)} s left.`;
   const short = w.shortfall_mw > 0;
   versus({ fig: short ? gw(w.shortfall_mw) : "", text: short ? "short: that much demand goes unserved" : "The grid still covers demand: nothing is shed",
     src: `arithmetic on ${w.source}`, gap: short },
-    withSide(sc, sc ? sc.share_of_shortfall_pct : null, "the gap", w.asked_cut_pct ? waitingText(w.asked_cut_pct, w.nothing_to_shed) : "No cut needed",
-      sc ? `estimate · this Mac's measured cut on ${gw(sc.flexible_mw)} of ${sc.flexible_source}` : "measured on this Mac, live"));
+    withSide(sc, sc ? sc.share_of_shortfall_pct : null, w.shortfall_mw, w.asked_cut_pct ? waitingText(w.asked_cut_pct, w.nothing_to_shed) : "No cut needed",
+      sc ? "estimate, a rate: this Mac's measured cut on every 1 GW of data centers; no fleet total is assumed" : "measured on this Mac, live"));
 }
 
 // Before this Mac's measured drop: why there is no "with Griddy" number yet, in words.
@@ -367,7 +371,7 @@ async function openCity(city) {
   }
   D.city = city; World.openCity(city, D.maps[city.id]); $("w-back").hidden = false; render();
 }
-// A click on either data center opens San Francisco's, side by side, each fed from its substation (Aryen, Sun 03:00:
+// A click on either data center opens San Francisco's, side by side, each beside its nearest substation (Aryen, Sun 03:00:
 // "data center needs to expand when clicked"; 04:00: "the datacenters connected to sf"; 04:20: "next to each other").
 function openDataCenters() {
   if (!D.dcMap) { toast("emergency", "data centers", "The data centers' map is not loaded: run scripts/fetch_datacenters.py", ""); return; }

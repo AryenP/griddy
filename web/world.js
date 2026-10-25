@@ -442,7 +442,7 @@ const World = (() => {
         .forEach(({ b: [bx, bz, bw, bd, bh], i }) => tower(bx, bz, bw, bd, bh, i + 11, v.lit));
       const litWith = d.with_mw && d.needed ? Math.min(1, ((d.served || 0) + d.with_mw) / d.needed) : null;
       label(13, 8.2, -10.5, `${area}${d.fault === "city" ? " · demand surge (what-if)" : ""}`, d.needed ? `${Math.round(v.lit * 100)}% lit` : "—",
-        litWith != null && litWith > v.lit + 0.0005 ? `${Math.round(litWith * 100)}% with Griddy's ${Math.round(d.with_mw)} MW`
+        litWith != null && litWith > v.lit + 0.0005 ? `${Math.round(litWith * 100)}% with 1 GW cutting like this Mac`
           : d.needed ? `${(v.served / 1000).toFixed(1)} of ${(v.needed / 1000).toFixed(1)} GW needed` : "", 6.2);
     } });
     const dcHover = S.hover === "datacenters" ? "rgba(255,255,255,0.95)" : null;   // a click opens every data center around the Bay
@@ -631,7 +631,7 @@ const World = (() => {
     }
     const hf = M.half, lit = 1 - st.dark;
     label(-hf, 4.5, -hf, `${S.city.name} · ${M.area}`, d.needed ? `${Math.round(lit * 100)}% of homes lit` : "—",
-      st.relit ? `${Math.round((lit + st.relit) * 100)}% with Griddy's ${Math.round(d.with_mw)} MW` : d.needed ? `${(d.served / 1000).toFixed(1)} of ${(d.needed / 1000).toFixed(1)} GW served` : "", 0.4);
+      st.relit ? `${Math.round((lit + st.relit) * 100)}% with 1 GW cutting like this Mac` : d.needed ? `${(d.served / 1000).toFixed(1)} of ${(d.needed / 1000).toFixed(1)} GW served` : "", 0.4);
     const hs = M.hospitals.filter((hh) => Math.abs(hh.x) < hf && Math.abs(hh.z) < hf).slice(0, 3);
     for (const hh of hs) label(hh.x, 5.5, hh.z, "Hospital · kept on", hh.name.length > 30 ? `${hh.name.slice(0, 29)}…` : hh.name, "critical load, OpenStreetMap", 1.4);
     const named = M.sites.filter((x) => x.name), pge = named.filter((x) => /Pacific Gas/.test(x.operator || ""));
@@ -639,14 +639,15 @@ const World = (() => {
     if (site) label(site.x, 4, site.z, `Power ${site.kind} · real`, site.name.length > 26 ? `${site.name.slice(0, 25)}…` : site.name, "OpenStreetMap", 0.8);
     const dc = standIn(M.dataCenters);
     if (dc) label(dc.x, 5, dc.z, "A real data center building", dc.address || "data center", "this Mac stands in for it · OpenStreetMap", 1.6);
-    if (st.relit) label(hf, 3.2, hf * 0.6, "From AI data centers", `${Math.round(d.with_mw)} MW freed`, "rerouted along real streets (mint)", 0.5);
+    if (st.relit) label(hf, 3.2, hf * 0.6, "Per 1 GW of data centers cutting like this Mac", `${Math.round(d.with_mw)} MW freed`, "a rate, rerouted along real streets (mint)", 0.5);
     drawLabels();
   }
   // ------------------------------------------------------------------ San Francisco's data centers, side by side
   // (Aryen, Sun 04:20: "just put them all next to each other like in grid view ... a cleaner route"; the map version is
   // tagged datacenter-maps). scripts/fetch_datacenters.py: the four OpenStreetMap maps in the city, by address (never the
-  // operator), each with its real footprint and nearest named PG&E substation. Drawn like the grid: each building as
-  // wide as its footprint, fed from its own substation; their racks are this Mac's, measured, standing in for each.
+  // operator), each with its real footprint and nearest named PG&E substation (which one feeds it is not public, and
+  // neither is its size). Drawn like the grid: each building as wide as its footprint, beside its nearest substation;
+  // their racks are this Mac's, measured, standing in for each.
   function prepareDc(m) {
     const subs = [], byName = {};
     for (const [i, dc] of m.data_centers.entries()) {
@@ -668,8 +669,8 @@ const World = (() => {
       lathe(sb.px + tx, -7.45, [[0.12, 0], [0.12, 0.6]], { y: 1.36, color: [235, 238, 240], n: 8, stripes: [[0.3, rgb(ring, 0.9)]] });
     }
     pylon(sb.px, -5.9, 3.8);
-    label(sb.px, 6.6, -7.2, "PG&E substation", sb.name || "substation",
-      `${sb.kv ? `${Math.round(sb.kv)} kV · ` : ""}feeds ${sb.dcs.length} of them here · OpenStreetMap`, 4.4);
+    label(sb.px, 6.6, -7.2, "Nearest PG&E substation", sb.name || "substation",
+      `${sb.kv ? `${Math.round(sb.kv)} kV · ` : ""}nearest to ${sb.dcs.length} of them · which feeds them is not public`, 4.4);
   }
   function drawDcBuilding(dc, edge) {                                   // the grid's data center, as wide as its footprint
     const d = S.data, x = dc.px - dc.w / 2;
@@ -683,7 +684,7 @@ const World = (() => {
       }
     });
     label(dc.px, 6.2, 5.1, dc.city && dc.city !== "San Francisco" ? `${dc.city} · San Francisco` : "San Francisco", dc.address || "address not mapped",
-      `${dc.area_m2 ? `${dc.area_m2.toLocaleString()} m² footprint` : "footprint not mapped"}${dc.substation ? ` · ${dc.substation.km} km from its substation` : ""}`, 2.2);
+      `${dc.area_m2 ? `${dc.area_m2.toLocaleString()} m² footprint` : "footprint not mapped"}${dc.substation ? ` · ${dc.substation.km} km to the nearest PG&E substation` : ""} · size not public`, 2.2);
   }
   function drawDc() {
     const M = S.cityMap, d = S.data, v = S.v, cap = d.cap;
@@ -700,7 +701,7 @@ const World = (() => {
       ...M.dcs.map((dc) => ({ x: dc.px, z: 5, draw: () => drawDcBuilding(dc, edge) }))];
     items.sort((a, b) => P(a.x, 0, a.z)[2] - P(b.x, 0, b.z)[2]).forEach((it) => it.draw());   // far first
     label(-M.dcs.length * 5.5 - 4, 3, 9, `${M.area}'s data centers`, `${M.counts.data_centers} mapped`,   // front left, clear of Back
-      d.ours_w != null ? `their racks are this Mac's: ${d.ours_w.toFixed(1)} W, measured` : "their racks are this Mac's, measured", 0.4);
+      d.ours_w != null ? `sizes not public · their racks are this Mac's: ${d.ours_w.toFixed(1)} W, measured` : "sizes not public · their racks are this Mac's, measured", 0.4);
     drawLabels();
   }
 

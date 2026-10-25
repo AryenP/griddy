@@ -222,8 +222,8 @@ function renderReplay() {
     <div class="r-tile">
       <h3 class="r-h">At the operator's scale <span class="d-sim">estimate</span></h3>
       ${sc ? html`<div class="r-big">about ${wholeMw(sc.freed_mw)} MW</div>
-        <p>freed if ${gwOf(sc.flexible_mw)} of flexible load cut ${fixed(sc.share_pct, 0)}%, the cut the grid asked and this Mac delivered (measured)</p>
-        ${sc.share_of_shed_pct != null || sc.people != null ? html`<p>${sc.share_of_shed_pct != null ? html`<b>${fixed(sc.share_of_shed_pct, 1)}%</b> of the ${fixed(ev.shed_mw, 0)} MW shed in this event` : ""}${sc.share_of_shed_pct != null && sc.people != null ? " · " : ""}${sc.people != null ? html`about <b>${Math.round(sc.people).toLocaleString()}</b> ${sc.people_unit} at this event's own ratio` : ""}</p>` : ""}`
+        <p>freed by every ${gwOf(sc.flexible_mw)} of data centers cutting ${fixed(sc.share_pct, 0)}%, the cut the grid asked and this Mac delivered (measured); a rate, no fleet total assumed${ev.shed_mw && sc.freed_mw > 0 ? html`: <b>${fixed((ev.shed_mw / sc.freed_mw) * (sc.flexible_mw / 1000), 0)} GW</b> of them would cover the ${wholeMw(ev.shed_mw)} MW gap` : ""}</p>
+        ${sc.share_of_shed_pct != null || sc.people != null ? html`<p>${sc.share_of_shed_pct != null ? html`per GW, <b>${fixed(sc.share_of_shed_pct, 1)}%</b> of the ${wholeMw(ev.shed_mw)} MW gap` : ""}${sc.share_of_shed_pct != null && sc.people != null ? " · " : ""}${sc.people != null ? html`about <b>${Math.round(sc.people).toLocaleString()}</b> ${sc.people_unit} kept on per GW` : ""}</p>` : ""}`
         : html`<p class="r-wait">Appears once our sites have cut.</p>`}
       <div class="src">${ev.flexible_source}. Arithmetic on the event's published numbers and one laptop's measured cut.</div>
     </div>`);
@@ -231,7 +231,7 @@ function renderReplay() {
 }
 
 // At grid scale, live: an ESTIMATE (grid/scale.py), never shown as measured. The grid's demand is live; the data
-// centers are a stated 1 GW unit; the cut is this Mac's, measured under the same call.
+// centers are a rate, per 1 GW (no fleet total is assumed); the cut is this Mac's, measured under the same call.
 function renderScale() {
   const box = $("live-scale"), x = S.scale;
   box.hidden = !x;
@@ -242,7 +242,7 @@ function renderScale() {
       <div class="r-tile"><div class="r-big">${gw(x.demand_mw)}</div>
         <p>${x.iso}'s demand served right now, live: its fuel mix, the total the Grid page shows</p></div>
       <div class="r-tile"><div class="r-big">about ${wholeMw(x.freed_mw)} MW</div>
-        <p>freed per ${gw(x.flexible_mw)} of data centers, if they cut the ${fixed(x.our_cut_pct, 0)}% this Mac cut under the same call${x.share_of_demand_pct != null ? html`: <b>${fixed(x.share_of_demand_pct, 1)}%</b> of ${x.iso}'s demand right now` : ""}</p></div>
+        <p>freed by every ${gw(x.flexible_mw)} of data centers cutting the ${fixed(x.our_cut_pct, 1)}% this Mac cut under the same call, a rate${x.share_of_demand_pct != null ? html`: <b>${fixed(x.share_of_demand_pct, 1)}%</b> of ${x.iso}'s demand right now` : ""}</p></div>
     </div>
     <div class="src">Demand: ${x.iso}'s fuel mix via gridstatus${x.demand_t ? `, ${localClock(Date.parse(x.demand_t) / 1000)}` : ""}.
       Data centers: ${x.flexible_source}. The cut: ${x.our_cut_source}. It scales one laptop's measured cut, so read it as an estimate.</div>`);

@@ -412,24 +412,24 @@ def event_reply(e: dict, st: dict) -> str:
             lines.append(f"What {NAME} would have freed: {where}, this Mac had nothing flexible running to "
                          "shed, so there is no cut to scale.")
         elif sc and last.get("measured_cut_pct") is not None:
-            people = (f"; at the event's own ratio, about {sc['people']:,} {sc.get('people_unit') or 'people'}'s "
-                      "worth of load" if sc.get("people") else "")
-            shed = (f", {sc['share_of_shed_pct']:.1f}% of the {_mw(e['shed_mw'])} MW shed"
+            people = (f"; per GW, about {sc['people']:,} {sc.get('people_unit') or 'people'} kept on at the event's "
+                      "own ratio" if sc.get("people") else "")
+            shed = (f", per GW {sc['share_of_shed_pct']:.1f}% of the {_mw(e['shed_mw'])} MW gap"
                     if sc.get("share_of_shed_pct") is not None and e.get("shed_mw") else "")
             lines.append(
                 f"What {NAME} would have freed: {where}, {NAME} cut this Mac's measured power by "
                 f"{last['measured_cut_pct']:.1f}% ({last['baseline_w']:.2f} W before the call, {last['ours_w']:.2f} W "
                 f"during it, macOS powermetrics; GET /api/state). Credited at {sc['share_pct']:.1f}% (the cut the alert "
-                f"asked, as far as it was delivered) on the {_mw(sc['flexible_mw'])} MW of flexible load "
-                f"({sc['flexible_source']}), that is about {sc['freed_mw']:,.0f} MW{shed}{people}. ESTIMATE: arithmetic "
-                "on cited numbers and one laptop's measured cut, not a data center's.")
+                f"asked, as far as it was delivered). As a rate, every {_mw(sc['flexible_mw'])} MW of data centers "
+                f"cutting that share frees about {sc['freed_mw']:,.0f} MW{shed}{people}. ESTIMATE: a rate from one "
+                "laptop's measured cut, not a data center's; no fleet total is assumed.")
         else:
             lines.append(f"What {NAME} would have freed: {where}, no cut had been measured yet.")
     else:
         lines.append(f"What {NAME} would have freed: not measured yet, because this event has not been replayed since "
                      "the runtime started. At the table its real EIA-930 hours run through the live software and "
-                     f"this Mac's cut is measured; {NAME} then scales that cut to the {_mw(e['flexible_mw'])} MW of "
-                     f"flexible load ({e['flexible_source']}). I can't start a replay myself.")
+                     f"this Mac's cut is measured; {NAME} then states it as a rate, per {_mw(e['flexible_mw'])} MW of "
+                     "data centers (no fleet total is assumed). I can't start a replay myself.")
     lines.append(f"Grid data: {e['data_source']}. Report: {e['report_url']}")
     return "\n".join(lines)
 

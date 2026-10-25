@@ -10,6 +10,6 @@ quote: null        # {text: "...", who: "Name", role: "Title, Org"}
 scale:
   poll_s: 60
   flexible_mw: 1000
-  flexible_source: "per 1 GW of data centers (illustrative unit, not a CAISO figure)"
+  flexible_source: "a rate per 1 GW of data centers: no fleet total is assumed"
   our_cut_pct: 31.2
   our_cut_source: "this Mac, evidence of record (DECISIONS 09:46): 14.34 W vs 20.85 W under the same call"

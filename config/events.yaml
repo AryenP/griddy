@@ -60,8 +60,8 @@ events:
          source: "FERC-NERC report (Nov 2021), PDF p. 15"}
     impact:                   # after the simulated lines the engine computes: the real event, cited
       - {text: "In Texas, Uri left more than 4.5 million people without power; at least 210 died", source: "FERC-NERC report (Nov 2021), PDF p. 10"}
-    flexible_mw: 1000          # per 1 GW of data centers: CAISO publishes no running-data-center figure we can cite
-    flexible_source: "per 1 GW of data centers (illustrative unit, not a CAISO figure)"
+    flexible_mw: 1000          # a rate per 1 GW of data centers: CAISO publishes no running-data-center figure we can cite
+    flexible_source: "a rate per 1 GW of data centers: no fleet total is assumed"
     report_url: https://www.nerc.com/pa/rrm/ea/Documents/February_2021_Cold_Weather_Report.pdf
 
   - id: caiso-2020-08
@@ -88,8 +88,8 @@ events:
     people_out: 491600
     people_unit: customers
     people_basis: "customers out per MW CAISO ordered (491,600, 931.6 MW; the utilities shed 1,072 MW)"
-    flexible_mw: 1000          # per 1 GW of data centers: CAISO publishes no running-data-center figure we can cite
-    flexible_source: "per 1 GW of data centers (illustrative unit, not a CAISO figure)"
+    flexible_mw: 1000          # a rate per 1 GW of data centers: CAISO publishes no running-data-center figure we can cite
+    flexible_source: "a rate per 1 GW of data centers: no fleet total is assumed"
     report_url: https://www.caiso.com/Documents/Final-Root-Cause-Analysis-Mid-August-2020-Extreme-Heat-Wave.pdf
 
   - id: caiso-2022-09
@@ -120,5 +120,5 @@ events:
     shed_mw: 2000              # what the phone alert had to find in half an hour
     people_out: null
     flexible_mw: 1000
-    flexible_source: "per 1 GW of data centers (illustrative unit, not a CAISO figure)"
+    flexible_source: "a rate per 1 GW of data centers: no fleet total is assumed"
     report_url: https://www.publicadvocates.cpuc.ca.gov/-/media/cal-advocates-website/files/press-room/reports-and-analyses/220922-caladvocates-sept-22-heat-wave-analysis---full.pdf
