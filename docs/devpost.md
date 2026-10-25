@@ -6,12 +6,15 @@ from memory. Measured numbers below come from DECISIONS.md; dated facts under "W
 RESEARCH.md. Remove this paragraph before submitting.
 
 ## Tagline
-When the grid runs short, the plan for AI data centers is diesel generators. This is the alternative.
+The grid's shock absorber: when a part of the grid fails, Griddy cuts it off, keeps the hospitals on, reroutes,
+pauses the AI work that can wait and sends a repair crew, on its own.
 
-## The problem (one sentence)
-When the grid is short of power, operators have two crude options for AI compute, run everything or
-switch to diesel, because nothing decides which work can wait, asks the people who own it, and proves
-the result in watts.
+## The problem
+The grid was not built for what is now plugged into it: cars charging in every garage at six in the evening, rooftop
+solar pushing power back into feeders built to carry it one way, and AI data centers asking for gigawatts. When it
+gives way, the result is outages, surges, blackouts and fires. And when the grid is short of power, operators have two
+crude options for AI compute, run everything or switch to diesel, because nothing decides which work can wait, asks
+the people who own it, and proves the result in watts.
 
 ## Why now
 - Winter Storm Fern (Jan 2026): the federal response for data centers was to order them onto backup
@@ -21,7 +24,17 @@ the result in watts.
 - EPRI DCFlex: 10 to 30 % peak-reduction potential from flexible data centers (Reuters, 8 Oct 2026).
 
 ## What it does
-Griddy is a grid-aware compute dispatcher. It reads the live grid (CAISO and ERCOT prices, day-ahead
+When a part of the grid fails or overloads, Griddy takes over on its own, about a second per step: it opens the
+breakers around the fault so it cannot spread, islands the hospitals onto their own central plants, closes a tie to a
+neighbouring feed, pauses the AI work that can wait and staggers EV charging, then sends a work order to repair crews.
+The crews are Fetch.ai agents that bid with their skills and their drive on real streets; the soonest able crew wins,
+repairs it, and Griddy gives everything back. It runs on a real square of Houston (the Texas Medical Center from
+OpenStreetMap: Grant Substation, its two 138 kV lines, the two central plants, the hospitals, the streets); the
+feeders, switches, EV chargers, rooftop solar and crews are a simulated layer, labelled on every step, because no
+public source lists a city's feeders and we have no access to a utility's switches. In a substation fire, 80 % of the
+square stays lit with Griddy against 0 % without it. Software cannot repair a transformer; the crew does.
+
+Under it, Griddy is a grid-aware compute dispatcher. It reads the live grid (CAISO and ERCOT prices, day-ahead
 curve, load forecast, fuel mix, alerts) with the timestamp and age of every number, schedules each AI
 job over the next 24 hours with a CP-SAT solver against cost, carbon, deadlines and a chat SLA
 (time to first token p95 <= 1.0 s, replies streamed), executes the current slot on a real machine (pause/resume with checkpoints, concurrency, GPU vs CPU),
@@ -116,6 +129,8 @@ the Mac was also in use (counted as outside load; DECISIONS 14:16, and stated in
   starts and seen one hour at a time, each only once it has ended, with each alert and impact cited by page; a judge's what-if
   faults are labelled what-if and sized from the grid's real numbers at that moment;
   grid-scale figures are labelled "estimate".
+- The emergency response's switching, EV chargers, rooftop solar and repair crews are simulated, and every step and
+  screen says so; the map under them is OpenStreetMap, and the AI-compute cut it asks for is this Mac's, measured.
 - A human owner approves any deadline slip; refusals are respected and logged with name and time.
 - Reviewed with Microsoft's HVE Core reviewers (Responsible AI, System Architecture) at the Saturday workshop.
   They found that any phone on the venue network could approve going over the cap; now only this machine or a
