@@ -260,6 +260,8 @@ async def parse_reply(request: ApprovalRequest, text: str, llm: LLM, now: dateti
             return decide("refuse", reason=m.group(1).strip())
         if _CONDITIONAL_OK.search(text) and (when := parse_deadline(text, now)):
             return decide("new_deadline", new_deadline=when, reason=text)
+        if ambiguous_hour(text):                 # a regex can tell "Tuesday 9" needs AM or PM: ask before any model
+            return decide("unclear", reason="that time could be AM or PM: please say which")
         user = (f"now={now.isoformat()} ({now:%A}). Request to {request.owner} about job {request.job_id}: "
                 f"{request.message}\n<reply>{text}</reply>")
         try:

@@ -61,7 +61,7 @@ everything, and asks the owner about the ~19-minute slip instead of breaking the
 > fractions of a cent; the claim is compliance in seconds with the work still delivered. The live
 > request → owner refusal → operator approval run is in
 > [docs/evidence/demo-flow-live-20261024.md](docs/evidence/demo-flow-live-20261024.md), and the responsible-design
-> evals (86/90 live, all 12 injection attempts rejected) in [docs/evidence/evals-live-20261024.md](docs/evidence/evals-live-20261024.md).
+> evals (135/138 live on Sat 20:33, all 19 injection attempts rejected, the judge's fault reader 14/14) in [docs/evidence/evals-live-20261024-2033.md](docs/evidence/evals-live-20261024-2033.md); the first live run (02:33) passed 86/90.
 
 ## Who controls what
 - **The utility** asks, in plain words or as an OpenADR 3.1 event. The request is parsed, read back with real

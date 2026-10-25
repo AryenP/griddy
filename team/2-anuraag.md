@@ -350,3 +350,6 @@ is tests/test_web_operator.py). For your driver card (task 27): the operator hot
 - Sat 20:29 from machine 1: task 23 (QR join links) done by me with the HVE Core re-check's role fix: scripts/qr.py now
   puts the owner token in the owner QR and the operator token in the operator QR (api/access.py has both), and your
   tests/test_web_qr.py expects those links. Keep both when you next touch them.
+- Sat 20:36 from machine 1: the HVE Core re-check asked for fault-reader evals and a fresh live run, so I added a
+  `fault_reader` suite to evals/cases.yaml and evals/suite.py (your lane) and quoted the 20:33 live run (135/138) in
+  docs/judging/criteria.md and responsible.md. Your tests/test_evals.py is untouched; my assertions are in test_whatif.py.
