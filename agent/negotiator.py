@@ -237,16 +237,16 @@ def ambiguous_hour(text: str) -> bool:
     return bool(_BARE_HOUR.search(text)) and not _HALF_OF_DAY.search(text)
 
 
-def parse_cap_reply(request: ApprovalRequest, text: str) -> OwnerDecision:
-    """The operator's answer to going over the utility's cap: rules only, never a model (HVE Core review,
-    fix 2). A plain yes approves; a no (with any reason) holds the cap; anything else asks again."""
+def parse_cap_reply(request: ApprovalRequest, text: str, what: str = "going over the cap") -> OwnerDecision:
+    """The operator's answer to going over the utility's cap, or to a staged cut (`what`): rules only, never a model
+    (HVE Core review, fix 2). A plain yes approves; a no (with any reason) refuses; anything else asks again."""
     text = text.strip()
     decide = lambda d, **kw: OwnerDecision(request_id=request.id, decision=d, raw=text, **kw)
     if _YES.match(text):
         return decide("approve")
     if m := _NO.match(text):
         return decide("refuse", reason=m.group(1).strip())
-    return decide("unclear", reason="going over the cap needs a plain yes, or no with your reason")
+    return decide("unclear", reason=f"{what} needs a plain yes, or no with your reason")
 
 
 async def parse_reply(request: ApprovalRequest, text: str, llm: LLM, now: datetime) -> OwnerDecision:

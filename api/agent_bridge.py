@@ -85,7 +85,9 @@ class AgentBridge:
                 if (owner is None or a.owner == owner) and (status is None or a.status == status)]
 
     def _open_for(self, job_id: str) -> ApprovalRequest | None:
-        return next((a for a in self.approvals.values() if a.job_id == job_id and a.status == "pending"), None)
+        """The solver's own open ask for this job (a staged request never stands in for one)."""
+        return next((a for a in self.approvals.values()
+                     if a.job_id == job_id and a.status == "pending" and a.cap_event is None), None)
 
     # ------------------------------------------------------------------ schedules
     async def on_schedule(self, sched: Schedule) -> None:
@@ -111,8 +113,8 @@ class AgentBridge:
                                                           refused=dict(self.refused))
                 self.approvals[req.id] = req
                 self._log(req, schedule_id=sched.id)
-        for a in self.pending():                 # the solver no longer needs these: expire them
-            if a.job_id not in live_jobs:
+        for a in self.pending():                 # the solver no longer needs these: expire them (a staged request
+            if a.cap_event is None and a.job_id not in live_jobs:   # is someone's ask, not the solver's: it waits)
                 a.status = "expired"
                 self._log(a, schedule_id=sched.id, why="the new schedule no longer needs this approval")
         if self.ex.signal is not None:
@@ -132,13 +134,24 @@ class AgentBridge:
             self.tl.log("note", level="warning", msg=f"reply to {req.id} refused: it is for {req.owner}, not {acting_as}",
                         request_id=req.id, who=who)
             raise PermissionError(f"this request is for {req.owner}; answer it from {req.owner}'s console")
-        decision = (negotiator.parse_cap_reply(req, text) if req.job_id == CAP_JOB
-                    else await negotiator.parse_reply(req, text, self.llm, self._now()))
+        staged = req.cap_event is not None
+        decision = (negotiator.parse_cap_reply(req, text, "applying this cut" if staged else "going over the cap")
+                    if req.job_id == CAP_JOB else await negotiator.parse_reply(req, text, self.llm, self._now()))
         self.tl.log("approval", request_id=req.id, who=who, decision=decision.model_dump(mode="json"))
         sched = None
         if decision.decision == "unclear":
             return decision, None
-        if req.job_id == CAP_JOB:
+        req.who, req.reply = who, text
+        if staged:                                                   # a cut asked over Fetch.ai: only now applied
+            if decision.decision == "approve":
+                ev = req.cap_event.model_copy(update={"start": max(req.cap_event.start, self._now())})
+                sched = await self.ex.add_event(ev)                  # it runs from the operator's yes
+                req.status, req.cap_event, req.run_id = "approved", ev, self.tl.run_id
+            else:
+                req.status = "refused"
+                self.tl.log("note", msg=f"operator refused the cut {req.asked_by} asked for: {decision.reason or 'no reason given'}",
+                            request_id=req.id)
+        elif req.job_id == CAP_JOB:
             if decision.decision == "approve":
                 req.status = "approved"
                 sched = await self.ex.approve_over_cap(who)          # only now may the plan exceed the cap
@@ -159,7 +172,7 @@ class AgentBridge:
             req.status = "refused"
             self.refused[req.job_id] = decision.reason
             sched = await self.ex.keep_deadline(req.job_id, decision.reason)
-        self._log(req, who=who, decided_t=time.time())
+        self._log(req, decided_t=time.time())
         return decision, sched
 
     # ------------------------------------------------------------------ operator Q&A
@@ -187,6 +200,24 @@ class AgentBridge:
     async def request(self, text: str, who: str):
         result = await intake.parse_request(text, self.llm, self._context())
         return result, await self._apply(result, who)
+
+    async def stage(self, text: str, who: str):
+        """A cut asked over Fetch.ai (team/1-aryen.md, "Fetch three-agent support"): parsed as usual, never applied
+        here. It waits for the operator as an approval carrying the cut and the solver's preview; their plain yes
+        applies it from that moment, a no is logged as a refusal. Returns (intake, approval or None, preview)."""
+        result = await intake.parse_request(text, self.llm, self._context())
+        self.tl.log("intake", intake=result.model_dump(mode="json"), who=who, staged=True)
+        if result.kind != "cap_event" or not result.cap_event:
+            return result, None, None                                # a question back, or rejected: nothing staged
+        ev, preview = await self.ex.preview_event(result.cap_event)
+        cap = f"{ev.target_w:.1f} W" if ev.target_w is not None else "the cap asked"
+        req = ApprovalRequest(job_id=CAP_JOB, owner=self.ex.policy.operator, cap_event=ev, asked_by=who,
+                              run_id=self.tl.run_id,
+                              message=f"Asked by Grid Desk on ASI:One: {result.readback} Reply yes to hold this Mac "
+                                      f"under {cap} for {round(ev.duration_s / 60)} min from your yes, or no (and why).")
+        self.approvals[req.id] = req
+        self._log(req, staged=True, baseline_w=self.ex.baseline_w())
+        return result, req, preview
 
     async def openadr(self, event: dict, who: str):
         result = intake.parse_openadr(event)

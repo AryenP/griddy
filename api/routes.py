@@ -109,6 +109,7 @@ class ChatIn(BaseModel):
 class RequestIn(BaseModel):
     text: str = Field(min_length=1, max_length=4000)
     who: str = "operator"
+    source: Literal["fetch"] | None = None   # "fetch": staged for the operator, never applied by the call (loopback only)
 
 
 class AskIn(BaseModel):
@@ -323,6 +324,15 @@ def make_router(rt) -> APIRouter:
     async def request(body: RequestIn, request: Request):
         who = by(body.who, request)
         paid.check(request)
+        if body.source == "fetch":                   # team/1-aryen.md "Fetch three-agent support": staged, not applied
+            if not access.is_loopback(request):
+                raise HTTPException(403, 'a "fetch" request is taken from this Mac\'s loopback only')
+            try:
+                result, req, preview = await rt.agent.stage(body.text, who)
+            except ValueError as e:
+                raise HTTPException(409, str(e))
+            return {"intake": _dump(result), "schedule": _dump(preview), "staged": req is not None,
+                    "approval_id": req.id if req else None, "approval": _dump(req), "run_id": rt.tl.run_id}
         try:
             result, sched = await rt.agent.request(body.text, who)
         except ValueError as e:                      # e.g. % cap before a measured baseline exists

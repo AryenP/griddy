@@ -90,14 +90,31 @@ class Executor:
         self.tl.log("policy", reason="operator change", who=who, changes=changes, **self.policy.model_dump(mode="json"))
         return await self.resolve("policy change")
 
-    async def add_event(self, ev: CapEvent) -> Schedule | None:
+    def _in_watts(self, ev: CapEvent, log: bool = True) -> CapEvent:
+        """A % cut becomes watts from the measured baseline now."""
         if ev.target_pct is not None and ev.target_w is None:
             base = self.baseline_w()
             if base is None:
                 raise ValueError(f"no measured baseline yet (needs {self.baseline_window_s}s of power)")
             ev = ev.model_copy(update={"target_w": base * (1 - ev.target_pct / 100)})
-            self.tl.log("note", msg=f"cap {ev.target_pct}% of measured baseline {base:.2f} W -> {ev.target_w:.2f} W",
-                        baseline_w=base, baseline_window_s=self.baseline_window_s)
+            if log:
+                self.tl.log("note", msg=f"cap {ev.target_pct}% of measured baseline {base:.2f} W -> {ev.target_w:.2f} W",
+                            baseline_w=base, baseline_window_s=self.baseline_window_s)
+        return ev
+
+    async def preview_event(self, ev: CapEvent) -> tuple[CapEvent, Schedule | None]:
+        """The schedule this cap would give with the caps in force, solved but neither applied nor logged: a staged
+        request's offer (api/agent_bridge.py `stage`). Its watts are fixed now, from the measured baseline."""
+        ev = self._in_watts(ev, log=False)
+        if self.signal is None:
+            return ev, None
+        sched = await asyncio.to_thread(solve, self.signal, self.jobs(), self.policy, self.solve_cal(),
+                                        self.active_events() + [ev], self.baseline_w(), self.chat_busy(),
+                                        frozenset(self.hard_deadlines), False, self.background_w, False)
+        return ev, sched
+
+    async def add_event(self, ev: CapEvent) -> Schedule | None:
+        ev = self._in_watts(ev)
         self.events.append(ev)
         self.tl.log("event", **ev.model_dump(mode="json"))
         return await self.resolve("cap event")

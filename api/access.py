@@ -55,6 +55,15 @@ def owner_token() -> str:
     return _token(settings.owner_token, OWNER_TOKEN_FILE)
 
 
+def is_loopback(request: Request) -> bool:
+    """Strictly 127.0.0.1 or ::1: a process on this Mac (the Fetch.ai Facility agent), never a LAN address."""
+    host = request.client.host if request.client else ""
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return False
+
+
 def is_this_machine(request: Request) -> bool:
     """A loopback client, or one connecting from the address it connected to (this Mac opening its LAN URL)."""
     host = request.client.host if request.client else ""

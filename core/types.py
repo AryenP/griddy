@@ -305,15 +305,21 @@ class IntakeResult(BaseModel):
 
 
 class ApprovalRequest(BaseModel):
-    """The solver needs an owner's yes/no: a deadline would slip, or chat would degrade."""
+    """The solver needs an owner's yes/no: a deadline would slip, or chat would degrade. Or a cut asked over Fetch.ai
+    (POST /request with "source": "fetch") waits for the operator: staged, applied only on their plain yes."""
 
     id: str = Field(default_factory=lambda: new_id("ask"))
     t: float = Field(default_factory=now)
     job_id: str
     owner: str
-    shortfall: Shortfall
+    shortfall: Shortfall | None = None   # None for a staged request: nobody is short, someone asked for a cut
     message: str                         # drafted by the negotiator from the shortfall's facts
     status: Literal["pending", "approved", "refused", "countered", "expired"] = "pending"
+    cap_event: CapEvent | None = None    # a staged request's cut as offered; once approved, as applied
+    asked_by: str = ""                   # a staged request's sender
+    who: str = ""                        # who answered
+    reply: str = ""                      # their words
+    run_id: str | None = None            # the run it was staged in, then applied in (the Verifier reads its timeline)
 
 
 class OwnerDecision(BaseModel):

@@ -1,4 +1,4 @@
-.PHONY: verify evidence evidence3 evidence-chat evidence-chat-judge preflight tag-stable ollama setup demo baseline calibrate chat-sweep solve report compare test probe qr fetch-agent clean
+.PHONY: verify evidence evidence3 evidence-chat evidence-chat-judge preflight tag-stable ollama setup demo baseline calibrate chat-sweep solve report compare test probe qr fetch-agent fetch-three clean
 
 PY ?= uv run
 # sudo for powermetrics: no prompt when the passwordless rule for /usr/bin/powermetrics is installed
@@ -93,6 +93,9 @@ qr:             ## print QR codes for the judge's phone (chat + owner console)
 FETCH_DEPS = --with uagents==0.26.1 --with uagents-core==0.4.12 --with httpx==0.28.1 --with python-dotenv==1.2.4
 fetch-agent:    ## Griddy on ASI:One: a read-only Fetch.ai Chat Protocol agent for the running runtime (docs/fetch-agent.md)
 	uv run --no-project --python 3.11 $(FETCH_DEPS) python agent/channels/fetch_agent.py
+
+fetch-three:    ## Fetch.ai three-agent flow for the running runtime: Grid Desk, Facility, Verifier (docs/judging/fetch-three-agents.md)
+	@for a in grid_desk facility verifier; do uv run --no-project --python 3.11 $(FETCH_DEPS) python fetch_agents/$$a.py & done; wait
 
 clean:
 	rm -rf runs/* reports/* .pytest_cache
