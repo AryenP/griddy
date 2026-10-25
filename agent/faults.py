@@ -1,4 +1,4 @@
-"""A judge describes, in their own words, how a part of the grid breaks (Aryen, Sat 17:40: "let the judges click parts
+"""A judge describes, in their own words, how a part of the grid breaks (Aryen, Sat evening: "let the judges click parts
 and type out how it breaks so they can see how we fix it"). This reads the words into a what-if (replay/whatif.py)
 that the judge then confirms.
 
