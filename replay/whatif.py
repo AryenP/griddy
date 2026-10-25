@@ -81,8 +81,23 @@ class WhatIf:
         pat = dict(FUELS)[name]
         return sum(v for k, v in mix.items() if re.search(pat, k, re.I) and v > 0)
 
-    def start(self, target: str, now: float | None = None) -> dict:
+    def parts(self, now: float | None = None) -> dict[str, float | None]:
+        """What can break right now and its real size: each producing fleet's MW, the substation (the largest fleet),
+        the city (the surge to the day's published forecast peak, if any)."""
         now = time.time() if now is None else now
+        g = self.grid_now(now)
+        out = {f"plant:{n}": mw for n, _ in FUELS if (mw := self.fleet_mw(g["mix"], n)) > 0}
+        if out:
+            out["hub"] = max(out.values())
+        if g["peak_needed"] and g["needed"] and g["peak_needed"] > g["needed"]:
+            out["city"] = g["peak_needed"] - g["needed"]
+        return out
+
+    def start(self, target: str, now: float | None = None, share_pct: float = 100.0, cause: str = "") -> dict:
+        """Break `target`: `share_pct` of its real size at this moment (all of it by default). `cause` is the judge's
+        own words (agent/faults.py), shown in the label."""
+        now = time.time() if now is None else now
+        share = max(1.0, min(100.0, float(share_pct))) / 100
         if target not in ("hub", "city") and not (target.startswith("plant:") and target[6:] in dict(FUELS)):
             raise KeyError(target)
         g = self.grid_now(now)
@@ -93,21 +108,27 @@ class WhatIf:
             fuel = name = target.split(":", 1)[1]
             if name not in dict(FUELS):
                 raise KeyError(target)
-            lost = self.fleet_mw(g["mix"], name)
-            if lost <= 0:
+            whole = self.fleet_mw(g["mix"], name)
+            if whole <= 0:
                 raise ValueError(f"{name} produces nothing right now: nothing to trip")
-            label = f"What-if: the {name.lower()} fleet trips, -{lost / 1000:.1f} GW (its real output at this moment)"
+            lost = whole * share
+            label = (f"What-if: the {name.lower()} fleet trips, -{lost / 1000:.1f} GW (its real output at this moment)" if share == 1
+                     else f"What-if: the {name.lower()} fleet loses {share:.0%}, -{lost / 1000:.1f} GW of its real {whole / 1000:.1f} GW now")
         elif target == "hub":
-            fuel, lost = max(((n, self.fleet_mw(g["mix"], n)) for n, _ in FUELS), key=lambda x: x[1])
-            name = fuel
-            label = f"What-if: the main substation fails and cuts off the {name.lower()} fleet, -{lost / 1000:.1f} GW (its real output)"
+            fuel, whole = max(((n, self.fleet_mw(g["mix"], n)) for n, _ in FUELS), key=lambda x: x[1])
+            lost = whole * share
+            label = (f"What-if: the main substation fails and cuts off the {fuel.lower()} fleet, -{lost / 1000:.1f} GW (its real output)"
+                     if share == 1 else f"What-if: the main substation fails and cuts off {share:.0%} of the {fuel.lower()} fleet, -{lost / 1000:.1f} GW")
         elif target == "city":
             if not g["peak_needed"] or g["peak_needed"] <= g["needed"]:
                 raise ValueError("demand is already at the day's forecast peak")
-            surge = g["peak_needed"] - g["needed"]
-            label = f"What-if: demand jumps to the day's forecast peak, +{surge / 1000:.1f} GW (the operator's real forecast)"
+            surge = (g["peak_needed"] - g["needed"]) * share
+            label = (f"What-if: demand jumps to the day's forecast peak, +{surge / 1000:.1f} GW (the operator's real forecast)" if share == 1
+                     else f"What-if: demand jumps {share:.0%} of the way to the day's forecast peak, +{surge / 1000:.1f} GW")
         else:
             raise KeyError(target)
+        if cause:
+            label = f"{label}. Cause, in the judge's words: {cause}"
         served_after = g["served"] - lost
         needed_after = g["needed"] + surge
         shortfall = max(0.0, needed_after - served_after)
@@ -119,7 +140,7 @@ class WhatIf:
         nothing = baseline is not None and baseline - idle < float(self.cfg.get("min_flexible_w", 3.0))
         asked = float(self.cfg.get("emergency_cut_pct", 40)) if shortfall > 0 else 0.0
         self.end(now)
-        self.fault = {"t0": now, "target": target, "fuel": fuel, "label": label, "lost_mw": lost, "surge_mw": surge,
+        self.fault = {"t0": now, "target": target, "fuel": fuel, "label": label, "share_pct": 100 * share, "cause": cause, "lost_mw": lost, "surge_mw": surge,
                       "grid": g, "served_after": served_after, "needed_after": needed_after, "shortfall_mw": shortfall,
                       "baseline_w": baseline, "asked_cut_pct": asked, "nothing_to_shed": nothing}
         if asked and baseline and not nothing:
@@ -159,6 +180,7 @@ class WhatIf:
                      "flexible_source": g["flexible_source"], "share_of_shortfall_pct": 100 * freed / f["shortfall_mw"],
                      "people": round(g["people_per_mw"] * freed) if g["people_per_mw"] else None, "people_unit": g["people_unit"]}
         state = {"t": now, "whatif": True, "target": f["target"], "fuel": f["fuel"], "label": f["label"],
+                 "share_pct": f["share_pct"], "cause": f["cause"],
                  "source": g["source"], "event": g["event"], "mix_mw": g["mix"], "nothing_to_shed": f["nothing_to_shed"],
                  "lost_mw": f["lost_mw"], "surge_mw": f["surge_mw"], "served_before": g["served"], "needed_before": g["needed"],
                  "served_after": f["served_after"], "needed_after": f["needed_after"], "shortfall_mw": f["shortfall_mw"],

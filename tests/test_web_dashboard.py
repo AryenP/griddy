@@ -90,7 +90,7 @@ def test_the_judge_page_is_the_3d_world_and_its_dock():
     assert re.findall(r'<script src="([^"]+)"', WORLD_HTML) == ["common.js", "world.js", "demo.js"]
     assert '<canvas id="world"' in WORLD_HTML and 'href="/info.html"' in WORLD_HTML
     assert "simulated" not in WORLD_HTML.lower() + DEMO_JS.lower()
-    assert set(re.findall(r'postJSON\(\s*[`"](/api/[\w/${}]+)', DEMO_JS)) <= {"/api/replay", "/api/jobs/${job}", "/api/whatif"}
+    assert set(re.findall(r'postJSON\(\s*[`"](/api/[\w/${}]+)', DEMO_JS)) <= {"/api/replay", "/api/jobs/${job}", "/api/whatif", "/api/whatif/read"}
     assert "prefers-reduced-motion" in WORLD_JS and "REDUCE" in WORLD_JS          # no motion for those who ask
     assert "ev.data_source" in DEMO_JS and "ev.report_url" in DEMO_JS and "estimate" in DEMO_JS
     assert "measured by powermetrics" in WORLD_HTML + DEMO_JS
@@ -117,3 +117,10 @@ def test_the_replay_says_where_its_hours_came_from():
     copy and why; and the software sees each hour only once it has ended."""
     assert "api.eia.gov" in DEMO_JS and "evidence copy" in DEMO_JS and "once it has ended" in DEMO_JS
     assert "d.hour_ending" in DEMO_JS
+
+
+def test_a_judge_can_say_how_it_breaks_and_confirms_the_reading_first():
+    """Sat 17:50: words go to /api/whatif/read (a pattern, then the model); the page shows the reading with its real
+    size and breaks nothing until the judge confirms. Griddy's executed actions show as they happen."""
+    assert 'id="w-pop-in"' in WORLD_HTML and "/api/whatif/read" in DEMO_JS and "Break it like that" in DEMO_JS
+    assert 'case "action"' in DEMO_JS and "Griddy acts" in DEMO_JS

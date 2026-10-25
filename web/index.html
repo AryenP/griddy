@@ -12,7 +12,7 @@
 </head>
 <body class="w">
   <header class="w-top">
-    <div class="w-brand"><b>Griddy</b><span>the grid's shock absorber for AI data centers</span></div>
+    <div class="w-brand"><b>Griddy</b><span>the grid's shock absorber: when any part fails, AI compute gives power back</span></div>
     <nav class="w-nav" aria-label="Pages"><a href="/" aria-current="page">Grid</a><a href="/info.html">Info</a><a href="/proof.html">Proof</a></nav>
     <div class="w-status"><span id="w-feed" class="w-pill">grid feed —</span><span id="conn" class="w-pill">connecting</span></div>
   </header>
@@ -20,7 +20,13 @@
   <canvas id="world" class="w-world" role="img" aria-label="The grid as a 3D world: power plants from the real fuel mix, the city lit by the demand served, this Mac's data center by its measured watts"></canvas>
   <div id="w-alerts" class="w-toasts" aria-live="polite"></div>
   <div id="w-pop" class="w-pop" role="dialog" aria-labelledby="w-pop-t" hidden>
-    <b id="w-pop-t"></b><p id="w-pop-p"></p><div id="w-pop-b" class="w-pop-b"></div>
+    <b id="w-pop-t"></b><p id="w-pop-p"></p>
+    <form id="w-pop-f" class="w-pop-f" hidden>
+      <label for="w-pop-in">Or say how it breaks, in your words</label>
+      <div><input id="w-pop-in" maxlength="500" autocomplete="off" placeholder="e.g. an ice storm freezes half the gas wellheads"><button type="submit">Read it</button></div>
+      <small id="w-pop-read" aria-live="polite"></small>
+    </form>
+    <div id="w-pop-b" class="w-pop-b"></div>
   </div>
 
   <section class="w-dock" aria-label="The demo">

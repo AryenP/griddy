@@ -24,7 +24,7 @@ const World = (() => {
     cv: null, ctx: null, w: 0, h: 0, dpr: 1, yaw: -0.62, pitch: 0.6, scale: 18, cx: 0, cy: 0, baseYaw: -0.62,
     drag: null, last: 0, t: 0, running: false, labels: [], smoke: [], smokeAcc: 0, safe: { top: 72, bottom: 230 },
     data: { mix: {}, served: null, needed: null, ours_w: null, baseline_w: null, cut_pct: null, alert: null, campus: null, peaks: {},
-      tripped: null, fault: null, with_mw: null, city: null },
+      tripped: null, tripped_mw: null, fault: null, with_mw: null, city: null },
     hits: [], hover: null, onPick: null, down: null,
     v: { served: 0, needed: 0, lit: 1, ours: 0.5, mix: {}, tint: { gen: [...C.lineOk], city: [...C.lineCity] } },
   };
@@ -238,9 +238,10 @@ const World = (() => {
     return out.slice(0, 6);
   }
   function drawPlant(p, x, z, total) {
-    const off = p.tripped, share = total && !off ? p.mw / total : 0, y = 0.36, peaks = S.data.peaks || {};
-    platform(x - 2.2, z - 2.2, 4.4, 4.4, 0.5, edgeFor(`plant:${p.title}`, off));
-    if (off) S.ctx.globalAlpha = 0.34;
+    const lostMw = p.tripped ? Math.min(p.mw, S.data.tripped_mw || p.mw) : 0, frac = p.mw ? lostMw / p.mw : 0;
+    const off = frac > 0.99, share = total ? (p.mw - lostMw) / total : 0, y = 0.36, peaks = S.data.peaks || {};
+    platform(x - 2.2, z - 2.2, 4.4, 4.4, 0.5, edgeFor(`plant:${p.title}`, p.tripped));
+    if (p.tripped) S.ctx.globalAlpha = 1 - 0.66 * frac;                // dimmed by the share of its output lost
     let top = 3;
     if (p.kind === "gas" || p.kind === "coal") {
       const coal = p.kind === "coal", hh = 1.0 + 2.2 * share;
@@ -262,7 +263,7 @@ const World = (() => {
       lathe(x + 1.0, z - 1.3, [[0.6, 0], [0.6, 0.8], [0.5, 1.15], [0.3, 1.35], [0.0, 1.42]], { y, color: [205, 212, 218], n: 16 });
       top = th + 0.5;
     } else if (p.kind === "wind") {
-      const speed = off ? 0 : peaks.wind ? p.mw / peaks.wind : Math.min(1, p.mw / 8000);
+      const speed = off ? 0 : peaks.wind ? (p.mw - lostMw) / peaks.wind : Math.min(1, (p.mw - lostMw) / 8000);
       for (let k = 0; k < 4; k++) {
         const tx = x - 1.2 + (k % 2) * 2.3, tz = z - 1.2 + Math.floor(k / 2) * 2.2, th = 2.9;
         lathe(tx, tz, [[0.09, 0], [0.05, th]], { y, color: [235, 240, 242], n: 8 });
@@ -277,7 +278,7 @@ const World = (() => {
       }
       top = 4;
     } else if (p.kind === "solar") {
-      const glow = off ? 0 : peaks.solar ? p.mw / peaks.solar : Math.min(1, p.mw / 15000);
+      const glow = off ? 0 : peaks.solar ? (p.mw - lostMw) / peaks.solar : Math.min(1, (p.mw - lostMw) / 15000);
       for (let r = 0; r < 4; r++) for (let k = 0; k < 3; k++) {
         const px = x - 1.75 + k * 1.2, pz = z - 1.6 + r * 0.9;
         const pts = [[px, y + 0.18, pz], [px + 1.05, y + 0.18, pz], [px + 1.05, y + 0.6, pz + 0.58], [px, y + 0.6, pz + 0.58]].map((v) => P(...v));
@@ -299,7 +300,8 @@ const World = (() => {
       top = 4;
     }
     S.ctx.globalAlpha = 1;
-    if (off) label(x, y + top + 2.4, z, `${p.title} · tripped (what-if)`, `−${(p.mw / 1000).toFixed(1)} GW`, "its real output, lost", y + top);
+    if (p.tripped) label(x, y + top + 2.4, z, `${p.title} · ${off ? "tripped" : `${Math.round(frac * 100)}% lost`} (what-if)`,
+      `−${(lostMw / 1000).toFixed(1)} GW`, off ? "its real output, lost" : `of its real ${(p.mw / 1000).toFixed(1)} GW`, y + top);
     else label(x, y + top + 2.4, z, p.title, `${(p.mw / 1000).toFixed(1)} GW`, `${Math.round(share * 100)}% of supply`, y + top);
   }
   // a pickable part's platform edge: red and pulsing when broken, white when the pointer is over it
@@ -361,7 +363,7 @@ const World = (() => {
     route(ROUTES.dc, v.tint.city, 0.3 + 1.6 * v.ours);
     route(ROUTES.campus, v.tint.city, flow);
 
-    const ps = plants(), total = ps.filter((p) => !p.tripped).reduce((s, p) => s + p.mw, 0);
+    const ps = plants(), total = ps.reduce((s, p) => s + p.mw - (p.tripped ? Math.min(p.mw, d.tripped_mw || p.mw) : 0), 0);
     const spots = [[-23, -11], [-16, -11], [-23, -4], [-16, -4], [-23, 3], [-16, 3]];
     const items = [];
     ps.forEach((p, i) => items.push({ x: spots[i][0], z: spots[i][1], draw: () => drawPlant(p, spots[i][0], spots[i][1], total),
