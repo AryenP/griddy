@@ -222,6 +222,22 @@ def make_router(rt) -> APIRouter:
         size = parts[got["target"]] * got["share_pct"] / 100
         return {**got, "size_mw": size, "part_mw": parts[got["target"]]}
 
+    @r.get("/api/cities")
+    async def cities():
+        """The cities a judge can open from the 3D world (config/cities.yaml) with their REAL hospitals
+        (docs/evidence/city/<id>.json, OpenStreetMap, ODbL). The feeders and blocks the page draws are illustrative."""
+        import yaml
+        root = Path(__file__).resolve().parents[1]
+        out = []
+        for c in yaml.safe_load((root / "config/cities.yaml").read_text())["cities"]:
+            try:
+                d = json.loads((root / "docs/evidence/city" / f"{c['id']}.json").read_text())
+            except OSError:
+                continue
+            out.append({**c, "hospitals": d["hospitals"], "source": d["source"], "license": d["license"],
+                        "fetched_at": d["fetched_at"]})
+        return out
+
     @r.get("/api/replay/events")
     async def replay_events():
         """The real grid emergencies a judge can replay, with their EIA-930 hours, cited alerts and impact."""

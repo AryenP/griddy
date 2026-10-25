@@ -295,3 +295,9 @@ each city's box, ODbL, docs/evidence/city/); config/cities.yaml; tests/test_city
 (California OES's layer needs a token; OSM search returns police substations), so the map's feeders will be an
 illustrative layout, labelled. Teammates still quiet; CI green.
 Next: the city map view in the 3D world. Blockers / needs Aryen: none new.
+
+## 2026-10-24 18:11 PT — the city map is in
+Done: click the city (or "Open the ... map" on its card) and the 3D world opens Houston or Los Angeles: real hospitals,
+homes dark by the grid's real unserved share, blocks relit by Griddy's freed MW, feeders labelled illustrative.
+GET /api/cities (HANDOFF). Teammates still quiet; CI green before this push.
+Next: technician dispatch when Aryen decides. Blockers / needs Aryen: that decision.
