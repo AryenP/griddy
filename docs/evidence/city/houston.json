@@ -1,0 +1,242 @@
+{
+ "city": "Houston",
+ "fetched_at": "2026-10-25T00:56:01+00:00",
+ "source": "OpenStreetMap via Nominatim search 'hospital' in viewbox [-95.6, 29.95, -95.2, 29.6]",
+ "license": "\u00a9 OpenStreetMap contributors, ODbL 1.0 (openstreetmap.org/copyright)",
+ "hospitals": [
+  {
+   "name": "University of Texas MD Anderson Cancer Center",
+   "lat": 29.7076703,
+   "lon": -95.3978436,
+   "osm": "way/51815686"
+  },
+  {
+   "name": "Houston Methodist Hospital",
+   "lat": 29.7108167,
+   "lon": -95.399264,
+   "osm": "way/597306771"
+  },
+  {
+   "name": "Ben Taub General Hospital",
+   "lat": 29.7106052,
+   "lon": -95.3934046,
+   "osm": "way/43035587"
+  },
+  {
+   "name": "Memorial Hermann-Texas Medical Center",
+   "lat": 29.7133883,
+   "lon": -95.3960451,
+   "osm": "relation/20380489"
+  },
+  {
+   "name": "Texas Heart Institute - Denton A. Cooley Building",
+   "lat": 29.7079305,
+   "lon": -95.399419,
+   "osm": "node/1975596439"
+  },
+  {
+   "name": "Memorial Hermann Southwest Hospital",
+   "lat": 29.6938503,
+   "lon": -95.5221634,
+   "osm": "way/567983582"
+  },
+  {
+   "name": "Shriners Hospitals for Children \u2014 Houston",
+   "lat": 29.7043576,
+   "lon": -95.4057084,
+   "osm": "way/426628324"
+  },
+  {
+   "name": "Michael E. DeBakey VA Medical Center",
+   "lat": 29.7018722,
+   "lon": -95.388855,
+   "osm": "way/567813753"
+  },
+  {
+   "name": "UTHealth Harris County Psychiatric Center",
+   "lat": 29.7121546,
+   "lon": -95.3745267,
+   "osm": "way/520346693"
+  },
+  {
+   "name": "Memorial Hermann Memorial City Medical Center",
+   "lat": 29.7817042,
+   "lon": -95.5467102,
+   "osm": "way/200166165"
+  },
+  {
+   "name": "The Woman's Hospital of Texas",
+   "lat": 29.6933775,
+   "lon": -95.4027926,
+   "osm": "way/129131939"
+  },
+  {
+   "name": "Saint Joseph Medical Center",
+   "lat": 29.7477865,
+   "lon": -95.3662056,
+   "osm": "way/375963174"
+  },
+  {
+   "name": "Lyndon B. Johnson General Hospital",
+   "lat": 29.8115032,
+   "lon": -95.3130453,
+   "osm": "way/568037942"
+  },
+  {
+   "name": "Memorial Hermann Greater Heights Hospital",
+   "lat": 29.810626,
+   "lon": -95.4313193,
+   "osm": "way/267238505"
+  },
+  {
+   "name": "Houston Behavioral Healthcare Hospital",
+   "lat": 29.8239329,
+   "lon": -95.5467544,
+   "osm": "way/568006578"
+  },
+  {
+   "name": "Park Plaza Hospital",
+   "lat": 29.7234578,
+   "lon": -95.3870177,
+   "osm": "way/567613307"
+  },
+  {
+   "name": "Quentin Mease Hospital",
+   "lat": 29.7112702,
+   "lon": -95.3594983,
+   "osm": "way/567588337"
+  },
+  {
+   "name": "Texas Orthopedic Hospital",
+   "lat": 29.7002235,
+   "lon": -95.4090834,
+   "osm": "way/567866262"
+  },
+  {
+   "name": "Behavioral Hospital of Bellaire",
+   "lat": 29.708365,
+   "lon": -95.4733724,
+   "osm": "way/693330110"
+  },
+  {
+   "name": "West Oaks Hospital",
+   "lat": 29.7095543,
+   "lon": -95.4979601,
+   "osm": "way/693331308"
+  },
+  {
+   "name": "Nexus Children's Hospital",
+   "lat": 29.7326357,
+   "lon": -95.5797148,
+   "osm": "way/598873005"
+  },
+  {
+   "name": "Children's Memorial Hermann Hospital",
+   "lat": 29.7138173,
+   "lon": -95.3955032,
+   "osm": "way/51812681"
+  },
+  {
+   "name": "Kindred Hospital The Heights",
+   "lat": 29.8089874,
+   "lon": -95.4308754,
+   "osm": "way/568016147"
+  },
+  {
+   "name": "Advanced Diagnostics East Hospital & 24 Hour Emergency Center",
+   "lat": 29.7707261,
+   "lon": -95.2004521,
+   "osm": "way/602271176"
+  },
+  {
+   "name": "US Pain & Spine Hospital",
+   "lat": 29.7242054,
+   "lon": -95.3840095,
+   "osm": "way/229203752"
+  },
+  {
+   "name": "Kindred Hospital Houston Medical Center",
+   "lat": 29.7129629,
+   "lon": -95.3990926,
+   "osm": "way/207815845"
+  },
+  {
+   "name": "Cornerstone Hospital Houston \u2013 Bellaire",
+   "lat": 29.70801,
+   "lon": -95.47327,
+   "osm": "node/356815851"
+  },
+  {
+   "name": "West Chase Houston Hospital",
+   "lat": 29.7114513,
+   "lon": -95.5561649,
+   "osm": "node/10917051808"
+  },
+  {
+   "name": "Independence Heights Hospital",
+   "lat": 29.8479999,
+   "lon": -95.4084103,
+   "osm": "node/13986638445"
+  },
+  {
+   "name": "Plaza Specialty Hospital",
+   "lat": 29.7233769,
+   "lon": -95.386876,
+   "osm": "node/356816038"
+  },
+  {
+   "name": "First Surgical Hospital",
+   "lat": 29.7099774,
+   "lon": -95.4626713,
+   "osm": "node/10917045362"
+  },
+  {
+   "name": "Kindred Hospital (Houston Northwest)",
+   "lat": 29.9243915,
+   "lon": -95.5880278,
+   "osm": "way/568396887"
+  },
+  {
+   "name": "CommonSpirit - Baylor St. Luke\u2019s Medical Center - McNair Campus - Houston",
+   "lat": 29.7003176,
+   "lon": -95.3939094,
+   "osm": "way/567813747"
+  },
+  {
+   "name": "Menninger Clinic",
+   "lat": 29.6465451,
+   "lon": -95.4575473,
+   "osm": "way/1100740604"
+  },
+  {
+   "name": "West Houston Medical Center",
+   "lat": 29.7287812,
+   "lon": -95.5944279,
+   "osm": "way/567935542"
+  },
+  {
+   "name": "Sun Behavioral Houston",
+   "lat": 29.69265,
+   "lon": -95.3985172,
+   "osm": "way/567855233"
+  },
+  {
+   "name": "Saint Joseph's Medical Center",
+   "lat": 29.8033906,
+   "lon": -95.4042191,
+   "osm": "way/568022244"
+  },
+  {
+   "name": "River Oaks Hospitals And Clinics",
+   "lat": 29.731067,
+   "lon": -95.4450385,
+   "osm": "node/10916990784"
+  },
+  {
+   "name": "Atrium Medical Center",
+   "lat": 29.6462764,
+   "lon": -95.5881322,
+   "osm": "node/10917052751"
+  }
+ ]
+}

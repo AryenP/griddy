@@ -288,3 +288,10 @@ substations (services3.arcgis.com/bWPjFyq029ChCGur/.../Substation/FeatureServer/
 transmission layers are gone (portal retired). Texas substations and lines: no official public layer found yet.
 Next: Aryen's call on technician dispatch, then the city map from these sources (hospitals from OSM, labelled ODbL).
 Blockers / needs Aryen: none new.
+
+## 2026-10-24 17:56 PT — city map data: real hospitals for Houston and Los Angeles
+Done: scripts/fetch_city.py fetched 39 Houston and 35 Los Angeles hospitals from OpenStreetMap (named places inside
+each city's box, ODbL, docs/evidence/city/); config/cities.yaml; tests/test_city.py. Substations: no public source
+(California OES's layer needs a token; OSM search returns police substations), so the map's feeders will be an
+illustrative layout, labelled. Teammates still quiet; CI green.
+Next: the city map view in the 3D world. Blockers / needs Aryen: none new.

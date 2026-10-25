@@ -49,6 +49,10 @@ members:
   - agent/faults.py
   - web/proof*
   - tests/test_web_proof*.py
+  - config/cities.yaml
+  - scripts/fetch_city.py
+  - docs/evidence/city/**
+  - tests/test_city*.py
   - tests/test_fleet*.py
   - scripts/team.py
   - scripts/check_runtime.py
