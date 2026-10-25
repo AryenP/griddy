@@ -68,9 +68,9 @@ function renderTrace() {
         <text class="cap-label" x="${X(Math.min(bro.end, xmax)) - 4}" y="${Y(bro.cap.target_w) - 6}" text-anchor="end">cap ${fixed(bro.cap.target_w, 2)} W</text>` : ""}
       ${lines.map((l) => html`<path class="trace" style="stroke:${l.pol.color}" d="${path(l.pts)}"/>`)}
     </svg>`);
-  setHTML($("trace-legend"), html`${lines.map((l) => html`<span><i class="sw" style="background:${l.pol.color}"></i><b>${l.pol.label}</b>
-    ${recorded(l.s)}${l.cap ? `, cap ${fixed(l.cap.target_w, 2)} W (${sig(l.cap.target_pct)}% below its measured baseline)` : ", no cap recorded"}</span>`)}`);
-  $("trace-src").textContent = "watts measured by macOS powermetrics at 1 Hz, from each run's recorded series; recorded, not live";
+  setHTML($("trace-legend"), html`${lines.map((l) => html`<span><i class="sw" style="background:${l.pol.color}"></i><b>${l.pol.label}</b></span>`)}`);
+  const cap = bro ? bro.cap : (lines.find((l) => l.cap) || {}).cap;
+  $("trace-src").textContent = `watts measured by macOS powermetrics at 1 Hz; 0 s is when each run's cut began${cap ? `; the red line is the cap, ${fixed(cap.target_w, 2)} W, ${sig(cap.target_pct)} % below the measured baseline` : ""}; recorded, not live`;
 }
 
 // ---------- the two comparisons ----------
@@ -108,10 +108,32 @@ function renderCompare(box, c, otherLabel) {
 
 async function loadCompare(pol, otherLabel) {
   const d = $("pick-dispatcher").value, b = $(`pick-${pol}`).value, box = $(`vs-${pol}`);
-  if (!d || !b) { setHTML(box, html`<p class="empty">${!d ? "no Griddy run recorded yet" : `no ${otherLabel.toLowerCase()} run recorded yet`}</p>`); return; }
+  if (!d || !b) { setHTML(box, html`<p class="empty">${!d ? "no Griddy run recorded yet" : `no ${otherLabel.toLowerCase()} run recorded yet`}</p>`); return null; }
   const r = await getJSON(`/api/compare?dispatched=${encodeURIComponent(d)}&baseline=${encodeURIComponent(b)}`);
-  if (!r.ok) { setHTML(box, html`<p class="empty">${routeError("/api/compare", r)}</p>`); return; }
+  if (!r.ok) { setHTML(box, html`<p class="empty">${routeError("/api/compare", r)}</p>`); return null; }
   renderCompare(box, r.data, otherLabel);
+  return r.data;
+}
+
+// ---------- the three cards: two numbers each, the server's ----------
+// Share of measured seconds at or under the cap, and training steps done in the window. Ignoring the call comes from
+// its comparison with Griddy, pausing everything and Griddy from theirs (both over the same 315 s window).
+function renderCards(vsIgnore, vsPause) {
+  const pct = (v) => (v == null ? "—" : `${fixed(v, 0)} %`);
+  const steps = (r) => (r && r.work_done && r.work_done.train != null
+    ? `${Math.round(r.work_done.train).toLocaleString("en-US")} training steps` : "training steps: n/a");
+  const inS = (r) => (r && r.time_to_compliance_s != null ? `under the cap in ${fixed(r.time_to_compliance_s, 0)} s` : "never under the cap");
+  const card = (pol, c, side, line) => html`<article class="p-card" style="--c:${pol.color}">
+      <h2>${pol.label}</h2>
+      <div class="p-big">${c ? pct((c.under_cap_pct || {})[side]) : "—"}</div>
+      <div class="p-unit">of the call at or under the cap</div>
+      <p>${c ? line(c[side]) : "no run loaded"}</p>
+    </article>`;
+  const [ig, pa, gr] = POLICIES;
+  setHTML($("cards"), html`${card(ig, vsIgnore, "baseline", (r) => `${inS(r)}; ${steps(r)}`)}
+    ${card(pa, vsPause, "baseline", (r) => `${inS(r)}; ${steps(r)}`)}
+    ${card(gr, vsPause, "dispatched", (r) => `${inS(r)}; ${steps(r)}`)}
+    <p class="src p-cards-src">recorded, not live · measured by macOS powermetrics · computed by the reporter from each run's timeline</p>`);
 }
 
 // ---------- what each run did ----------
@@ -142,13 +164,14 @@ async function loadAll() {
       if (r.ok) P.series[pol.id] = r.data; else { delete P.series[pol.id]; $("trace-src").textContent = routeError(path, r); }
     }));
     renderTrace(); renderActions();
-    await Promise.all([loadCompare("baseline", "Ignore the call"), loadCompare("pause_all", "Pause everything")]);
+    const [vsIgnore, vsPause] = await Promise.all([loadCompare("baseline", "Ignore the call"), loadCompare("pause_all", "Pause everything")]);
+    renderCards(vsIgnore, vsPause);
   } else {
-    for (const id of ["trace", "vs-baseline", "vs-pause_all"]) setHTML($(id), html`<p class="empty">needs the run list: ${$("runs-src").textContent}</p>`);
+    for (const id of ["cards", "trace", "vs-baseline", "vs-pause_all"]) setHTML($(id), html`<p class="empty">needs the run list: ${$("runs-src").textContent}</p>`);
   }
   $("proof-load").disabled = false;
 }
 
 $("proof-load").addEventListener("click", loadAll);
-window.brownout = { renderTrace, renderCompare, renderActions, P };   // for drawing recorded fixtures from the console
+window.brownout = { renderTrace, renderCompare, renderActions, renderCards, P };   // for drawing recorded fixtures from the console
 loadAll();

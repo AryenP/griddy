@@ -1,0 +1,104 @@
+{
+ "city": "San Francisco",
+ "fetched_at": "2026-10-25T06:44:42+00:00",
+ "source": "OpenStreetMap via Nominatim search 'hospital' in viewbox [-122.52, 37.81, -122.35, 37.7]",
+ "license": "\u00a9 OpenStreetMap contributors, ODbL 1.0 (openstreetmap.org/copyright)",
+ "hospitals": [
+  {
+   "name": "San Francisco General Hospital",
+   "lat": 37.7568103,
+   "lon": -122.4052532,
+   "osm": "way/24446045"
+  },
+  {
+   "name": "UCSF Benioff Children's Hospital San Francisco",
+   "lat": 37.7647716,
+   "lon": -122.3896641,
+   "osm": "node/5555408498"
+  },
+  {
+   "name": "Chinese Hospital",
+   "lat": 37.7954771,
+   "lon": -122.4090036,
+   "osm": "way/160703804"
+  },
+  {
+   "name": "California Pacific Medical Center",
+   "lat": 37.790601,
+   "lon": -122.4322597,
+   "osm": "way/160705973"
+  },
+  {
+   "name": "San Francisco VA Medical Center",
+   "lat": 37.7824221,
+   "lon": -122.5054093,
+   "osm": "relation/2142027"
+  },
+  {
+   "name": "Saint Mary's Medical Center",
+   "lat": 37.7737654,
+   "lon": -122.4536123,
+   "osm": "way/160702015"
+  },
+  {
+   "name": "Laguna Honda Hospital And Rehabilitation Center",
+   "lat": 37.7494117,
+   "lon": -122.4572486,
+   "osm": "way/160835902"
+  },
+  {
+   "name": "Saint Francis Memorial Hospital",
+   "lat": 37.7896437,
+   "lon": -122.4165414,
+   "osm": "way/160710807"
+  },
+  {
+   "name": "UCSF Mount Zion Campus",
+   "lat": 37.7848882,
+   "lon": -122.4389299,
+   "osm": "way/160833250"
+  },
+  {
+   "name": "Kaiser Permanente Medical Center Geary Campus",
+   "lat": 37.7828619,
+   "lon": -122.4406591,
+   "osm": "way/160833245"
+  },
+  {
+   "name": "UCSF Medical Center at Mission Bay",
+   "lat": 37.7659389,
+   "lon": -122.3907673,
+   "osm": "way/580277612"
+  },
+  {
+   "name": "CPMC California Campus",
+   "lat": 37.7866132,
+   "lon": -122.4556947,
+   "osm": "way/160833241"
+  },
+  {
+   "name": "CPMC Davies Campus",
+   "lat": 37.7682569,
+   "lon": -122.4346212,
+   "osm": "way/112073351"
+  },
+  {
+   "name": "CPMC Mission Bernal Campus",
+   "lat": 37.7469902,
+   "lon": -122.4208571,
+   "osm": "way/160709337"
+  },
+  {
+   "name": "CPMC Van Ness Campus",
+   "lat": 37.7859772,
+   "lon": -122.422352,
+   "osm": "way/288533921"
+  },
+  {
+   "name": "UC Medical Center Moffett & Long Hospitals",
+   "lat": 37.7630641,
+   "lon": -122.4570483,
+   "osm": "node/9865529017"
+  }
+ ]
+}

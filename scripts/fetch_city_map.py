@@ -5,7 +5,7 @@ data from maps online ... just part of it is fine").
 
 Coordinates become metres from the square's centre: x east, z south. A building's height is its OSM `height`, else
 `building:levels` x 3.5 m, else an estimate from its type; the file counts which is which so the page can say so.
-Usage: uv run python scripts/fetch_city_map.py [city-id ...]   (one request per city; OSM asks for light use)
+Usage: uv run python scripts/fetch_city_map.py [city-id ...]   (one request per 800 m tile; OSM asks for light use)
 """
 from __future__ import annotations
 
@@ -13,6 +13,7 @@ import json
 import math
 import re
 import sys
+import time
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 from pathlib import Path
@@ -22,6 +23,7 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 API = "https://api.openstreetmap.org/api/0.6/map"
+TILE_M = 800                    # a dense city square is fetched in tiles of about this size
 UA = "Griddy-hackathon-demo/1.0"
 ROADS = {"motorway": 5, "trunk": 5, "primary": 4, "secondary": 3, "tertiary": 3, "residential": 2, "unclassified": 2,
          "living_street": 2, "service": 1, "motorway_link": 3, "trunk_link": 3, "primary_link": 3, "secondary_link": 2,
@@ -55,9 +57,20 @@ def fetch(city: dict) -> dict:
     kx, kz = 111320.0 * math.cos(math.radians(lat0)), 110540.0
     dlon, dlat = half / kx, half / kz
     bbox = f"{lon0 - dlon:.5f},{lat0 - dlat:.5f},{lon0 + dlon:.5f},{lat0 + dlat:.5f}"
-    r = httpx.get(API, params={"bbox": bbox}, headers={"User-Agent": UA}, timeout=90)
-    r.raise_for_status()
-    root = ET.fromstring(r.content)
+    root = ET.Element("osm")                       # one call per tile: the API caps each call at 50,000 nodes
+    n = max(1, math.ceil(2 * half / TILE_M))
+    seen: set[tuple[str, str]] = set()
+    for i in range(n):
+        for j in range(n):
+            w, s = lon0 - dlon + 2 * dlon * i / n, lat0 - dlat + 2 * dlat * j / n
+            r = httpx.get(API, params={"bbox": f"{w:.5f},{s:.5f},{w + 2 * dlon / n:.5f},{s + 2 * dlat / n:.5f}"},
+                          headers={"User-Agent": UA}, timeout=90)
+            r.raise_for_status()
+            for el in ET.fromstring(r.content):
+                if el.tag in ("node", "way", "relation") and (el.tag, el.get("id")) not in seen:
+                    seen.add((el.tag, el.get("id"))); root.append(el)
+            if n > 1:
+                time.sleep(1.5)                    # light use, as OSM asks
     xy = {n.get("id"): ((float(n.get("lon")) - lon0) * kx, -(float(n.get("lat")) - lat0) * kz) for n in root.iter("node")}
     tags = lambda e: {t.get("k"): t.get("v") for t in e.findall("tag")}                                   # noqa: E731
     ways = {w.get("id"): w for w in root.iter("way")}
@@ -72,14 +85,20 @@ def fetch(city: dict) -> dict:
         if len(pts) < 4 or not inside(pts):
             return
         h, how = _num(t.get("height")), "tagged"
-        if h is None and _num(t.get("building:levels")) is not None:
+        if not h:                                                      # "0" is a tagging slip, not a height
+            h = None
+        if h is None and _num(t.get("building:levels")):
             h, how = _num(t["building:levels"]) * 3.5, "levels"
         if h is None:
             h, how = TYPE_HEIGHT.get(t.get("building", ""), 10.0), "estimated"
         heights[how] += 1
         h0 = _num(t.get("min_height")) or 0.0
         hosp = t.get("amenity") == "hospital" or t.get("healthcare") == "hospital" or t.get("building") == "hospital"
-        out["buildings"].append({"p": r1(_simplify(pts[:-1] if pts[0] == pts[-1] else pts, 0.8)), "h": round(h, 1),
+        ring = _simplify(pts[:-1] if pts[0] == pts[-1] else pts, 0.8)
+        if len(ring) < 3:                                              # a sliver that simplifies to a line: nothing to draw
+            heights[how] -= 1
+            return
+        out["buildings"].append({"p": r1(ring), "h": round(h, 1),
                                  "h0": round(h0, 1), **({"hospital": True} if hosp else {}),
                                  **({"name": t["name"]} if hosp and t.get("name") else {})})
 
@@ -87,6 +106,9 @@ def fetch(city: dict) -> dict:
         t, pts = tags(w), pts_of(w)
         if len(pts) < 2:
             continue
+        if t.get("power") in ("substation", "plant", "generator") and inside(pts):   # also when mapped as a building
+            cx, cz = sum(x for x, _ in pts) / len(pts), sum(z for _, z in pts) / len(pts)
+            out["power_sites"].append({"kind": t["power"], "x": round(cx, 1), "z": round(cz, 1), **({"name": t["name"]} if t.get("name") else {})})
         if "building" in t or "building:part" in t:
             building(pts, t)
         elif t.get("highway") in ROADS and inside(pts):
@@ -97,9 +119,6 @@ def fetch(city: dict) -> dict:
             out["water"].append(r1(_simplify(pts, 2.0)))
         elif t.get("power") in ("line", "minor_line", "cable") and inside(pts):
             out["power_lines"].append({"kind": t["power"], "p": r1(pts), **({"voltage": t["voltage"]} if t.get("voltage") else {})})
-        elif t.get("power") in ("substation", "plant", "generator") and inside(pts):
-            cx, cz = sum(x for x, _ in pts) / len(pts), sum(z for _, z in pts) / len(pts)
-            out["power_sites"].append({"kind": t["power"], "x": round(cx, 1), "z": round(cz, 1), **({"name": t["name"]} if t.get("name") else {})})
         if (t.get("amenity") == "hospital" or t.get("healthcare") == "hospital") and t.get("name") and inside(pts):
             cx, cz = sum(x for x, _ in pts) / len(pts), sum(z for _, z in pts) / len(pts)
             out["hospitals"].append({"name": t["name"], "x": round(cx, 1), "z": round(cz, 1), "outline": r1(_simplify(pts, 2.0))})
@@ -121,6 +140,8 @@ def fetch(city: dict) -> dict:
             x, z = xy[n.get("id")]
             out["power_sites"].append({"kind": t["power"], "x": round(x, 1), "z": round(z, 1), **({"name": t["name"]} if t.get("name") else {})})
     out["buildings"].sort(key=lambda b: -b["h"])
+    rank = {"substation": 0, "plant": 1, "generator": 2}        # named substations first: the page labels the first named site
+    out["power_sites"].sort(key=lambda p: (rank.get(p["kind"], 3), "name" not in p))
     return {"city": city["name"], "area": m["name"], "center": [lat0, lon0], "half_m": half, "bbox": bbox,
             "fetched_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
             "source": f"OpenStreetMap API v0.6 map call, bbox {bbox}",

@@ -365,3 +365,5 @@ class Comparison(BaseModel):
     delta: dict[str, float] = Field(default_factory=dict,
                                     description="dispatched minus baseline: cost_usd, co2_g, energy_wh, chat_p95_s, ...")
     notes: list[str] = Field(default_factory=list)
+    under_cap_pct: dict[str, float | None] = Field(default_factory=dict,
+                                                   description="measured seconds at or under the cap, % per side: dispatched, baseline")

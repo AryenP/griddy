@@ -19,17 +19,38 @@
   </header>
   <header class="top">
     <div class="claim">
-      <h1>Proof: one utility call, three answers</h1>
-      <p>The same scripted cap on the same Mac, answered three ways: ignore the call, pause everything, or Griddy.
-        macOS powermetrics measured every number here during recorded runs.</p>
+      <h1>What the meter recorded</h1>
+      <p>We sent this Mac the same request three times: cut power 30 % for five minutes. Once it ignored the request,
+        once it paused everything, and once Griddy handled it. macOS powermetrics measured the watts.</p>
     </div>
-    <div class="controls">
-      <span class="badge warn">recorded, not live</span>
-    </div>
+    <span class="badge warn">recorded, not live</span>
   </header>
 
   <main>
+    <section id="cards" class="p-cards" aria-live="polite"><p class="empty">loading the runs…</p></section>
+
     <section class="panel">
+      <h2>Measured power, from the moment the cut began</h2>
+      <div id="trace" class="proof-trace"><p class="empty">loading the runs…</p></div>
+      <div class="legend" id="trace-legend"></div>
+      <div class="src" id="trace-src"></div>
+    </section>
+
+    <details class="panel i-more">
+      <summary>Every number, side by side</summary>
+      <section class="row bottom">
+        <div><h2>Griddy and ignoring the call</h2><div id="vs-baseline"><p class="empty">loading…</p></div></div>
+        <div><h2>Griddy and pausing everything</h2><div id="vs-pause_all"><p class="empty">loading…</p></div></div>
+      </section>
+    </details>
+
+    <details class="panel i-more">
+      <summary>What each run did, second by second</summary>
+      <div id="actions" class="receipt-grid"></div>
+    </details>
+
+    <details class="panel i-more">
+      <summary>Show other recorded runs</summary>
       <div class="receipt-pick">
         <label>Ignore the call <select id="pick-baseline"></select></label>
         <label>Pause everything <select id="pick-pause_all"></select></label>
@@ -37,31 +58,7 @@
         <button id="proof-load" type="button" class="primary">Show these runs</button>
       </div>
       <div class="src" id="runs-src">runs not loaded yet</div>
-    </section>
-
-    <section class="panel">
-      <h2>Measured power, aligned at each run's cap start</h2>
-      <p class="cap">Measured watts at 1 Hz. 0 s is when each run's cap began; red is Griddy's cap.</p>
-      <div id="trace" class="proof-trace"><p class="empty">loading the runs…</p></div>
-      <div class="legend" id="trace-legend"></div>
-      <div class="src" id="trace-src"></div>
-    </section>
-
-    <section class="row bottom">
-      <div class="panel">
-        <h2>Griddy vs ignoring the call</h2>
-        <div id="vs-baseline"><p class="empty">loading…</p></div>
-      </div>
-      <div class="panel">
-        <h2>Griddy vs pausing everything</h2>
-        <div id="vs-pause_all"><p class="empty">loading…</p></div>
-      </div>
-    </section>
-
-    <section class="panel">
-      <h2>What each run did during the call</h2>
-      <div id="actions" class="receipt-grid"></div>
-    </section>
+    </details>
   </main>
 
   <script src="common.js"></script>

@@ -389,44 +389,42 @@ function renderJobs() {
   setHTML($("jobs"), html`${ids.map(jobRow)}`);
 }
 
-function kv(k, v) { return html`<div class="kv"><b>${k}</b> ${v}</div>`; }
+// One job per row (Aryen, Sat 23:45: "too many numbers"): a plain line (whose job, when it is due, where it runs, how
+// far along), its progress, and one small line with the measured details, each with its source and age.
 function jobRow(id) {
   const st = S.jobs[id] || {}, spec = S.jobSpecs[id];
-  const facts = [];
-  if (spec) {
-    const dl = spec.deadline ? `${isoLabel(spec.deadline)}` + (S.hardDeadlines.has(id) ? " (kept by owner: hard)" : "") : "none";
-    facts.push(kv("owner", spec.owner));
-    facts.push(kv("deadline", dl));
-  }
-  facts.push(kv("device", st.device || "—"));
-  if (id === "chat") {
-    if (st.concurrency != null) facts.push(kv("concurrency", `${st.concurrency}` + (st.inflight != null ? ` (${st.inflight} in flight)` : "")));
-    const planned = S.schedule ? (S.schedule.chat_busy_streams != null ? `${sig(S.schedule.chat_busy_streams)} busy streams` : "full concurrency") : "no schedule yet";
-    facts.push(kv("traffic", `${st.busy_60s != null ? sig(st.busy_60s) : "—"} busy, measured over 60 s; the plan assumed ${planned}`));
-    if (st.max_tokens != null) facts.push(kv("max tokens", `${st.max_tokens}` + (st.model ? `, ${st.model}` : "")));
-  } else if (st.concurrency != null) {
-    facts.push(kv("concurrency", st.concurrency));
-  }
-  let progress = "";
+  const state = st.state || "no status";
+  const stale = state !== "done" && st.t != null && nowS() - st.t > STALE_STATUS_S;   // a finished job's status is old by design
+  const n = (v) => Number(v).toLocaleString("en-US");
+  const due = spec ? (spec.deadline ? `due ${isoLabel(spec.deadline)}${S.hardDeadlines.has(id) ? " (kept by owner: hard)" : ""}` : "no deadline") : null;
+  let amount = "", progress = "";
+  if (id === "chat" && st.concurrency != null) amount = `${st.concurrency} streams, ${st.inflight != null ? st.inflight : 0} in flight`;
+  else if (st.concurrency != null) amount = `concurrency ${st.concurrency}`;
   if (st.step != null) {
-    facts.push(kv("step", `${st.step}` + (spec && spec.target_steps ? ` of ${spec.target_steps}` : "") + (st.loss != null ? `, loss ${sig(st.loss)}` : "")));
+    amount = `step ${n(st.step)}${spec && spec.target_steps ? ` of ${n(spec.target_steps)}` : ""}`;
     if (spec && spec.target_steps) progress = html`<div class="bar"><span style="width:${Math.min(100, st.step / spec.target_steps * 100).toFixed(1)}%"></span></div>`;
   }
   if (st.items_done != null) {
     const f = st.fraction != null ? st.fraction : st.total ? st.items_done / st.total : null;
-    facts.push(kv("items", `${st.items_done}` + (st.total != null ? ` of ${st.total}` : "")));
+    amount = `${n(st.items_done)}${st.total != null ? ` of ${n(st.total)}` : ""} items`;
     if (f != null) progress = html`<div class="bar"><span style="width:${(f * 100).toFixed(1)}%"></span></div>`;
   }
-  if (st.rate != null) facts.push(kv("rate", `${sig(st.rate)} ${id === "train" ? "steps/s" : id === "batch" ? "items/s" : "/s"}, measured by the workload`));
+  const line = [spec ? spec.owner : null, due, st.device ? `on the ${String(st.device).toUpperCase()}` : null, amount || null].filter(Boolean).join(" · ");
+  const detail = [];
+  if (id === "chat") {
+    const planned = S.schedule ? (S.schedule.chat_busy_streams != null ? sig(S.schedule.chat_busy_streams) : "full concurrency") : "no schedule yet";
+    detail.push(`${st.busy_60s != null ? sig(st.busy_60s) : "—"} busy streams measured over 60 s (the plan assumed ${planned})`);
+    if (st.max_tokens != null) detail.push(`${st.max_tokens} max tokens${st.model ? `, ${st.model}` : ""}`);
+  }
+  if (st.rate != null) detail.push(`${sig(st.rate)} ${id === "train" ? "steps/s" : id === "batch" ? "items/s" : "/s"}, measured by the workload`);
+  if (st.loss != null) detail.push(`loss ${sig(st.loss)}`);
   const cal = S.calibration && S.calibration.jobs[id] && st.device ? S.calibration.jobs[id][st.device] : null;
-  if (cal) facts.push(kv("calibrated", `+${sig(cal.delta_w)} W on ${st.device}, powermetrics ${age(S.calibration.measured_at)}`));
-  const state = st.state || "no status";
-  const stale = st.t != null && nowS() - st.t > STALE_STATUS_S;
+  if (cal) detail.push(`calibrated +${sig(cal.delta_w)} W on the ${String(st.device).toUpperCase()} (powermetrics, ${age(S.calibration.measured_at)})`);
+  detail.push(st.t == null ? "no status from the workload yet" : `${stale ? "STALE: " : ""}status ${age(st.t)}`);
   return html`<div class="d-job" style="--c:${MAP_JOB_COLOR[id] || "var(--text)"}">
     <div class="d-job-id"><h3>${id}</h3><span class="badge state-${state}">${state}</span></div>
-    <div class="d-job-facts">${facts}${progress}</div>
-    <div class="d-job-plan">${nextRun(id)}</div>
-    <div class="src d-job-src">${st.t == null ? "no status from the workload yet" : (stale ? "STALE: " : "") + `status ${age(st.t)}`}${spec ? "; owner and deadline from config/jobs.yaml and approvals" : ""}</div></div>`;
+    <div class="d-job-main"><p class="d-job-line">${line || "—"}</p>${progress}<p class="src d-job-src">${detail.join(" · ")}</p></div>
+    <div class="d-job-plan">${nextRun(id)}</div></div>`;
 }
 
 function nextRun(id) {

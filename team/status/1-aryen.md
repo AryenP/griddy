@@ -446,3 +446,7 @@ to every page's wording, no fact changed. 502 tests pass. Next: the docs' wordin
   and the owner flow (30 % request read back, ml-team asked, refusal in words, re-plan) all checked.
 - Found, not fixed (pre-existing): the owner's slip message prints the deadline in UTC (agent/negotiator.py:22), so
   a 00:46 deadline reads "07:46" on the phone.
+
+## Sat 23:55
+- SF city view (Mission District, real OSM), CAISO priced at DLAP_PGAE, Proof and Info redesigned, nav prerender, local
+  deadlines (DECISIONS 23:55). make test 502, verify 82/82. Needs Aryen: restart the demo for the new price.

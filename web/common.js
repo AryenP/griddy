@@ -5,6 +5,26 @@
 
 const $ = (id) => document.getElementById(id);
 
+// Moving between Grid, Info and Proof (Aryen, Sat 23:45: "a cut feeling, not smooth"): Chrome prerenders the other
+// two pages when the pointer rests on their links, so a click shows a page that has already loaded its data and drawn
+// its charts, and chrome.css cross-fades into it. Browsers without speculation rules just load the page as before.
+try {
+  if (HTMLScriptElement.supports && HTMLScriptElement.supports("speculationrules")) {
+    const rules = document.createElement("script");
+    rules.type = "speculationrules";
+    rules.textContent = JSON.stringify({ prerender: [{ source: "list", eagerness: "moderate",
+      urls: ["/", "/info.html", "/proof.html"].filter((u) => u !== location.pathname) }] });
+    document.head.append(rules);
+  }
+} catch (e) { /* no prerender: navigation works as before */ }
+
+// A time as ISO 8601 with this browser's own offset ("2026-10-25T00:46:00-07:00"), so a deadline the page sends
+// reads in local time everywhere it is shown, the owner's phone included (not "07:46" in UTC).
+function localISO(d) {
+  const off = -d.getTimezoneOffset(), a = Math.abs(off), p = (x) => String(x).padStart(2, "0");
+  return `${new Date(d.getTime() + off * 60000).toISOString().slice(0, 19)}${off >= 0 ? "+" : "-"}${p(Math.floor(a / 60))}:${p(a % 60)}`;
+}
+
 // ---------- escaping ----------
 class SafeHTML { constructor(s) { this.s = s; } toString() { return this.s; } }
 const ESC = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };

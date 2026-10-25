@@ -1,8 +1,9 @@
 """Fetch the hospitals of each city in config/cities.yaml from OpenStreetMap (Nominatim search, ODbL) into
-docs/evidence/city/<id>.json, once, so the demo needs no network for them. Usage: uv run python scripts/fetch_city.py"""
+docs/evidence/city/<id>.json, once, so the demo needs no network for them. Usage: uv run python scripts/fetch_city.py [city-id ...]"""
 from __future__ import annotations
 
 import json
+import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -15,9 +16,11 @@ URL = "https://nominatim.openstreetmap.org/search"
 UA = "Griddy-hackathon-demo/1.0"          # Nominatim's policy asks for an identifying agent; one request per second
 
 
-def main() -> None:
+def main(ids: list[str]) -> None:
     cities = yaml.safe_load((ROOT / "config/cities.yaml").read_text())["cities"]
     for c in cities:
+        if ids and c["id"] not in ids:
+            continue
         w, n, e, s = c["viewbox"]
         r = httpx.get(URL, params={"q": "hospital", "format": "jsonv2", "limit": 40, "bounded": 1,
                                    "viewbox": f"{w},{n},{e},{s}"}, headers={"User-Agent": UA}, timeout=25)
@@ -34,4 +37,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv[1:])
