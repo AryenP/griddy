@@ -50,3 +50,19 @@ def test_the_map_route_serves_only_named_cities():
     c = TestClient(app)
     assert c.get("/api/cities/houston/map").json()["area"] == "Texas Medical Center"
     assert c.get("/api/cities/..%2F..%2F.env/map").status_code == 404 and c.get("/api/cities/nowhere/map").status_code == 404
+
+
+def test_a_plant_on_the_grid_view_is_named_only_with_a_source():
+    # config/isos.yaml `places`: a fuel gets a real plant's name only where that plant is the whole number (Aryen, Sun
+    # 01:10: "make the unnamed stuff into actual locations"); a total of many plants keeps its fuel's name
+    import re
+    world = (ROOT / "web/world.js").read_text()
+    fuels = set(re.findall(r'\[/[^/]+/i, "(\w+)", "\w+"\]', world))          # the plant titles world.js draws
+    assert {"Gas", "Nuclear", "Imports"} <= fuels
+    isos = yaml.safe_load((ROOT / "config/isos.yaml").read_text())["isos"]
+    assert isos["CAISO"]["places"]["Nuclear"]["name"] == "Diablo Canyon"
+    for iso, c in isos.items():
+        for fuel, p in (c.get("places") or {}).items():
+            assert fuel in fuels and p["name"] and p["note"] and p["source"], (iso, fuel)
+    assert '"iso_places"' in (ROOT / "api/app.py").read_text() and '"iso_places"' in (ROOT / "HANDOFF.md").read_text()
+    assert "d.iso_places" in (ROOT / "web/demo.js").read_text()

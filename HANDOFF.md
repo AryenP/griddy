@@ -37,7 +37,8 @@ WebSocket `GET /ws`. First message is a snapshot, then every timeline event as i
   "power": PowerReading | null, "jobs": {"chat": status, "train": status, "batch": status},
   "calibration": Calibration | null, "policy": Policy, "iso_options": ["CAISO", "ERCOT"],
   "dispatcher_enabled": true, "agent": "online" | "offline", "run_id": str, "iso": str,
-  "job_specs": {"train": Job, ...}, "quote": {"text", "who", "role"} | null}}
+  "job_specs": {"train": Job, ...}, "quote": {"text", "who", "role"} | null,
+  "iso_places": {"CAISO": {"area": str | null, "places": {"Nuclear": {"name", "note", "source"}}}, ...}}}
 {"t": 1792822585.31, "kind": "power",    "data": PowerReading}
 {"t": ...,           "kind": "grid",     "data": {"feed": "signal", ...GridSignal}}
 {"t": ...,           "kind": "schedule", "data": Schedule}

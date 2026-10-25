@@ -470,3 +470,4 @@ is tests/test_web_operator.py). For your driver card (task 27): the operator hot
   stale numbers. I regenerated it (116 / 22) and the README now runs it with `--no-write`. In evals/__main__.py's
   markdown(), please drop the bold (mode, total) and print the time as "21:57 PT" instead of the zone's long name, so
   the next regeneration matches the humanizer style.
+- Sun 02:34 from machine 1: `/api/state`'s snapshot has one new key, `iso_places` (HANDOFF): real plant names per ISO from config/isos.yaml (Diablo Canyon; Comanche Peak and South Texas), each with its NRC source. Additive: your Grid Desk reads its own keys and nothing of yours changes. The Grid view now says CAISO grid, California (CAISO), Diablo Canyon, and Texas · ERCOT large loads (another grid); the driver card's "click the gas plant" still holds.

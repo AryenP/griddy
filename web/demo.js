@@ -7,7 +7,7 @@
 
 const D = { grid: null, power: null, replay: null, last: null, whatif: null, cat: [], pick: "live", scale: null, fetching: false,
   capEvents: [], pts: [],
-  cities: [], city: null, maps: {},
+  cities: [], city: null, maps: {}, mapTried: new Set(), places: {},
   shown: new Set(), peaks: {}, specs: {}, jobs: {} };
 
 const gw = (mw) => (mw == null ? "—" : `${fixed(mw / 1000, 1)} GW`);
@@ -45,6 +45,7 @@ function handle(msg) {
     case "snapshot":
       hideLoader();
       D.grid = d.grid; D.power = d.power; D.replay = d.replay || null; D.scale = d.scale || null; D.whatif = d.whatif || null;
+      D.places = d.iso_places || {};
       D.specs = d.job_specs || {}; D.jobs = d.jobs || {}; D.capEvents = d.cap_events || [];
       D.pts = (d.power_history || []).filter((x) => x && x[1] != null).slice(-180);
       if (D.replay && D.replay.last) D.last = D.replay.last;
@@ -108,7 +109,8 @@ function setNum(el, text) {
   const dec = (m[2].split(".")[1] || "").length, t0 = performance.now(), st = { v: to, unit, raf: 0 };
   const tick = (now) => {
     const f = Math.min(1, (now - t0) / 520), v = from + (to - from) * (1 - Math.pow(1 - f, 3));
-    el.textContent = f < 1 ? `${v < 0 ? "-" : ""}${Math.abs(v).toFixed(dec)}${unit}` : text;
+    const n = m[2].includes(",") ? Math.abs(v).toLocaleString(undefined, { minimumFractionDigits: dec, maximumFractionDigits: dec }) : Math.abs(v).toFixed(dec);
+    el.textContent = f < 1 ? `${v < 0 ? "-" : ""}${n}${unit}` : text;
     if (f < 1) st.raf = requestAnimationFrame(tick);
   };
   st.raf = requestAnimationFrame(tick);
@@ -196,13 +198,14 @@ function render() {
   D.versusPrev = D.versusOn; D.versusOn = false;
   $("w-versus").hidden = true;
   World.set({ racks: rackStates(), cap: capNow() });
-  followCity();
+  followCity(); prefetchMap();
   if (running()) {
     const d = D.last, sc = d.scale;
     if (d.mix_mw) for (const [k, v] of Object.entries(d.mix_mw)) D.peaks[k.toLowerCase()] = Math.max(D.peaks[k.toLowerCase()] || 0, v);
     World.set({ mix: d.mix_mw, served: d.demand_mw, needed: d.forecast_mw, ours_w: d.ours_w, baseline_w: d.baseline_w,
       cut_pct: d.measured_cut_pct, alert: d.cut_kinds.includes("emergency") ? "emergency" : d.cut_kinds.includes("warning") ? "warning" : null,
       peaks: { wind: D.peaks.wind, solar: D.peaks.solar }, with_mw: sc ? sc.freed_mw : null, city: ev ? ev.region : null,
+      iso: ev ? ev.iso : null, places: ev ? D.places[ev.iso] || null : null, stand_in: standInNow(),
       campus: ev ? { title: "Data centers", value: gw(ev.flexible_mw), sub: ev.flexible_mw === 1000 ? "a 1 GW unit" : "up to: each load's Sep peak, summed" } : null });
     $("w-clock").textContent = `${ev ? ev.title : d.title} · ${isoLabel(d.hour_ending || d.sim_time)}`;
     $("w-progress").style.width = `${(100 * d.progress).toFixed(1)}%`;
@@ -214,7 +217,7 @@ function render() {
     $("s-mac-src").textContent = d.nothing_to_shed ? "nothing running to shed" : cut != null
       ? `${fixed(Math.abs(cut), 0)}% ${cut >= 0 ? "below" : "above"} its baseline · measured` : "measured by powermetrics";
     if (sc && sc.people != null) { setNum($("s-impact"), compact(sc.people)); $("s-impact-k").textContent = `${sc.people_unit} kept on`; }
-    else if (sc) { setNum($("s-impact"), `${fixed(sc.freed_mw, 0)} MW`); $("s-impact-k").textContent = "freed at grid scale"; }
+    else if (sc) { setNum($("s-impact"), `${wholeMw(sc.freed_mw)} MW`); $("s-impact-k").textContent = "freed at grid scale"; }
     else { setNum($("s-impact"), "—"); $("s-impact-k").textContent = "at grid scale"; }
     $("s-impact-src").textContent = sc ? `estimate · ${fixed(sc.share_pct, 0)}% cut asked, on ${gw(sc.flexible_mw)}` : "appears once this Mac cuts";
     if (ev) {
@@ -232,9 +235,11 @@ function render() {
   const mixNow = (g && g.fuel_mix_mw) || {};
   const served = Object.values(mixNow).filter((v) => v > 0).reduce((s, v) => s + v, 0) || null;
   const needed = liveNeeded(g);
+  const elsewhere = !!(g && g.iso !== "ERCOT");
   World.set({ mix: mixNow, served, needed, ours_w: p ? p.combined_w : null, baseline_w: null, cut_pct: null, alert: null, peaks: {},
-    with_mw: null, city: null,
-    campus: D.scale ? { title: "ERCOT large loads", value: `up to ${gw(D.scale.large_loads_running_mw)}`, sub: "each load's Sep 2026 peak, summed" } : null });
+    with_mw: null, city: null, iso: g ? g.iso : null, places: g ? D.places[g.iso] || null : null, stand_in: standInNow(),
+    campus: D.scale ? { title: elsewhere ? "Texas · ERCOT large loads" : "ERCOT large loads", value: `up to ${gw(D.scale.large_loads_running_mw)}`,
+      sub: `${elsewhere ? "another grid · " : ""}each load's Sep 2026 peak, summed`, elsewhere } : null });
   if (live) {
     $("w-clock").textContent = g ? `Live · ${g.iso} · ${localClock(nowS())}` : "Live · waiting for the grid feed";
     $("w-progress").style.width = "0%";
@@ -250,7 +255,7 @@ function render() {
   setNum($("s-needed"), gw(needed)); $("s-needed-src").textContent = needed ? `${g.iso} load forecast` : "no forecast for this hour";
   setNum($("s-mac"), p ? `${fixed(p.combined_w, 1)} W` : "—");
   $("s-mac-src").textContent = p ? `measured by powermetrics · ${age(p.t)}` : "waiting for the meter";
-  setNum($("s-impact"), D.scale ? `${fixed(D.scale.freed_mw, 0)} MW` : "—");
+  setNum($("s-impact"), D.scale ? `${wholeMw(D.scale.freed_mw)} MW` : "—");
   $("s-impact-k").textContent = "ERCOT, if large loads cut like this Mac";
   $("s-impact-src").textContent = D.scale ? `estimate · ${fixed(D.scale.share_of_demand_pct, 1)}% of ERCOT now` : "estimate";
   setHTML($("w-sources"), html`Live grid data: ${g ? g.iso : "—"} via gridstatus. This Mac: macOS powermetrics. Detail and every graph: <a href="/info.html">Info</a>.`);
@@ -310,6 +315,20 @@ async function followCity() {
   citySwitching = true;
   try { if (want) await openCity(want); else closeCity(); } finally { citySwitching = false; }
 }
+// The overview names the real building this Mac stands in for, the one the city view outlines: fetch the city's map
+// once, ahead of a click (which also makes the fly-in instant). One try per city.
+async function prefetchMap() {
+  const c = cityNow();
+  if (!c || D.maps[c.id] || D.mapTried.has(c.id)) return;
+  D.mapTried.add(c.id);
+  const r = await getJSON(`/api/cities/${c.id}/map`);
+  if (r.ok && !D.maps[c.id]) { D.maps[c.id] = r.data; render(); }
+}
+function standInNow() {
+  const c = cityNow(), m = c && D.maps[c.id], dc = m ? World.standIn(m.data_centers) : null;
+  return dc && dc.address ? dc.address : null;
+}
+function wholeMw(mw) { return mw == null || !isFinite(mw) ? "—" : Math.round(mw).toLocaleString(); }
 async function openCity(city) {
   if (!D.maps[city.id]) {                                       // one real square of the city, 1:1 (OpenStreetMap)
     const r = await getJSON(`/api/cities/${city.id}/map`);
