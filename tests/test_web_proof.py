@@ -29,7 +29,7 @@ def test_draws_the_three_policies_from_the_contract():
 
 
 def test_the_evidence_runs_of_record_are_picked_by_default():
-    """Sat 17:45: the newest run on the demo Mac is often a test session; Proof defaults to the comparisons of record
+    """Sat 17:38: the newest run on the demo Mac is often a test session; Proof defaults to the comparisons of record
     in docs/evidence/claims.yaml (GET /api/runs marks them `of_record`) and says so."""
     import yaml
     claims = yaml.safe_load(open("docs/evidence/claims.yaml"))["comparisons"]
