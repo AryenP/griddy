@@ -271,3 +271,11 @@ Teammates quiet: Anuraag's last status 06:10, Krish 14:15, Arumalla 12:46. No op
 Next: Aryen's call on technician dispatch (a judge's phone gets the work order), then the city map, then Proof.
 Blockers / needs Aryen: AGENTVERSE_API_KEY in .env for the Fetch agent (docs/fetch-agent.md); optional EIA_API_KEY
 (free, eia.gov/opendata/register.php) so replays do not lean on the rate-limited DEMO_KEY.
+
+## 2026-10-24 17:47 PT — Proof page taken over and restyled; it now opens on the evidence of record
+Done: web/proof* moved to machine 1 (roster; note in team/2-anuraag.md, task 26 keeps chat/owner/operator). Proof
+in Info's look; "Griddy" on the page. Fixed: Proof defaulted to the newest runs (tonight's test session); /api/runs
+now marks the runs of record from docs/evidence/claims.yaml and the page picks them. 482 tests pass. CI green since
+309bd80. Teammates still quiet (no new commits, no PRs to act on, no issues).
+Next: Aryen's call on technician dispatch, then the city map.
+Blockers / needs Aryen: none new.

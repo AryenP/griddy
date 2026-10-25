@@ -47,6 +47,8 @@ members:
   - tests/test_replay*.py
   - tests/test_whatif*.py
   - agent/faults.py
+  - web/proof*
+  - tests/test_web_proof*.py
   - tests/test_fleet*.py
   - scripts/team.py
   - scripts/check_runtime.py
@@ -102,7 +104,7 @@ members:
   - tests/fixtures/openadr/**
 - number: 2
   name: Anuraag
-  role: Frontend (chat, owner, operator, proof pages and the shared style + helpers), evals, judging docs, preflight
+  role: Frontend (chat, owner and operator pages and the shared style + helpers), evals, judging docs, preflight
   github: ARP-source
   emails:
   - anuraagpunnam6@gmail.com
@@ -116,11 +118,9 @@ members:
   - web/operator*
   - web/approvals*
   - web/receipts*
-  - web/proof*
   - scripts/qr.py
   - tests/test_web_pages.py
   - tests/test_web_qr.py
-  - tests/test_web_proof*.py
   - tests/test_web_a11y*.py
   - evals/**
   - tests/test_evals*.py

@@ -144,8 +144,20 @@ def make_router(rt) -> APIRouter:
 
     @r.get("/api/runs")
     async def runs():
+        """`of_record`: the run is one of the evidence comparisons of record (docs/evidence/claims.yaml), so the Proof
+        page picks those by default rather than whatever ran last on this Mac."""
         from agent.reporter import runtime_runs
-        return [{k: v for k, v in run.items() if k != "path"} for run in runtime_runs(RUNS)]
+        return [{**{k: v for k, v in run.items() if k != "path"}, "of_record": run["run_id"] in _of_record()}
+                for run in runtime_runs(RUNS)]
+
+    def _of_record() -> set[str]:
+        import yaml
+        try:
+            claims = yaml.safe_load((Path(__file__).resolve().parents[1] / "docs/evidence/claims.yaml").read_text())
+        except OSError:
+            return set()
+        return {c[k] for c in claims.get("comparisons", []) if "of record" in c.get("name", "")
+                for k in ("dispatched", "baseline") if c.get(k)}
 
     @r.get("/api/runs/{run_id}/series")
     async def run_series(run_id: str):

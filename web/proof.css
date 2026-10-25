@@ -1,0 +1,29 @@
+/* The Proof page (proof.html) in the look Aryen picked for Info (info.css, Sat 16:44): a near-black page with a faint
+   green glow, dark cards with large radii, Inter, big thin numbers, small muted uppercase labels, one mint accent for
+   measured. It changes the look, never the content: every source line stays, smaller and fainter. */
+body.proof.p {
+  --bg: #08090a; --panel: #121415; --panel2: #191c1d; --line: rgba(255, 255, 255, 0.07);
+  --text: #f0f4f2; --muted: #8f9b98; --ok: #7df0bf; --bad: #ff5a5a; --warn: #ffbe46;
+  --font: "Inter", "SF Pro Text", system-ui, -apple-system, "Segoe UI", sans-serif;
+  font: 15.5px/1.45 var(--font); color: var(--text); padding: 18px 22px 40px; max-width: 1560px; letter-spacing: -0.005em;
+  background:
+    radial-gradient(1200px 600px at 10% -10%, rgba(125, 240, 191, 0.07), transparent 60%),
+    radial-gradient(900px 500px at 100% 0%, rgba(90, 168, 255, 0.06), transparent 60%), var(--bg);
+}
+body.proof.p .top { margin-bottom: 14px; }
+body.proof.p .claim h1 { font-size: 1.6rem; font-weight: 300; letter-spacing: -0.02em; margin: 0; }
+body.proof.p .claim p { font-size: 1rem; color: var(--muted); }
+body.proof.p .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 22px; padding: 20px 22px;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 20px 40px -24px rgba(0, 0, 0, 0.7); }
+body.proof.p h2 { font-size: 0.82rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+body.proof.p .cap, body.proof.p .src { color: #6b7774; font-size: 0.74rem; }
+body.proof.p button, body.proof.p select { border-radius: 999px; border: 1px solid var(--line); background: var(--panel2); color: var(--text);
+  font: inherit; min-height: 44px; padding: 6px 14px; }
+body.proof.p button.primary { background: var(--ok); border-color: var(--ok); color: #06120d; font-weight: 650; }
+body.proof.p .rtable td, body.proof.p .rtable th { border-color: var(--line); }
+body.proof.p .rtable td { font-weight: 300; font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+body.proof.p .badge.warn { color: var(--warn); border-color: rgba(255, 190, 70, 0.4); border-radius: 999px; }
+body.proof.p .proof-trace .grid { stroke: rgba(255, 255, 255, 0.06); }
+body.proof.p .proof-trace .tick { fill: #6b7774; font: 12px var(--font); }
+body.proof.p .proof-trace .trace { stroke-width: 2; }
+@media (max-width: 640px) { body.proof.p { padding: 10px 12px 28px; } body.proof.p .panel { padding: 14px; border-radius: 18px; } }

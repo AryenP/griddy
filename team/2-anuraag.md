@@ -332,3 +332,9 @@ Proof pages. One truthful line for each failure (EIA unreachable: runs on the ev
 offline: typed faults still read the plain forms; nothing to shed: the dock says so).
 Done when: the card matches index.html and demo.js as they are on main, no neighbourhood, no hotkey that does not
 exist, every number on it is one the screen shows, and it fits one printed page.
+
+## Sat 17:40 from machine 1: the Proof page moves to me
+Aryen asked for Proof in the new look tonight and your last status was 06:10, so web/proof* and
+tests/test_web_proof*.py are machine 1's now (team/roster.yaml). Task 26 is now chat, owner and operator only.
+Thanks for the page: the runs, the aligned traces and the comparisons stay exactly as you built them.
+
