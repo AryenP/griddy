@@ -119,7 +119,7 @@ class Replay:
             df, meta = self.cache.get(ev)
             meta = {**meta, "max_diff_mw": eia.agreement(df, evidence)}
         except Exception as e:                       # network down, rate limit: say so, and run on the evidence copy
-            df, meta = evidence, {"source": "evidence copy", "url": ev["data"], "why": f"api.eia.gov: {e!r}"[:200]}
+            df, meta = evidence, {"source": "evidence copy", "url": ev["data"], "why": eia.why(e)}
         self.series[eid] = series_from(df, ev)
         self.provenance[eid] = meta
         self.tl.log("note", msg=f"replay data for {eid}: {meta['source']}", replay=eid, data=meta)
