@@ -427,3 +427,8 @@ to every page's wording, no fact changed. 502 tests pass. Next: the docs' wordin
   DECISIONS). README and Devpost now open with Aryen's framing (EVs, rooftop solar and data centers on a grid not built
   for them) and explain the job owner (Krish K22). pytest 507, verify 82/82. The recurring tick is stopped (Aryen).
 - Needs Aryen: restart the demo on the new code in his own terminal (`sudo -v && make demo`), then `make crews`.
+
+## Sat 23:25
+- Done: emergency response checked live on the restarted demo with the crew agents: substation fire, line fault and
+  EV surge all ran end to end (DECISIONS 23:25). The demo runs from ~/brownout (a link to the project) in Terminal 2.
+- Next: rehearse the new demo beat once and add it to DEMO.md.
