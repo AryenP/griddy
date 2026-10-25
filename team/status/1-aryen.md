@@ -455,3 +455,7 @@ to every page's wording, no fact changed. 502 tests pass. Next: the docs' wordin
 - SF square B (SoMa to Mission Bay, 365 Main St, Embarcadero substation, UCSF Mission Bay); city view smooth (worst
   frame 142 ms to 17 ms, watts not up); the data center gives power back visibly from live state. make test 503,
   verify 82/82. Next: restart from cold (Aryen's password), full demo path check, gallery, tag demo-stable-8.
+
+## Sun 00:31: locked
+- Demo up from cold (run 20261025-002517, ~7 s); full path checked live (DECISIONS 00:31); gallery docs/gallery/1-7;
+  make test 503, verify 82/82; tagged demo-stable-8.

@@ -55,6 +55,7 @@ members:
   - scripts/fetch_city.py
   - scripts/fetch_city_map.py
   - docs/evidence/city/**
+  - docs/gallery/**
   - tests/test_city*.py
   - tests/test_app_pages*.py
   - web/operator*
