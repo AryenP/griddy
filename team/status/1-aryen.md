@@ -398,3 +398,11 @@ to every page's wording, no fact changed. 502 tests pass. Next: the docs' wordin
   The intro-film brief for the Devpost video is published for Aryen (claude.ai artifact, private).
 - Next: commit the 18:38 Uri replay timeline with a claims entry so 28.2 W to 10.9 W recomputes in verify.py.
 - Blockers: the needs-Aryen items from 21:45 (App Insights line, repo public, EIA key rotation).
+
+## Sat 22:07 tick
+- Done: Krish's K19 Devpost audit fixed in 0fda52d (eval counts, Azure and the agent stated as they actually run,
+  Uri impact paragraph added, the 2 % share dated, 17.68 W and 21.57 W now recompute: verify 82/82, pytest 502).
+  Krish has K20 (README read as a judge in 5 minutes). No open PR besides #23; no issues.
+- Needs Aryen (new, once): the Fetch.ai opt-in line in docs/devpost.md: opt in with the one read-only agent (and say
+  so) or leave Fetch out. TRACKS.md's three-agent condition is not met.
+- Next: the Uri replay timeline into docs/evidence/runs with a claims entry (28.2 W to 10.9 W).
