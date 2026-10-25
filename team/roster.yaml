@@ -29,6 +29,7 @@ members:
   - .gitignore
   - .python-version
   - scripts/probe_mac.sh
+  - scripts/judge_check.sh
   - scripts/verify_feed.py
   # the dashboard page (Aryen, Sat 04:05); the other pages and the shared web/style.css + web/common.js stay with 2
   - web/index.html

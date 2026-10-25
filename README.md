@@ -129,7 +129,11 @@ python -m uv run python -m evals --no-write   # the AI-layer evals, offline, pri
 
 ## Run it on an Apple-silicon Mac
 
+Judges: what you need, with links, and `make judge`, which says what is missing:
+[docs/judging/run-it-yourself.md](docs/judging/run-it-yourself.md).
+
 ```bash
+make judge            # checks only: what this Mac still needs, and the command for each
 make setup            # uv environment and dependencies (for Azure: uv pip install -e '.[azure]')
 cp .env.example .env  # add your keys; never commit .env. PJM also needs PJM_API_KEY (CAISO and ERCOT need none)
 ollama pull qwen3:4b-instruct   # the chat model (plain qwen3:4b always "thinks" and leaks its reasoning)

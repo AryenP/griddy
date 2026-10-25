@@ -1,4 +1,4 @@
-.PHONY: verify evidence evidence3 evidence-chat evidence-chat-judge preflight tag-stable ollama setup demo baseline calibrate chat-sweep solve report compare test probe qr fetch-agent fetch-three clean
+.PHONY: judge verify evidence evidence3 evidence-chat evidence-chat-judge preflight tag-stable ollama setup demo baseline calibrate chat-sweep solve report compare test probe qr fetch-agent fetch-three clean
 
 PY ?= uv run
 # sudo for powermetrics: no prompt when the passwordless rule for /usr/bin/powermetrics is installed
@@ -81,6 +81,9 @@ tag-stable:     ## after a full live `make demo` worked end to end: tag it; demo
 
 preflight:      ## before the judge: is everything the demo needs ready? (machine 2 builds it)
 	$(PY) python scripts/preflight.py
+
+judge:          ## can this Mac run Griddy? checks only, installs nothing (docs/judging/run-it-yourself.md)
+	bash scripts/judge_check.sh
 
 probe:          ## what does this Mac support?
 	bash scripts/probe_mac.sh | tee runs/probe-$$(date +%s).txt
