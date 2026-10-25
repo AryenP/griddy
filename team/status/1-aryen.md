@@ -307,3 +307,8 @@ Done: README, DEMO and the Devpost draft now say the replay's hours are fetched 
 hour at a time (never a later one), and describe what-if faults (click or words) and the city map with what is real and
 what is illustrative. make verify: 74 of 74. Teammates still quiet; CI green.
 Next: technician dispatch when Aryen decides. Blockers / needs Aryen: that decision.
+
+## 2026-10-24 18:27 PT — the 3D scene keeps clear of the alert cards
+Done: on screens wider than 900 px the world eases aside and shrinks to the room the alert cards leave, and no label
+slides under a card (checked at 1280 x 800 with four cards). Teammates still quiet; CI green.
+Next: technician dispatch when Aryen decides. Blockers / needs Aryen: that decision.

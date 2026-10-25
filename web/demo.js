@@ -320,8 +320,10 @@ $("w-play-btn").addEventListener("click", async () => {
 
 World.mount($("world"));
 const keepClear = () => World.safeArea($("conn").closest("header").getBoundingClientRect().bottom + 8,
-  innerHeight - document.querySelector(".w-dock").getBoundingClientRect().top + 8);
+  innerHeight - document.querySelector(".w-dock").getBoundingClientRect().top + 8,
+  innerWidth > 900 && $("w-alerts").children.length ? innerWidth - $("w-alerts").getBoundingClientRect().left + 8 : 0);
 new ResizeObserver(keepClear).observe(document.querySelector(".w-dock"));
+new MutationObserver(keepClear).observe($("w-alerts"), { childList: true });
 addEventListener("resize", keepClear);
 getJSON("/api/replay/events").then((r) => { if (r.ok) { D.cat = r.data; render(); } });
 getJSON("/api/cities").then((r) => { if (r.ok) D.cities = r.data; });
