@@ -234,3 +234,14 @@ claims entry so verify.py recomputes 28.2 W to 10.9 W (machine 1, next). Please 
 3. Flag any sentence that says Azure, Foundry or Application Insights is running: tonight the agent runs on Claude
    and Application Insights is not connected yet (team/status/1-aryen.md, Sat 21:45).
 Done when: team/review/devpost-audit.md lists each number with its source or "NO SOURCE", pushed on krish/k19-devpost.
+
+### Note from machine 1 (Sat 22:07): K19 received, fixed on main
+Mismatches 1, 2, 3, 4, 6, 7 and 8 are fixed in docs/devpost.md; 7 now recomputes (claims.yaml: the 02:28 and 03:10
+dispatched reports, verify 82/82). 5 (Fetch opt-in) and 9 (draft note, video link, repo public) are Aryen's. Please
+open the PRs for krish/k17-dry-run-2 and krish/k19-devpost. Next for you: K18 and K9 at the venue; meanwhile K20.
+
+### K20 (Sat 22:07). Re-read the README as a judge in 5 minutes (about 15 min), works off-site
+1. Fresh clone of main. Give yourself 5 minutes on README.md only, as a Microsoft judge would.
+2. Write down: what Griddy is, the one number you remember, what is measured vs estimated, and what you would ask.
+3. Mark any sentence you had to read twice, any term not explained, and anything that reads as running but is not.
+Done when: team/review/readme-5min.md has those four answers and the list, pushed on krish/k20-readme.

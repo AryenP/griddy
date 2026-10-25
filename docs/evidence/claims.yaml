@@ -111,3 +111,21 @@ reports:
       chat_ttft_during_s: 0.19
     quoted_in:
       docs/devpost.md: ["held in 8 s", "84 % of capped seconds", "47 % below baseline", "0.19 s"]
+
+  - name: "First two-policy run, dispatched side, its own report (DECISIONS 02:28)"
+    run: 20261024-022026
+    expect:
+      baseline_w: 17.68
+      mean_w: 0.68
+      reduction_pct: 96
+    quoted_in:
+      docs/devpost.md: ["17.68 → 0.68 W"]
+
+  - name: "Second two-policy run, dispatched side, its own report (DECISIONS 03:10)"
+    run: 20261024-025349
+    expect:
+      baseline_w: 21.57
+      mean_w: 1.64
+      reduction_pct: 92
+    quoted_in:
+      docs/devpost.md: ["21.57 → 1.64 W"]
