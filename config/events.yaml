@@ -40,19 +40,20 @@ events:
       - {day: "2021-02-13", kind: warning, label: "ERCOT Emergency Notice for extreme cold weather", cut_pct: 20,
          source: "FERC-NERC report (Nov 2021), PDF p. 54"}
       - {at: "2021-02-15T01:20", kind: emergency, label: "ERCOT declares EEA 3 and orders its first 1,000 MW of firm load shed", cut_pct: 40,
-         source: "FERC-NERC report (Nov 2021), PDF p. 15"}
+         source: "FERC-NERC report (Nov 2021), PDF pp. 15, 136"}
       - {at: "2021-02-15T01:51", kind: emergency, label: "Frequency below 59.4 Hz for 4 min 23 s: minutes from a total blackout",
          source: "FERC-NERC report (Nov 2021), PDF p. 138"}
       - {at: "2021-02-15T19:00", kind: outage, label: "Firm load shed peaks at 20,000 MW",
          source: "FERC-NERC report (Nov 2021), PDF p. 15"}
     impact:
       - {text: "More than 4.5 million people in Texas lost power", source: "FERC-NERC report (Nov 2021), PDF p. 10"}
-      - {text: "210 people died during the event, most of the deaths connected to the power outages", source: "FERC-NERC report (Nov 2021), PDF p. 10"}
+      - {text: "At least 210 people died during the event, most of the deaths connected to the power outages", source: "FERC-NERC report (Nov 2021), PDF p. 10"}
       - {text: "20,000 MW of firm load shed at the worst point; load shed lasted nearly three days", source: "FERC-NERC report (Nov 2021), PDF p. 15"}
     shed_mw: 20000
     people_out: 4500000
-    flexible_mw: 4132          # large loads ERCOT observes running today (ERCOT Monthly Operational Overview, Sep 2026, p. 8)
-    flexible_source: "ERCOT large loads observed running, September 2026 (ERCOT Monthly Operational Overview, p. 8)"
+    flexible_mw: 4132          # up to: the sum of each large load's own September 2026 peak, not what runs at once (Krish K13)
+    flexible_source: "ERCOT large loads, the sum of each one's own September 2026 peak (non-simultaneous: an upper bound; ERCOT Monthly Operational Overview, PDF p. 9)"
+    people_basis: "people out per MW shed at the peak (4.5 million, 20,000 MW)"
     report_url: https://www.nerc.com/pa/rrm/ea/Documents/February_2021_Cold_Weather_Report.pdf
 
   - id: caiso-2020-08
@@ -78,6 +79,7 @@ events:
     shed_mw: 931.6
     people_out: 491600
     people_unit: customers
+    people_basis: "customers out per MW CAISO ordered (491,600, 931.6 MW; the utilities shed 1,072 MW)"
     flexible_mw: 1000          # per 1 GW of data centers: CAISO publishes no running-data-center figure we can cite
     flexible_source: "per 1 GW of data centers (illustrative unit, not a CAISO figure)"
     report_url: https://www.caiso.com/Documents/Final-Root-Cause-Analysis-Mid-August-2020-Extreme-Heat-Wave.pdf

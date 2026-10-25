@@ -35,8 +35,10 @@ OWNER_TOKEN_FILE = Path("runs/.owner_token")
 def _token(configured: str, path: Path) -> str:
     if configured:
         return configured
-    if path.exists():
-        return path.read_text().strip()
+    if path.exists() and (tok := path.read_text().strip()):
+        return tok
+    if path.exists():                                                   # an empty file must not mean "no token" (K12 #6)
+        path.unlink()
     path.parent.mkdir(parents=True, exist_ok=True)
     tok = secrets.token_urlsafe(18)
     fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)

@@ -221,6 +221,16 @@ def check_ollama(ctx: Ctx) -> list[Check]:
     return out
 
 
+def check_eia_key(ctx: Ctx) -> list[Check]:
+    """Replays fetch the event's hours live from api.eia.gov (replay/eia.py). Without EIA_API_KEY they use the public
+    DEMO_KEY, which allows 10 requests a day and was exhausted by others' traffic on Sat (Krish K16 #2): FAIL, so a
+    replay never falls back to the evidence copy unnoticed at the table. The key itself is never printed."""
+    if (ctx.env.get("EIA_API_KEY") or "").strip():
+        return [Check("eia key", "PASS", "EIA_API_KEY set: replays fetch their hours live from api.eia.gov")]
+    return [Check("eia key", "FAIL", "no EIA_API_KEY: replays would use the public DEMO_KEY (10 requests a day) and fall back to the evidence copy",
+                  "free key, instant: https://www.eia.gov/opendata/register.php, then EIA_API_KEY=... in .env")]
+
+
 def check_calibration(ctx: Ctx) -> list[Check]:
     if not ctx.is_mac:
         return [Check("calibration", "SKIP", "not macOS: calibration is measured on the demo Mac")]
@@ -352,7 +362,7 @@ def check_public_url(ctx: Ctx) -> list[Check]:
     return [Check("PUBLIC_URL", "PASS", f"{host} is this machine ({lan})")]
 
 
-CHECKS = [check_python, check_env, check_ollama, check_calibration, check_ports, check_oasis, check_sudo,
+CHECKS = [check_python, check_env, check_ollama, check_eia_key, check_calibration, check_ports, check_oasis, check_sudo,
           check_disk, check_git, check_public_url]
 
 

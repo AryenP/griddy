@@ -135,7 +135,7 @@ def make_router(rt) -> APIRouter:
         routes check, then opens the page. A wrong token joins nothing."""
         if not (hmac.compare_digest(t, access.operator_token()) or hmac.compare_digest(t, access.owner_token())):
             raise HTTPException(401, "wrong or missing join token: use the QR code from `make qr`")
-        dest = next if next.startswith("/") and not next.startswith("//") else "/"
+        dest = next if next.startswith("/") and not next.startswith("//") and "\\" not in next else "/"   # no "/\\host" (K12 #3)
         resp = RedirectResponse(dest, status_code=303)
         resp.set_cookie(access.COOKIE, t, httponly=True, samesite="strict", max_age=2 * 86400)
         return resp

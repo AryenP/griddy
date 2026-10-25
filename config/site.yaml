@@ -3,14 +3,15 @@
 quote: null        # {text: "...", who: "Name", role: "Title, Org"}
 
 # At grid scale: an ESTIMATE from public data, labelled so on the dashboard (Aryen, Sat 13:20: "public data sets").
-# Live: ERCOT's actual system demand (gridstatus, keyless). Cited: the large loads ERCOT sees running, and the queue.
+# Live: ERCOT's actual system demand (gridstatus, keyless). Cited: ERCOT's large loads (the sum of each one's own monthly
+# peak: an upper bound, not what runs at once), and the queue.
 # The cut is this Mac's measured one under the same call (evidence of record, DECISIONS 09:46: Brownout 14.34 W
 # vs ignore the call 20.85 W). A laptop's response is not a data center's: the page says "if".
 scale:
   poll_s: 300
   large_loads_running_mw: 4132     # non-simultaneous monthly peak of loads approved to energize, Sep 2026
   large_loads_approved_mw: 9456
-  large_loads_source: "ERCOT Monthly Operational Overview, September 2026 (published 16 Oct 2026), p. 8"
+  large_loads_source: "ERCOT Monthly Operational Overview, September 2026 (published 16 Oct 2026), PDF p. 9: the sum of each large load's own September peak (non-simultaneous)"
   large_loads_url: https://www.ercot.com/files/docs/2026/10/16/ERCOT-Monthly-Operational-Overview-September.pdf
   queue_gw: 474                    # large loads asking to connect, about 90 % data centers
   queue_source: "Utility Dive, 5 Aug 2026, quoting Gov. Abbott's letter"

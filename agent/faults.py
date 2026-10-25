@@ -60,6 +60,8 @@ def _regex(text: str, clicked: str | None) -> FaultSpec | None:
     if target is None:
         return None
     m = PCT.search(t)
+    if m and not 0 < float(m.group(1)) <= 100:                       # "200 %": refused by rule, not left to the model
+        raise ValueError(f"{m.group(1)} % is more than all of it: say a share from 1 to 100 %")
     share = float(m.group(1)) if m else next((v for pat, v in SHARES if re.search(pat, t)), None)
     if share is None or not 1 <= share <= 100:
         return None

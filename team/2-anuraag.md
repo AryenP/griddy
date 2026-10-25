@@ -353,3 +353,5 @@ is tests/test_web_operator.py). For your driver card (task 27): the operator hot
 - Sat 20:36 from machine 1: the HVE Core re-check asked for fault-reader evals and a fresh live run, so I added a
   `fault_reader` suite to evals/cases.yaml and evals/suite.py (your lane) and quoted the 20:33 live run (135/138) in
   docs/judging/criteria.md and responsible.md. Your tests/test_evals.py is untouched; my assertions are in test_whatif.py.
+- Sat 20:45 from machine 1 (Krish's K14/K16 findings): scripts/preflight.py has a new check_eia_key (FAIL without
+  EIA_API_KEY), and evals/cases.yaml's fault case "too-much" is now refused by rule. Both in your lane; keep them.

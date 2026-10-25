@@ -205,3 +205,11 @@ def test_the_fault_reader_evals_pass_offline_and_no_injection_is_read_as_a_fault
     assert not failing, "\n".join(failing)
     assert all(r.status == "pass" for r in rows if r.category == "injection")
     assert all(r.status == "needs_llm" for r in rows if r.path == "llm")
+
+
+def test_a_share_over_all_of_it_is_refused_by_rule():
+    """Krish K16 #3: "200% of the gas plants" went to the model; it is refused before any model sees it."""
+    llm = StubLLM({"understood": True, "target": "plant:Gas", "share_pct": 100, "cause": "x"})
+    with pytest.raises(ValueError, match="more than all of it"):
+        read("200% of the gas plants trip", llm=llm)
+    assert llm.seen == []

@@ -209,3 +209,17 @@ def test_the_owner_join_link_sets_an_owner_cookie(monkeypatch):
     c, _ = client(joined=False)
     r = c.get(f"/join?t={OWNER}&next=/owner.html", follow_redirects=False)
     assert r.status_code == 303 and r.headers["location"] == "/owner.html" and access.COOKIE in r.headers.get("set-cookie", "")
+
+
+def test_join_never_redirects_off_site_and_an_empty_token_file_is_replaced(tmp_path, monkeypatch):
+    """Krish K12 #3 and #6: "/\\example.com" is another site to some browsers; an empty token file failed open."""
+    c, _ = client(joined=False)
+    for bad in ("/\\example.com", "//example.com", "https://example.com"):
+        r = c.get(f"/join?t={TOKEN}&next={bad}", follow_redirects=False)
+        assert r.status_code == 303 and r.headers["location"] == "/", bad
+    monkeypatch.setattr(access.settings, "operator_token", "")
+    empty = tmp_path / ".operator_token"
+    empty.write_text("")
+    monkeypatch.setattr(access, "TOKEN_FILE", empty)
+    tok = access.operator_token()
+    assert len(tok) >= 20 and empty.read_text() == tok

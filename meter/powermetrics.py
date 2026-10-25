@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-import fcntl
 import os
 import re
 import time
@@ -56,6 +55,7 @@ class PowerMeter:
     def _acquire(self):
         """One power-measuring run per Mac: powermetrics sees the whole SoC, so a second run's load
         would land in the first run's numbers. Exclusive lock, released when the process exits."""
+        import fcntl                      # Unix only, and only the meter needs it: tests collect on Windows (Krish K14)
         LOCK.parent.mkdir(parents=True, exist_ok=True)
         fh = open(LOCK, "a+")
         try:
@@ -70,6 +70,7 @@ class PowerMeter:
 
     def _release(self):
         if self._lock_fh:
+            import fcntl
             fcntl.flock(self._lock_fh, fcntl.LOCK_UN)
             self._lock_fh.close()
             self._lock_fh = None
