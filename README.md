@@ -23,7 +23,8 @@ through the live software on Sat 24 Oct (on the stored copy of the EIA data: the
 When ERCOT's EEA 3 arrived, this Mac cut from 28.2 W to 10.9 W, measured: 61 %. We count only the 40 % the grid asked
 for. Applied to ERCOT's large loads (up to 4.1 GW, the sum of each load's own monthly peak, so an upper bound), that
 is up to 1,653 MW: about 8 % of what Uri shed, or about 372,000 people kept on at the event's own ratio of people per
-MW shed (DECISIONS 18:38).
+MW shed (DECISIONS 18:38). At Emerald AI's field-tested 25 % (a real GPU cluster in Phoenix, held for
+three hours; RESEARCH.md), the same arithmetic gives about 1,000 MW and about 230,000 people.
 
 <details><summary>Terms used below</summary>
 

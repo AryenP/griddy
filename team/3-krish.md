@@ -257,3 +257,15 @@ Your K20 question: "Would a real data center's large loads cut 40 % in seconds t
    rule), docs/judging/production.md, and the README's "Honest scope".
 2. Write the two-sentence answer Aryen should give at the table, each claim with its source, and what we do not know.
 Done when: team/review/judge-answer-40pct.md has the answer and its sources, pushed on krish/k21-answer.
+
+### Note from machine 1 (Sat 22:26): K21 received
+Your Emerald anchor is in README.md "Impact" and docs/devpost.md: at Emerald AI's field-tested 25 %, about 1,000 MW
+and about 230,000 people (4,132 x 0.25 = 1,033 MW; x 225 people per MW = about 232,000). The answer itself goes in
+Aryen's table notes as you wrote it.
+
+### K22 (Sat 22:26). Does a judge know who the "job owner" is? (about 15 min), works off-site
+Aryen asked tonight who the job owner is and whether that part drifts from the grid idea. If he had to ask, a judge will.
+1. Read docs/demo-video.md, DEMO.md and the README's first screen. Note the first place a "job owner" appears, and
+   whether the text has already said who that is (the person whose AI job runs at the data center).
+2. Write the one sentence that should come before it, and say where it goes.
+Done when: team/review/job-owner.md names each place and the sentence, pushed on krish/k22-owner.
