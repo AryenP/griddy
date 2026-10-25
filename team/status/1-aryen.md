@@ -312,3 +312,10 @@ Next: technician dispatch when Aryen decides. Blockers / needs Aryen: that decis
 Done: on screens wider than 900 px the world eases aside and shrinks to the room the alert cards leave, and no label
 slides under a card (checked at 1280 x 800 with four cards). Teammates still quiet; CI green.
 Next: technician dispatch when Aryen decides. Blockers / needs Aryen: that decision.
+
+## 2026-10-24 18:38 PT — demo path checked end to end; the public EIA key is used up
+Done: deadline then Uri replay on this Mac: 28.2 W to 10.9 W at EEA 3, 1,653 MW and about 372,000 people credited at
+ERCOT scale, "Griddy acts" card seen. Fixed: a failed EIA fetch no longer shows the request URL (it carries the key).
+Training's deadline restored to 26 Oct 09:00.
+Blockers / needs Aryen: **EIA_API_KEY in .env before the demo** (free, instant: https://www.eia.gov/opendata/register.php).
+The public DEMO_KEY is exhausted for about 22 hours; without a key, replays run on the evidence copy and say so.

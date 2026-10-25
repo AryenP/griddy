@@ -57,6 +57,16 @@ def fetch(ev: dict, timeout: float = 8.0) -> tuple[pd.DataFrame, dict]:
     return df, meta
 
 
+def why(e: Exception) -> str:
+    """A failed fetch in words for the page and the timeline: never the request URL, which carries the API key."""
+    if isinstance(e, httpx.HTTPStatusError):
+        r = e.response
+        if r.status_code == 429:
+            return "api.eia.gov: rate limit reached for this key (429); add a free EIA_API_KEY to .env"
+        return f"api.eia.gov answered {r.status_code} {r.reason_phrase}"
+    return f"api.eia.gov not reached ({e.__class__.__name__})"
+
+
 def _num(v) -> float | None:
     try:
         return float(v)

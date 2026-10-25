@@ -133,7 +133,7 @@ def test_live_fetch_is_used_and_an_unreachable_api_falls_back_to_the_evidence_co
     monkeypatch.setattr(eia, "fetch", down)
     r.cache.got.clear()
     meta = r.prepare("uri-2021")
-    assert meta["source"] == "evidence copy" and "unreachable" in meta["why"] and len(r.data("uri-2021")) == len(evidence)
+    assert meta["source"] == "evidence copy" and "not reached" in meta["why"] and len(r.data("uri-2021")) == len(evidence)
 
 
 def test_the_live_api_rows_become_the_evidence_columns(monkeypatch):
@@ -146,3 +146,14 @@ def test_the_live_api_rows_become_the_evidence_columns(monkeypatch):
     df, meta = eia.fetch({"window": ["2021-02-14T18:00", "2021-02-15T21:00"], "ba": "ERCO"})
     assert list(df["utc_end"]) == ["2021-02-15T03:00:00Z"] and df.loc[0, "demand_mw"] == 68862.0
     assert df.loc[0, "Natural Gas"] == 43967.0 and df.loc[0, "Wind"] == 7642.0 and meta["source"] == "live"
+
+
+def test_a_failed_fetch_never_shows_the_key():
+    """The page and the timeline show why a live fetch failed; httpx's own message carries the URL with api_key."""
+    import httpx
+    from replay import eia
+    req = httpx.Request("GET", "https://api.eia.gov/v2/electricity/rto/region-data/data/?api_key=SECRET123&x=1")
+    for status in (429, 500):
+        err = httpx.HTTPStatusError("boom", request=req, response=httpx.Response(status, request=req))
+        assert "SECRET123" not in eia.why(err) and "api_key" not in eia.why(err) and str(status) in eia.why(err)
+    assert "SECRET123" not in eia.why(httpx.ConnectError("x SECRET123", request=req))
