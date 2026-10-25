@@ -2,7 +2,8 @@
 # grid emergencies played through the live software, judges pick the event").
 #
 # Everything here is REAL and cited: the hourly demand, the operator's own day-ahead forecast and generation by fuel
-# come from the U.S. EIA's Form EIA-930 files (docs/evidence/events/<id>.csv); every alert time and every impact
+# come from the U.S. EIA's Form EIA-930, fetched live from api.eia.gov when a replay starts (the evidence copy in
+# docs/evidence/events/<id>.csv if the API cannot be reached, and the page says so); every alert time and every impact
 # number comes from the official report named with it, with its page. Nothing is invented: what the replay adds is
 # Brownout itself, running live on this Mac, receiving each alert at the moment it was really issued and cutting the
 # measured power of our sites.
@@ -14,12 +15,18 @@
 
 replay_seconds: 120           # how long a replay lasts on screen, whatever its real window
 baseline_s: 20                # our sites' measured baseline: the mean over this many seconds before the replay starts
+flag_cut_pct: 20              # the cut Brownout's own flag asks of our sites (a warning: shift deferrable work)
+refetch_s: 600                # reuse a live fetch for this long (the public DEMO_KEY is rate-limited)
+whatif:                       # a judge breaks a part (replay/whatif.py): the fault is invented, its size is real
+  seconds: 60                 # how long the fault lasts
+  emergency_cut_pct: 40       # the cut asked of our sites while the grid is short
 
 events:
   - id: uri-2021
     title: "Winter Storm Uri, Texas"
     when: "15 February 2021"
     iso: ERCOT
+    region: Texas
     ba: ERCO
     timezone: US/Central
     data: docs/evidence/events/uri-2021.csv
@@ -51,6 +58,7 @@ events:
     title: "California rotating outages"
     when: "14 August 2020"
     iso: CAISO
+    region: California
     ba: CISO
     timezone: US/Pacific
     data: docs/evidence/events/caiso-2020-08.csv
@@ -77,6 +85,7 @@ events:
     title: "California's record heat wave"
     when: "6 September 2022"
     iso: CAISO
+    region: California
     ba: CISO
     timezone: US/Pacific
     data: docs/evidence/events/caiso-2022-09.csv
