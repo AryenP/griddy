@@ -22,7 +22,7 @@ const World = (() => {
   };
   const S = {
     cv: null, ctx: null, w: 0, h: 0, dpr: 1, yaw: -0.62, pitch: 0.6, scale: 18, cx: 0, cy: 0, baseYaw: -0.62,
-    drag: null, last: 0, t: 0, running: false, labels: [], smoke: [], smokeAcc: 0, safe: { top: 72, bottom: 230 },
+    drag: null, last: 0, t: 0, running: false, labels: [], smoke: [], smokeAcc: 0, safe: { top: 72, bottom: 230, right: 0 },
     data: { mix: {}, served: null, needed: null, ours_w: null, baseline_w: null, cut_pct: null, alert: null, campus: null, peaks: {},
       tripped: null, tripped_mw: null, fault: null, with_mw: null, city: null },
     hits: [], hover: null, onPick: null, down: null, city: null, cityLayout: null,
@@ -34,6 +34,8 @@ const World = (() => {
   function easeColor(cur, target, dt) { return cur.map((c, i) => ease(c, target[i], dt, 3)); }
   function step(dt) {
     const d = S.data, v = S.v;
+    if (S.cxTo != null) S.cx = ease(S.cx, S.cxTo, dt, 2);           // the scene slides aside for the alert cards
+    if (S.fitTo != null) S.fit = ease(S.fit || 1, S.fitTo, dt, 2);
     v.served = ease(v.served, d.served || 0, dt);
     v.needed = ease(v.needed, d.needed || 0, dt);
     const lit = d.needed ? Math.max(0, Math.min(1, (d.served || 0) / d.needed)) : 1;
@@ -52,7 +54,7 @@ const World = (() => {
     const c = Math.cos(S.yaw), s = Math.sin(S.yaw), cp = Math.cos(S.pitch), sp = Math.sin(S.pitch);
     const xr = x * c - z * s, zr = x * s + z * c;
     const depth = zr * cp + y * sp;
-    const k = (S.city ? S.scale * 0.7 : S.scale) / (1 - depth / 120);   // the city map is wider: pull the camera back
+    const k = (S.city ? S.scale * 0.7 : S.scale) * (S.fit || 1) / (1 - depth / 120);   // the city map is wider: pull the camera back
     return [S.cx + xr * k, (S.city ? S.cy - S.h * 0.07 : S.cy) - (y * cp - zr * sp) * k, depth];
   }
   const rgb = (a, al = 1) => `rgba(${a[0] | 0},${a[1] | 0},${a[2] | 0},${al})`;
@@ -166,7 +168,7 @@ const World = (() => {
       return { ...L, w, h, bx: L.x - w / 2, by: L.y - h };
     });
     const top = S.safe.top, bottom = S.h - S.safe.bottom;            // keep cards clear of the page's bars
-    for (const L of items) { L.by = Math.max(top, Math.min(bottom - L.h, L.by)); L.bx = Math.max(8, Math.min(S.w - L.w - 8, L.bx)); }
+    for (const L of items) { L.by = Math.max(top, Math.min(bottom - L.h, L.by)); L.bx = Math.max(8, Math.min(S.w - S.safe.right - L.w - 8, L.bx)); }
     items.sort((a, b) => a.by - b.by);                                // nudge apart: a later card moves below an earlier one
     for (let i = 0; i < items.length; i++) for (let j = 0; j < i; j++) {
       const A = items[j], B = items[i];
@@ -519,7 +521,8 @@ const World = (() => {
     S.dpr = Math.min(2, window.devicePixelRatio || 1);
     S.w = r.width; S.h = r.height;
     S.cv.width = Math.round(r.width * S.dpr); S.cv.height = Math.round(r.height * S.dpr);
-    S.cx = S.w * 0.5; S.cy = S.h * 0.43; S.scale = Math.min(S.w / 60, S.h / 46);
+    S.cx = S.cxTo = (S.w - S.safe.right) * 0.5; S.cy = S.h * 0.43;
+    S.fit = S.fitTo = fitFor(S.safe.right); S.scale = Math.min(S.w / 60, S.h / 46);
     if (!S.running) { step(1); draw(); }
   }
   function mount(canvas) {
@@ -569,7 +572,14 @@ const World = (() => {
     if (!S.running) { step(1); draw(); }
   }
   // the page's bars, in CSS pixels from the top and bottom edges: labels stay between them
-  function safeArea(top, bottom) { S.safe = { top, bottom }; }
+  // `right`: the alert cards' column, so the scene centres in what is left and no label slides under a card
+  const fitFor = (right) => (S.w && S.h ? Math.max(0.5, Math.min((S.w - right) / 60, S.h / 46) / Math.min(S.w / 60, S.h / 46)) : 1);
+  function safeArea(top, bottom, right = 0) {
+    S.safe = { top, bottom, right };
+    S.cxTo = (S.w - right) * 0.5;
+    S.fitTo = fitFor(right);                                          // shrink to the room left
+    if (!S.running) { S.cx = S.cxTo; S.fit = S.fitTo; draw(); }
+  }
   function hitAt(e) {
     const r = S.cv.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
     return S.hits.filter((h) => x >= h.x0 && x <= h.x1 && y >= h.y0 && y <= h.y1).sort((a, b) => b.depth - a.depth)[0] || null;
