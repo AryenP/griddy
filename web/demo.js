@@ -170,14 +170,32 @@ function provenance(ev, data) {
   return html`Grid data: the evidence copy, ${ev ? ev.data_source : "EIA-930"} (${data.why || "api.eia.gov not reached"}). The software sees each hour once it has ended.`;
 }
 
-function versus(without, withText, withoutSrc, withSrc) {
+// Without Griddy / With Griddy, the point of the page (Aryen, Sun 02:50: "it matters"): a big figure and a short line
+// each, and one bar on the same scale, the gap: all red without, the mint share Griddy closes with it.
+// no = {fig, text, src, gap}, yes = {fig, text, src, pct}: pct of the gap closed, 0 until this Mac has cut.
+function versus(no, yes) {
   const el = $("w-versus");
   el.hidden = false;
   if (!D.versusPrev && !STILL) { el.classList.remove("enter"); void el.offsetWidth; el.classList.add("enter"); }   // it rises in once
   D.versusOn = true;
-  $("w-without").textContent = without; $("w-without-src").textContent = withoutSrc;
-  $("w-with").textContent = withText; $("w-with-src").textContent = withSrc;
+  setNum($("w-without-fig"), no.fig || ""); $("w-without").textContent = no.text; $("w-without-src").textContent = no.src;
+  setNum($("w-with-fig"), yes.fig || ""); $("w-with").textContent = yes.text; $("w-with-src").textContent = yes.src;
+  const bars = !!no.gap && yes.pct != null, pct = bars ? Math.max(0, Math.min(100, yes.pct)) : 0;
+  $("w-without-bar").hidden = !bars; $("w-with-bar").hidden = !bars;
+  $("w-with-fill").style.width = `${pct > 0 ? Math.max(1, pct).toFixed(1) : 0}%`;   // a sliver stays visible
+  $("w-with-bar").setAttribute("aria-label", `${fixed(pct, 0)}% of the gap closed`);
 }
+// the With side from a scale estimate: people kept on when the event gives a ratio, else the megawatts freed
+function withSide(sc, pct, ofWhat, waiting, src) {
+  if (!sc) return { fig: "", text: waiting, pct: 0, src };
+  const share = pct != null ? `: ${fixed(pct, pct < 10 ? 1 : 0)}% of ${ofWhat}` : "";
+  return sc.people != null
+    ? { fig: bigCount(sc.people), text: `${sc.people_unit} kept on, ${wholeMw(sc.freed_mw)} MW freed${share}`, pct, src }
+    : { fig: `${wholeMw(sc.freed_mw)} MW`, text: `freed by data centers cutting like this Mac${share}`, pct, src };
+}
+function bigCount(n) { return n >= 1e6 ? `${fixed(n / 1e6, 1)} million` : Math.round(n).toLocaleString(); }
+// the cited sentence a figure comes from (config/events.yaml impact), else the first
+function cited(ev, figure) { return ev.impact.find((i) => i.text.includes(figure)) || ev.impact[0]; }
 
 function render() {
   const live = !running() && D.pick === "live";
@@ -221,11 +239,11 @@ function render() {
     else { setNum($("s-impact"), "—"); $("s-impact-k").textContent = "at grid scale"; }
     $("s-impact-src").textContent = sc ? `estimate · ${fixed(sc.share_pct, 0)}% cut asked, on ${gw(sc.flexible_mw)}` : "appears once this Mac cuts";
     if (ev) {
-      const withText = sc
-        ? `${sc.people != null ? `${compact(sc.people)} ${sc.people_unit} kept on: ` : ""}${fixed(sc.freed_mw, 0)} MW freed${sc.share_of_shed_pct != null ? `, ${fixed(sc.share_of_shed_pct, 0)}% of the ${fixed(ev.shed_mw, 0)} MW it had to find` : ""}`
-        : waitingText(d.asked_cut_pct, d.nothing_to_shed);
-      versus(ev.impact.slice(0, 2).map((i) => i.text).join(". "), withText, ev.impact[0].source,
-        sc ? `estimate · this Mac's measured cut, as far as asked (${fixed(sc.share_pct, 0)}%), on ${gw(sc.flexible_mw)} of ${sc.flexible_source}${sc.people != null && ev.people_basis ? `; ${ev.people_basis}` : ""}` : "measured on this Mac, live");
+      const fig = ev.people_out ? bigCount(ev.people_out) : `${wholeMw(ev.shed_mw)} MW`, c = cited(ev, fig);
+      versus({ fig, text: ev.people_out ? `${ev.people_unit || "people"} lost power` : "the grid had to find at the peak",
+        src: `${c.text} · ${c.source}`, gap: ev.shed_mw > 0 },
+        withSide(sc, sc ? sc.share_of_shed_pct : null, `the ${wholeMw(ev.shed_mw)} MW it had to find`, waitingText(d.asked_cut_pct, d.nothing_to_shed),
+          sc ? `estimate · this Mac's measured cut, as far as asked (${fixed(sc.share_pct, 0)}%), on ${gw(sc.flexible_mw)} of ${sc.flexible_source}${sc.people != null && ev.people_basis ? `; ${ev.people_basis}` : ""}` : "measured on this Mac, live"));
     }
     setHTML($("w-sources"), html`${provenance(ev, d.data)} ${ev ? html`Alerts and impact: <a href="${ev.report_url}" target="_blank" rel="noopener">official report</a>, page on each.` : html``}`);
     overlayFault();
@@ -282,14 +300,15 @@ function overlayFault() {
   setNum($("s-needed"), gw(w.needed_after));
   $("s-needed-src").textContent = w.surge_mw ? `what-if: +${gw(w.surge_mw)}, the published forecast peak` : "the operator's forecast";
   if (sc) {
-    setNum($("s-impact"), `${fixed(sc.freed_mw, 0)} MW`); $("s-impact-k").textContent = "freed at grid scale";
+    setNum($("s-impact"), `${wholeMw(sc.freed_mw)} MW`); $("s-impact-k").textContent = "freed at grid scale";
     $("s-impact-src").textContent = `estimate · ${fixed(sc.share_of_shortfall_pct, 1)}% of the shortfall`;
   }
   $("w-head").textContent = `${w.label}. ${Math.round(w.remaining_s)} s left.`;
-  versus(w.shortfall_mw > 0 ? `The grid is ${gw(w.shortfall_mw)} short: that much demand goes unserved` : "The grid still covers demand: nothing is shed",
-    sc ? `${sc.people != null ? `${compact(sc.people)} ${sc.people_unit} kept on: ` : ""}${fixed(sc.freed_mw, 0)} MW freed by data centers cutting like this Mac, ${fixed(sc.share_of_shortfall_pct, 1)}% of the gap`
-      : w.asked_cut_pct ? waitingText(w.asked_cut_pct, w.nothing_to_shed) : "No cut needed",
-    `arithmetic on ${w.source}`, sc ? `estimate · this Mac's measured cut on ${gw(sc.flexible_mw)} of ${sc.flexible_source}` : "measured on this Mac, live");
+  const short = w.shortfall_mw > 0;
+  versus({ fig: short ? gw(w.shortfall_mw) : "", text: short ? "short: that much demand goes unserved" : "The grid still covers demand: nothing is shed",
+    src: `arithmetic on ${w.source}`, gap: short },
+    withSide(sc, sc ? sc.share_of_shortfall_pct : null, "the gap", w.asked_cut_pct ? waitingText(w.asked_cut_pct, w.nothing_to_shed) : "No cut needed",
+      sc ? `estimate · this Mac's measured cut on ${gw(sc.flexible_mw)} of ${sc.flexible_source}` : "measured on this Mac, live"));
 }
 
 // Before this Mac's measured drop: why there is no "with Griddy" number yet, in words.
