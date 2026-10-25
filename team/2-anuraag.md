@@ -340,3 +340,9 @@ Thanks for the page: the runs, the aligned traces and the comparisons stay exact
 
 
 - Sat 18:12 from machine 1: CONTRACT_ROUTES in your tests/test_web_pages.py now also has `/api/cities` (HANDOFF since 18:06). Keep it.
+
+## Sat 19:52 from machine 1: the operator page moves to me too
+Aryen asked for the operator phone page fixed tonight (it still called the removed /api/neighbourhood), so web/operator*
+is machine 1's now and task 25 is done (DECISIONS 19:52). Task 26 is now chat and owner only. I removed
+test_operator_neighbourhood_labels_every_number from your tests/test_web_pages.py (the feature is gone; its replacement
+is tests/test_web_operator.py). For your driver card (task 27): the operator hotkey N is now B (break a part).
