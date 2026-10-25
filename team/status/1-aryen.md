@@ -389,3 +389,12 @@ to every page's wording, no fact changed. 502 tests pass. Next: the docs' wordin
   the demo and checks spans arrive, or say "cut it" and the pitch uses /api/trace; (2) make the repo public;
   (3) rotate the EIA key pasted in chat earlier. Recommendation on Prompt Shields: skip tonight (documented gap).
 - Next: the rehearsal, demo-stable-7 and gallery screenshots in one runtime session, on Aryen's go.
+
+## Sat 21:59 tick
+- Done: Krish's K17 (second Windows dry run) read and fixed in 474f7f4: the no-Mac block runs without uv on PATH,
+  evals print only, docs/judging/evals.md regenerated (116 / 22), the meter-lock test skips on Windows, the README's
+  Uri sentence says the stored EIA copy. pytest 502 passed, verify 74/74. Krish got K19 (Devpost claim audit,
+  works off-site); K9 and K18 wait for him at the venue. Anuraag noted on the evals generator's style.
+  The intro-film brief for the Devpost video is published for Aryen (claude.ai artifact, private).
+- Next: commit the 18:38 Uri replay timeline with a claims entry so 28.2 W to 10.9 W recomputes in verify.py.
+- Blockers: the needs-Aryen items from 21:45 (App Insights line, repo public, EIA key rotation).
