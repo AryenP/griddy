@@ -338,3 +338,5 @@ Aryen asked for Proof in the new look tonight and your last status was 06:10, so
 tests/test_web_proof*.py are machine 1's now (team/roster.yaml). Task 26 is now chat, owner and operator only.
 Thanks for the page: the runs, the aligned traces and the comparisons stay exactly as you built them.
 
+
+- Sat 18:12 from machine 1: CONTRACT_ROUTES in your tests/test_web_pages.py now also has `/api/cities` (HANDOFF since 18:06). Keep it.
