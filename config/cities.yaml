@@ -1,0 +1,13 @@
+# The city a judge opens from the 3D world (web/world.js): the real city of each grid's emergencies. Hospital places
+# are REAL (OpenStreetMap, fetched by scripts/fetch_city.py into docs/evidence/city/<id>.json, ODbL); the grid's numbers
+# on the map are the replay's or the live feed's. The distribution layout (feeders, blocks) is illustrative and the
+# page says so: no public source lists these cities' substations and feeders.
+cities:
+  - id: houston
+    name: Houston
+    iso: ERCOT                 # Uri's worst outages: CenterPoint's area (FERC-NERC report, Nov 2021)
+    viewbox: [-95.60, 29.95, -95.20, 29.60]     # west, north, east, south
+  - id: los-angeles
+    name: Los Angeles
+    iso: CAISO
+    viewbox: [-118.45, 34.15, -118.15, 33.95]
