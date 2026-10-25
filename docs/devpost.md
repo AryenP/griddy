@@ -80,7 +80,8 @@ Winter Storm Uri left more than 4.5 million people without power and at least 21
 data: the public API key was rate-limited), this Mac cut from 28.2 W to 10.9 W, measured, when ERCOT's EEA 3 arrived.
 Credited only as far as the grid asked (40 %) and applied to ERCOT's large loads (up to 4.1 GW, the sum of each one's
 own monthly peak), that frees up to 1,653 MW: about 8 % of what Uri shed, about 372,000 people kept on at the event's
-own ratio of people per MW shed (DECISIONS 18:38). The screen labels it as an estimate.
+own ratio of people per MW shed (DECISIONS 18:38). At Emerald AI's field-tested 25 % (a real GPU cluster in Phoenix, held for
+three hours; RESEARCH.md), the same arithmetic gives about 1,000 MW and about 230,000 people. The screen labels it as an estimate.
 
 ERCOT's large loads draw up to 4.1 GW (ERCOT Monthly Operational Overview, September 2026, PDF p. 9: a non-simultaneous
 peak of 4,132 MW, the sum of each load's own monthly peak, of 9,456 MW approved to energize), and 474 GW more, about 90 % data centers, are asking to connect (Utility
