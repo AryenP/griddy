@@ -1,4 +1,4 @@
-.PHONY: verify evidence evidence3 evidence-chat evidence-chat-judge preflight tag-stable ollama setup demo baseline calibrate chat-sweep solve report compare test probe qr clean
+.PHONY: verify evidence evidence3 evidence-chat evidence-chat-judge preflight tag-stable ollama setup demo baseline calibrate chat-sweep solve report compare test probe qr fetch-agent clean
 
 PY ?= uv run
 # sudo for powermetrics: no prompt when the passwordless rule for /usr/bin/powermetrics is installed
@@ -87,6 +87,12 @@ probe:          ## what does this Mac support?
 
 qr:             ## print QR codes for the judge's phone (chat + owner console)
 	$(PY) python scripts/qr.py
+
+# uagents needs protobuf < 6 and the runtime's OR-Tools needs 6, so the Fetch.ai agent runs in its own
+# environment with these pins (uv caches it after the first run). It talks to the runtime over loopback only.
+FETCH_DEPS = --with uagents==0.26.1 --with uagents-core==0.4.12 --with httpx==0.28.1 --with python-dotenv==1.2.4
+fetch-agent:    ## Griddy on ASI:One: a read-only Fetch.ai Chat Protocol agent for the running runtime (docs/fetch-agent.md)
+	uv run --no-project --python 3.11 $(FETCH_DEPS) python agent/channels/fetch_agent.py
 
 clean:
 	rm -rf runs/* reports/* .pytest_cache

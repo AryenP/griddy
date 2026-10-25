@@ -96,6 +96,7 @@ members:
   - agent/explainer.py
   - agent/channels/**
   - tests/test_agent*.py
+  - tests/test_fetch_agent*.py
   - tests/fixtures/openadr/**
 - number: 2
   name: Anuraag
