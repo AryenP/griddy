@@ -51,7 +51,7 @@ class Runtime:
         self.meter.subscribers.append(lambda r: self.executor.on_power(self.fleet.combine(r)))
         self.replay = Replay(self.tl, self.executor)         # real grid emergencies, replayed through the live software
         self.whatif = WhatIf(self.tl, self.executor, self.replay, (config.events or {}).get("whatif"))   # a judge breaks a part
-        self.scale: dict | None = None                               # ERCOT-scale ESTIMATE (grid/scale.py)
+        self.scale: dict | None = None                               # grid-scale ESTIMATE (grid/scale.py)
         self.agent = AgentBridge(self.tl, self.executor, store=Path("runs/approvals.json"))   # survives a restart
         self.agent.snapshot = self.snapshot
         self.watcher: GridWatcher | None = None
@@ -132,17 +132,18 @@ class Runtime:
                 self.tl.log("note", level="error", msg=f"cut hand-over failed: {e!r}"[:300])
 
     async def _scale_loop(self, cfg: dict):
-        """Every `poll_s`: ERCOT's live demand, and what this Mac's measured cut would mean there (an estimate)."""
-        from grid import isos, scale
+        """Every `poll_s`: the live grid's demand served (its fuel mix now, as the Grid page shows it) and what this
+        Mac's measured cut would mean on a stated unit of its data centers (an estimate)."""
+        from datetime import datetime
+
+        from grid import scale
         while True:
-            try:
-                cond = await asyncio.to_thread(isos.fetch_ercot_conditions)
-                self.scale = scale.estimate(cfg, cond.get("Actual System Demand"), cond.get("Time"))
+            sig = self.executor.signal
+            if sig is not None and sig.fuel_mix_mw:          # no reading yet: wait for the feed, never guess
+                served = sum(v for v in sig.fuel_mix_mw.values() if v > 0)
+                self.scale = scale.estimate(cfg, sig.iso, served, datetime.fromtimestamp(sig.t).astimezone().isoformat())
                 self.tl.log("scale", **self.scale)
-            except Exception as e:                  # feed down: keep the last estimate, say so in the log
-                log.warning("ERCOT demand fetch failed: %r", e)
-                self.tl.log("note", level="warning", feed="ercot_scale", error=repr(e)[:300])
-            await asyncio.sleep(float(cfg.get("poll_s", 300)))
+            await asyncio.sleep(float(cfg.get("poll_s", 60)) if self.scale else 5.0)
 
     async def stop(self):
         for t in self._tasks + ([self.watcher_task] if self.watcher_task else []):

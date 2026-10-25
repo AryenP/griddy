@@ -23,37 +23,45 @@ whatif:                       # a judge breaks a part (replay/whatif.py): the fa
   min_surge_mw: 500           # the city surge needs today's forecast peak at least this far above demand now
 
 events:
-  - id: uri-2021
-    title: "Winter Storm Uri, Texas"
-    when: "15 February 2021"
-    iso: ERCOT
-    region: Texas
-    ba: ERCO
-    timezone: US/Central
-    data: docs/evidence/events/uri-2021.csv
+  - id: uri-sf
+    title: "Winter Storm Uri, in San Francisco"
+    when: "Simulated · 15 February 2021"
+    # Aryen, Sun 03:00: "get rid of texas ... simulate what would happen if it happened in sf". SIMULATED, and labelled so
+    # on every page: California's OWN recorded hours (EIA-930, CISO, the same dates), with the share of what it needed
+    # that Texas could serve, hour for hour on the local clock (EIA-930, ERCO). Uri's alerts at their real times.
+    simulated: "Uri's hour-by-hour shortfall share applied to California's own recorded hours"
+    iso: CAISO
+    region: California (CAISO)
+    ba: CISO
+    timezone: US/Pacific
+    data: docs/evidence/events/uri-sf-ciso.csv
+    shape:
+      ba: ERCO
+      timezone: US/Central
+      data: docs/evidence/events/uri-2021.csv
+      source: "U.S. EIA Form EIA-930, ERCO: demand served over the day-ahead forecast, each hour"
     window: ["2021-02-14T18:00", "2021-02-15T21:00"]
-    record_mw: 65750          # ERCOT's winter record before the event (17 Jan 2018); the day-ahead forecast above it is Brownout's flag
-    record_source: "FERC-NERC-Regional Entity Joint Staff Report, The February 2021 Cold Weather Outages (Nov 2021), PDF p. 33"
+    people:                   # the share of Texans who lost power, applied to San Francisco
+      out: 4500000
+      of: 29145505
+      apply_to: 873965
+      unit: San Franciscans
+      source: "more than 4.5 million of Texas's 29,145,505 people lost power (FERC-NERC report, PDF p. 10; 2020 Census), applied to San Francisco's 873,965 (2020 Census)"
     alerts:
-      - {day: "2021-02-08", kind: warning, label: "ERCOT Operating Condition Notices: extreme cold expected 11-15 February",
+      - {day: "2021-02-08", kind: warning, label: "Extreme cold forecast for 11 to 15 February (in Texas, the operator's notices began 8 February)",
          source: "FERC-NERC report (Nov 2021), PDF p. 54"}
-      - {day: "2021-02-13", kind: warning, label: "ERCOT Emergency Notice for extreme cold weather", cut_pct: 20,
+      - {day: "2021-02-13", kind: warning, label: "Emergency notice for extreme cold weather (Texas, 13 February)", cut_pct: 20,
          source: "FERC-NERC report (Nov 2021), PDF p. 54"}
-      - {at: "2021-02-15T01:20", kind: emergency, label: "ERCOT declares EEA 3 and orders its first 1,000 MW of firm load shed", cut_pct: 40,
+      - {at: "2021-02-15T01:20", kind: emergency, label: "Energy emergency, level 3: the first rotating outages are ordered (Texas, 01:20)", cut_pct: 40,
          source: "FERC-NERC report (Nov 2021), PDF pp. 15, 136"}
-      - {at: "2021-02-15T01:51", kind: emergency, label: "Frequency below 59.4 Hz for 4 min 23 s: minutes from a total blackout",
+      - {at: "2021-02-15T01:51", kind: emergency, label: "Minutes from a total blackout: frequency below 59.4 Hz for 4 min 23 s (Texas, 01:51)",
          source: "FERC-NERC report (Nov 2021), PDF p. 138"}
-      - {at: "2021-02-15T19:00", kind: outage, label: "Firm load shed peaks at 20,000 MW",
+      - {at: "2021-02-15T19:00", kind: outage, label: "Rotating outages peak (Texas: 20,000 MW at 19:00)",
          source: "FERC-NERC report (Nov 2021), PDF p. 15"}
-    impact:
-      - {text: "More than 4.5 million people in Texas lost power", source: "FERC-NERC report (Nov 2021), PDF p. 10"}
-      - {text: "At least 210 people died during the event, most of the deaths connected to the power outages", source: "FERC-NERC report (Nov 2021), PDF p. 10"}
-      - {text: "20,000 MW of firm load shed at the worst point; load shed lasted nearly three days", source: "FERC-NERC report (Nov 2021), PDF p. 15"}
-    shed_mw: 20000
-    people_out: 4500000
-    flexible_mw: 4132          # up to: the sum of each large load's own September 2026 peak, not what runs at once (Krish K13)
-    flexible_source: "ERCOT large loads, the sum of each one's own September 2026 peak (non-simultaneous: an upper bound; ERCOT Monthly Operational Overview, PDF p. 9)"
-    people_basis: "people out per MW shed at the peak (4.5 million, 20,000 MW)"
+    impact:                   # after the simulated lines the engine computes: the real event, cited
+      - {text: "In Texas, Uri left more than 4.5 million people without power; at least 210 died", source: "FERC-NERC report (Nov 2021), PDF p. 10"}
+    flexible_mw: 1000          # per 1 GW of data centers: CAISO publishes no running-data-center figure we can cite
+    flexible_source: "per 1 GW of data centers (illustrative unit, not a CAISO figure)"
     report_url: https://www.nerc.com/pa/rrm/ea/Documents/February_2021_Cold_Weather_Report.pdf
 
   - id: caiso-2020-08

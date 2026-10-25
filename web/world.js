@@ -188,8 +188,8 @@ const World = (() => {
   }
 
   // ------------------------------------------------------------------ labels: glass cards with leader lines, drawn last
-  function label(x, y, z, title, value, sub, anchorY) {
-    const p = P(x, y, z), a = P(x, anchorY == null ? y - 1.5 : anchorY, z);
+  function label(x, y, z, title, value, sub, anchorY, at) {         // `at`: [x, z] the leader points to, if not below the card
+    const p = P(x, y, z), a = at ? P(at[0], anchorY, at[1]) : P(x, anchorY == null ? y - 1.5 : anchorY, z);
     S.labels.push({ x: p[0], y: p[1], ax: a[0], ay: a[1], title, value, sub });
   }
   function drawLabels() {
@@ -271,7 +271,7 @@ const World = (() => {
     for (const [re, title, kind] of FUELS) {
       const mw = Object.entries(S.v.mix).filter(([k, v]) => re.test(k) && v > 0).reduce((s, [, v]) => s + v, 0);
       const place = ((S.data.places || {}).places || {})[title] || null;   // config/isos.yaml: named only where it is the whole number
-      if (mw > 1) out.push({ title, kind, mw, place, tripped: S.data.tripped === title });
+      if (mw >= 50) out.push({ title, kind, mw, place, tripped: S.data.tripped === title });   // a fleet under 50 MW reads as 0.0 GW: left out
     }
     return out.slice(0, 6);
   }
@@ -414,7 +414,7 @@ const World = (() => {
       route([...ROUTES.dc].reverse(), C.mint, 1.4, 0.9);
       route(ROUTES.city, C.mint, 1.4, 0.9);
     }
-    if (!(d.campus && d.campus.elsewhere)) route(ROUTES.campus, v.tint.city, flow);
+    route(ROUTES.campus, v.tint.city, flow);
 
     const ps = plants(), total = ps.reduce((s, p) => s + p.mw - (p.tripped ? Math.min(p.mw, d.tripped_mw || p.mw) : 0), 0);
     const spots = [[-23, -11], [-16, -11], [-23, -4], [-16, -4], [-23, 3], [-16, 3]];
@@ -444,8 +444,9 @@ const World = (() => {
         litWith != null && litWith > v.lit + 0.0005 ? `${Math.round(litWith * 100)}% with Griddy's ${Math.round(d.with_mw)} MW`
           : d.needed ? `${(v.served / 1000).toFixed(1)} of ${(v.needed / 1000).toFixed(1)} GW needed` : "", 6.2);
     } });
-    items.push({ x: -7, z: 8, draw: () => {                          // our data center: this Mac, measured
-      const capEdge = cap ? (cap.over || cap.ttc == null ? "rgba(255,190,70,0.95)" : "rgba(125,240,191,0.95)") : null;
+    const dcHover = S.hover === "datacenters" ? "rgba(255,255,255,0.95)" : null;   // a click opens every data center around the Bay
+    items.push({ x: -7, z: 8, hit: { id: "datacenters", title: "Data centers", box: [-9.6, 5.7, 5, 4.6, 3] }, draw: () => {   // our data center: this Mac, measured
+      const capEdge = dcHover || (cap ? (cap.over || cap.ttc == null ? "rgba(255,190,70,0.95)" : "rgba(125,240,191,0.95)") : null);
       platform(-9.6, 5.7, 5, 4.6, 0.85, capEdge);                      // amber while over the cap, mint once under it
       RACKS.forEach(([job, color], i) => {                            // three rack rows, each lit by its job's own state
         const z0 = 6.2 + i * 1.3, r = (d.racks || []).find((x) => x.job === job), st = r ? r.state : "off";
@@ -466,8 +467,8 @@ const World = (() => {
             : `under the ${cap.w.toFixed(1)} W cap${cap.ttc != null ? ` in ${Math.round(cap.ttc)} s` : ""} · measured`;
       label(-7.1, 6.2, 8, d.stand_in ? `This Mac · stands in for ${d.stand_in}` : "This Mac", d.ours_w != null ? `${d.ours_w.toFixed(1)} W` : "—", sub, 3.2);
     } });
-    items.push({ x: 9.5, z: 9, draw: () => {                         // the large loads: the grid's data centers
-      platform(6.5, 6.5, 7.2, 5.2, 0.55);
+    items.push({ x: 9.5, z: 9, hit: { id: "datacenters", title: "Data centers", box: [6.5, 6.5, 7.2, 5.2, 3] }, draw: () => {   // the Bay's data centers
+      platform(6.5, 6.5, 7.2, 5.2, 0.55, dcHover);
       const on = Math.min(1, v.ours);
       [[7, 7, 2.8], [10.1, 7, 2.8], [7, 9.5, 2.8], [10.1, 9.5, 2.8]].forEach(([bx, bz, bw], i) =>
         box(bx, bz, bw, 2, 1.4, { y: 0.36, color: [205, 218, 228], band: on * (0.7 + 0.1 * i), cap: true }));
@@ -600,6 +601,7 @@ const World = (() => {
   function drawCity(dt) {
     const M = S.cityMap, d = S.data, v = S.v, g = S.ctx;
     if (!M) return;
+    if (M.kind === "datacenters") { drawDc(dt); return; }
     S.labels = [];
     const st = cityState();
     const key = [S.yaw, S.pitch, S.scale, S.fit, S.cx, S.cy].map((x) => (+x || 0).toFixed(3)).join("|") + `|${S.w}x${S.h}|${st.key}`;
@@ -639,9 +641,141 @@ const World = (() => {
     if (st.relit) label(hf, 3.2, hf * 0.6, "From AI data centers", `${Math.round(d.with_mw)} MW freed`, "rerouted along real streets (mint)", 0.5);
     drawLabels();
   }
+  // ------------------------------------------------------------------ the data centers (Aryen, Sun 03:00 and 04:00)
+  // scripts/fetch_datacenters.py: each one OpenStreetMap maps, by address (never the operator). San Francisco's, which a
+  // click opens ("the datacenters connected to sf"): footprints to scale and raised, each joined to its nearest named
+  // PG&E substation as the crow flies (no public source gives a data center's feeder), with power pulsing along the join
+  // at this Mac's measured watts, which stand in for each: inward while it runs, outward in mint once it is under a cap.
+  // The Bay Area's (kept for later, "dont get rid of ur progress"): pillars larger than life, by cluster.
+  function prepareDc(m) {
+    const local = m.half_m < 15000, k = 30 / m.half_m, xz = ([x, z]) => [x * k, z * k];   // 60 units across either way
+    const shoelace = (pts) => pts.reduce((a, q, i) => { const r = pts[(i + 1) % pts.length]; return a + q[0] * r[1] - r[0] * q[1]; }, 0);
+    const dcs = m.data_centers.map((dc, i) => {
+      const side = dc.area_m2 ? Math.sqrt(dc.area_m2) : 70;
+      let pts = local && dc.outline.length > 2 ? dc.outline.map(xz) : null;   // San Francisco: the real footprint
+      if (pts && shoelace(pts) < 0) pts = pts.reverse();
+      const sub = dc.substation && dc.substation.x != null ? { ...dc.substation, x: dc.substation.x * k, z: dc.substation.z * k } : null;
+      return { ...dc, i, x: dc.x * k, z: dc.z * k, pts, sub, s: local ? Math.max(0.4, side * k) : Math.max(0.55, Math.min(1.3, side * k * 9)),
+        h: local ? 1.5 : 0.7 + Math.min(3.2, (dc.area_m2 || 4000) / 6000) };
+    });
+    const groups = {};
+    for (const dc of dcs) (groups[dc.city || "?"] = groups[dc.city || "?"] || []).push(dc);
+    const clusters = local ? [] : Object.entries(groups).filter(([c, xs]) => c !== "?" && xs.length >= 3)
+      .map(([city, xs]) => ({ city, n: xs.length, x: xs.reduce((a, b) => a + b.x, 0) / xs.length, z: xs.reduce((a, b) => a + b.z, 0) / xs.length,
+        m2: xs.reduce((a, b) => a + (b.area_m2 || 0), 0) }))
+      .sort((a, b) => b.n - a.n);
+    const joined = new Set(dcs.filter((dc) => dc.sub).map((dc) => dc.sub.name));
+    return { kind: "datacenters", half: 30, local, area: m.area, counts: m.counts, dcs, clusters,
+      sf: dcs.filter((dc) => dc.in_sf), coast: m.coast.map((l) => l.map(xz)), roads: m.roads.map((r) => r.p.map(xz)),
+      lines: m.lines.map((l) => l.p.map(xz)), places: m.places.map((pl) => ({ ...pl, x: pl.x * k, z: pl.z * k })),
+      subs: (m.substations || []).map((sb) => ({ ...sb, x: sb.x * k, z: sb.z * k, joined: joined.has(sb.name) })) };
+  }
+  function strokePath(pts, y, color, w) {
+    const g = S.ctx;
+    g.beginPath(); pts.forEach(([x, z], i) => { const p = P(x, y, z); if (i) g.lineTo(p[0], p[1]); else g.moveTo(p[0], p[1]); });
+    g.strokeStyle = color; g.lineWidth = w; g.stroke();
+  }
+  const DC_LOOK = { wall: [140, 232, 200], alpha: 0.97, floors: "rgba(220,255,240,0.45)", edge: "rgba(170,255,222,1)" };
+  function drawDcStatic(look) {
+    const g = S.ctx, M = S.cityMap, hf = M.half;
+    platform(-hf - 1, -hf - 1, 2 * hf + 2, 2 * hf + 2, 0.25);
+    g.save(); g.lineCap = "round"; g.lineJoin = "round";
+    for (const l of M.coast) strokePath(l, 0.37, "rgba(90,168,255,0.6)", 1.4);           // the shoreline
+    for (const r of M.roads) strokePath(r, 0.37, M.local ? "rgba(150,190,215,0.22)" : "rgba(150,190,215,0.16)", 1);
+    for (const l of M.lines) strokePath(l, 0.38, "rgba(255,206,130,0.4)", 1);            // power lines and cables
+    for (const dc of M.dcs) if (dc.sub) {                              // each data center to its substation: a wide glow, a thin core
+      strokePath([[dc.x, dc.z], [dc.sub.x, dc.sub.z]], 0.42, rgb(look.color, 0.18), 7);
+      strokePath([[dc.x, dc.z], [dc.sub.x, dc.sub.z]], 0.42, rgb(look.color, 0.85), 1.6);
+    }
+    g.restore();
+    if (M.places.length <= 80) {
+      g.save(); g.font = `500 ${M.local ? 9 : 10}px Inter, system-ui, sans-serif`; g.textAlign = "center"; g.fillStyle = `rgba(190,215,210,${M.local ? 0.32 : 0.5})`;
+      for (const pl of M.places) { const p = P(pl.x, 0.4, pl.z); g.fillText(pl.name, p[0], p[1] + 14); }
+      g.restore();
+    }
+    for (const sb of M.subs) {                                         // the substations: the joined ones larger, named
+      const r = sb.joined ? 0.32 : 0.14;
+      box(sb.x - r, sb.z - r, 2 * r, 2 * r, sb.joined ? 0.7 : 0.3, { y: 0.36, color: [255, 196, 110], cap: sb.joined });
+      if (sb.joined && sb.name) {
+        const p = P(sb.x, 1.3, sb.z);
+        g.save(); g.font = "600 10px Inter, system-ui, sans-serif"; g.textAlign = "left"; g.fillStyle = "rgba(255,214,150,0.9)";
+        g.fillText(sb.name, p[0] + 8, p[1]); g.restore();
+      }
+    }
+    const items = M.dcs.map((dc) => ({ dc, depth: P(dc.x, 0, dc.z)[2] })).sort((a, b) => a.depth - b.depth);
+    for (const { dc } of items) {
+      const sel = S.hover === `dc:${dc.i}`;
+      if (dc.pts) prism({ pts: dc.pts, h0: 0.36, h: 0.36 + dc.h }, sel ? { ...DC_LOOK, wall: [215, 255, 238] } : DC_LOOK);
+      else box(dc.x - dc.s / 2, dc.z - dc.s / 2, dc.s, dc.s, dc.h, { y: 0.36, color: sel ? [235, 255, 248] : dc.in_sf ? [170, 245, 215] : [196, 214, 226],
+        band: look.band, bandColor: look.color, cap: true });
+    }
+  }
+  function drawDc(dt) {
+    const M = S.cityMap, d = S.data, v = S.v, g = S.ctx, cap = d.cap;
+    S.labels = [];
+    const giving = cap && !cap.over && cap.ttc != null;               // the same states as our data center on the grid
+    const look = { band: Math.min(1, v.ours), color: giving ? C.mint : cap ? [255, 190, 70] : [120, 200, 255] };
+    const key = [S.yaw, S.pitch, S.scale, S.fit, S.cx, S.cy].map((x) => (+x || 0).toFixed(3)).join("|")
+      + `|${S.w}x${S.h}|${S.hover}|${look.band.toFixed(1)}|${look.color}`;
+    if (!S.cityCache) S.cityCache = document.createElement("canvas");
+    const cc = S.cityCache, cw = Math.round(S.cv.width / S.dpr), ch = Math.round(S.cv.height / S.dpr);
+    if (cc.width !== cw || cc.height !== ch) { cc.width = cw; cc.height = ch; S.cityKey = null; }
+    if (S.cityKey !== key) {
+      const main = S.ctx, c2 = cc.getContext("2d");
+      c2.setTransform(1, 0, 0, 1, 0, 0); c2.clearRect(0, 0, cw, ch);
+      S.ctx = c2; drawDcStatic(look); S.ctx = main; S.cityKey = key;
+    }
+    g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(cc, 0, 0, S.cv.width, S.cv.height); g.restore();
+    if (!REDUCE) {                                                     // the only per-frame drawing: lights and moving power
+      g.save(); g.globalCompositeOperation = "lighter";
+      const a = 0.35 + 0.5 * look.band * (0.75 + 0.25 * Math.sin(S.t * 2.2));
+      for (const dc of M.dcs) glowDot(dc.x, dc.h + (M.local ? 0.9 : 0.55), dc.z, M.local ? 12 : dc.in_sf ? 9 : 6, look.color, a);
+      const speed = 0.5 + 1.8 * look.band;                             // faster with more measured watts
+      for (const dc of M.dcs) if (dc.sub) {
+        const a3 = [dc.sub.x, 0.45, dc.sub.z], b3 = [dc.x, 0.45, dc.z], pts = giving ? [b3, a3] : [a3, b3];
+        const L = lenOf(pts);
+        if (L < 0.05) continue;                                        // a data center beside its substation: nothing to show
+        for (let f = ((S.t * speed) % 0.9) / L; f < 1; f += 0.9 / L) { const q = P(...along(pts, f)); g.fillStyle = rgb(look.color, 0.95); g.beginPath(); g.arc(q[0], q[1], 2.4, 0, 7); g.fill(); }
+      }
+      g.restore();
+    }
+    S.hits = M.dcs.map((dc) => {                                       // hover one: its address, footprint and substation
+      const r = Math.max(dc.s / 2, 0.5);
+      const pts = [[dc.x - r, 0, dc.z - r], [dc.x + r, dc.h + 0.6, dc.z + r], [dc.x - r, dc.h + 0.6, dc.z + r], [dc.x + r, 0, dc.z - r]].map((q) => P(...q));
+      const xs = pts.map((q) => q[0]), ys = pts.map((q) => q[1]);
+      return { id: `dc:${dc.i}`, title: dc.address || "data center", x0: Math.min(...xs) - 3, x1: Math.max(...xs) + 3, y0: Math.min(...ys) - 3, y1: Math.max(...ys) + 3, depth: P(dc.x, 0, dc.z)[2] };
+    });
+    const c = M.counts, hf = M.half;
+    if (M.local) {
+      label(-hf, 6, -hf, `${M.area} · data centers`, `${c.data_centers} mapped`, "each joined to its nearest PG&E substation · OpenStreetMap", 0.4);
+      for (const dc of M.dcs) label(dc.x, dc.h + 5, dc.z, dc.city || M.area, dc.address || "address not mapped",
+        dc.sub ? `to ${dc.sub.name || "a substation"}${dc.sub.kv ? `, ${Math.round(dc.sub.kv)} kV` : ""}: ${dc.sub.km} km` : "", dc.h + 0.9);
+      const hov = S.hover && S.hover.startsWith("dc:") ? M.dcs[+S.hover.slice(3)] : null;
+      if (hov) label(hov.x, hov.h + 9, hov.z, "this Mac stands in for it", d.ours_w != null ? `${d.ours_w.toFixed(1)} W, measured` : "measured",
+        hov.area_m2 ? `${hov.area_m2.toLocaleString()} m² footprint` : "", hov.h + 5);
+      drawLabels();
+      return;
+    }
+    label(-hf, 6, -hf, "San Francisco Bay Area · data centers", `${c.data_centers} mapped`,
+      `OpenStreetMap · ${c.with_outline} with outlines · pillars larger than life`, 0.4);
+    if (M.sf.length) {
+      const sx = M.sf.reduce((a, b) => a + b.x, 0) / M.sf.length, sz = M.sf.reduce((a, b) => a + b.z, 0) / M.sf.length;
+      label(-hf * 0.92, 5, sz - 4, `San Francisco · ${M.sf.length} data centers`, d.ours_w != null ? `this Mac: ${d.ours_w.toFixed(1)} W` : "this Mac",
+        M.sf.map((x) => x.address).filter(Boolean).join(" · "), 1.2, [sx, sz]);   // on the west edge, pointing at the city
+    }
+    M.clusters.filter((x) => !M.sf.some((sf) => sf.city === x.city)).slice(0, 2).forEach((cl, k) =>   // on the east edge
+      label(hf * 0.95, 5, cl.z - 7 + k * 9, cl.city, `${cl.n} data centers`,
+        cl.m2 ? `about ${Math.round(cl.m2 / 1000).toLocaleString()}k m² of footprint, mapped` : "mapped", 1.2, [cl.x, cl.z]));
+    const hov = S.hover && S.hover.startsWith("dc:") ? M.dcs[+S.hover.slice(3)] : null;
+    if (hov) label(hov.x, hov.h + 4, hov.z, `${hov.city || "data center"}${hov.in_sf ? " · San Francisco" : ""}`, hov.address || "address not mapped",
+      [hov.area_m2 ? `${hov.area_m2.toLocaleString()} m² footprint` : null,
+        hov.sub ? `${hov.sub.km} km from ${hov.sub.name || "a"} ${Math.round(hov.sub.kv)} kV substation` : null].filter(Boolean).join(" · "), hov.h + 0.6);
+    drawLabels();
+  }
+
   // Click the city: the camera flies into it. Back: it flies out. About 1.2 s; none under prefers-reduced-motion.
   function openCity(city, map) {
-    S.cityMap = prepareMap(map); S.cityKey = null; S.hover = null;
+    S.cityMap = map.kind === "datacenters" ? prepareDc(map) : prepareMap(map); S.cityKey = null; S.hover = null;
     S.trans = REDUCE ? null : { t0: performance.now(), dir: 1, o: P(13, 2.5, -9) };   // wall clock: smooth even at a low frame rate
     S.city = city;
     if (!S.running) { step(1); draw(); }
@@ -722,7 +856,9 @@ const World = (() => {
     canvas.addEventListener("pointermove", (e) => {
       if (!S.drag) {                                                  // hover: say what a click would break
         const h = hitAt(e);
-        if ((h && h.id) !== S.hover) { S.hover = h ? h.id : null; canvas.style.cursor = h && S.onPick ? "pointer" : ""; if (!S.running) draw(); }
+        if ((h && h.id) !== S.hover) {                                // a data center pillar: hover only, no hand
+          S.hover = h ? h.id : null; canvas.style.cursor = h && S.onPick && !h.id.startsWith("dc:") ? "pointer" : ""; if (!S.running) draw();
+        }
         return;
       }
       S.yaw = S.drag.yaw + (e.clientX - S.drag.x) * 0.006;
@@ -778,7 +914,7 @@ const World = (() => {
   function onPick(cb) { S.onPick = cb; }
   // Switching between the four picks (Aryen, Sun 00:40: "clean animations for each of the default"): the camera glides
   // to each one's own angle and distance, eased, then stays still. It moves only when the pick changes.
-  const GLIDE = { live: [-0.62, 1], "uri-2021": [-0.44, 1.05], "caiso-2020-08": [-0.8, 1.03], "caiso-2022-09": [-0.7, 1.04] };
+  const GLIDE = { live: [-0.62, 1], "uri-sf": [-0.44, 1.05], "caiso-2020-08": [-0.8, 1.03], "caiso-2022-09": [-0.7, 1.04] };
   function glide(key) {
     const [yaw, zoom] = GLIDE[key] || GLIDE.live;
     S.baseYaw = yaw; S.zoomTo = zoom;

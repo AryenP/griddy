@@ -13,6 +13,7 @@ isos:
       Nuclear: {name: Diablo Canyon, note: "California's only nuclear plant",
                 source: "NRC, List of Power Reactor Units (reviewed 14 Sep 2026): Diablo Canyon 1 and 2 are the only units in CA"}
   ERCOT:
+    offered: false            # Aryen, Sun 03:00: Texas leaves the demo (Uri now replays as a San Francisco simulation)
     timezone: US/Central
     lmp_market: REAL_TIME_15_MIN
     day_ahead_market: DAY_AHEAD_HOURLY

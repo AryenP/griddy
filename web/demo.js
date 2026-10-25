@@ -161,8 +161,18 @@ function onAction(d) {
 }
 
 // Where the replayed hours came from: fetched live just now, or the evidence copy (and why).
+// The data centers' block on the overview: San Francisco's, as OpenStreetMap maps them; a click opens them.
+function campus() {
+  const m = D.dcMap;
+  return m ? { title: `${m.area}'s data centers`, value: `${m.counts.data_centers} mapped`, sub: "each joined to its substation · click to see them" }
+    : { title: "Data centers", value: "—", sub: "loading the map" };
+}
 function provenance(ev, data) {
   if (!data) return html``;
+  if (data.simulated) {
+    const how = (m, ba) => (m && m.source === "live" ? `fetched live from api.eia.gov (EIA-930, ${ba})` : `the evidence copy (EIA-930, ${ba})`);
+    return html`Simulated: ${data.simulated}. California's hours ${how(data, ev ? ev.ba : "")}; Texas's share each hour ${how(data.shape, "ERCO")}. The software sees each hour only once it has ended.`;
+  }
   if (data.source === "live") {
     const same = data.max_diff_mw === 0 ? ", identical to the evidence copy" : data.max_diff_mw != null ? `, within ${fixed(data.max_diff_mw, 0)} MW of the evidence copy` : "";
     return html`Grid data fetched live from api.eia.gov at ${data.fetched_at ? new Date(data.fetched_at).toTimeString().slice(0, 5) : "—"} (EIA-930, ${ev ? ev.ba : ""}${same}). The software sees each hour only once it has ended.`;
@@ -223,8 +233,7 @@ function render() {
     World.set({ mix: d.mix_mw, served: d.demand_mw, needed: d.forecast_mw, ours_w: d.ours_w, baseline_w: d.baseline_w,
       cut_pct: d.measured_cut_pct, alert: d.cut_kinds.includes("emergency") ? "emergency" : d.cut_kinds.includes("warning") ? "warning" : null,
       peaks: { wind: D.peaks.wind, solar: D.peaks.solar }, with_mw: sc ? sc.freed_mw : null, city: ev ? ev.region : null,
-      iso: ev ? ev.iso : null, places: ev ? D.places[ev.iso] || null : null, stand_in: standInNow(),
-      campus: ev ? { title: "Data centers", value: gw(ev.flexible_mw), sub: ev.flexible_mw === 1000 ? "a 1 GW unit" : "up to: each load's Sep peak, summed" } : null });
+      iso: ev ? ev.iso : null, places: ev ? D.places[ev.iso] || null : null, stand_in: standInNow(), campus: campus() });
     $("w-clock").textContent = `${ev ? ev.title : d.title} · ${isoLabel(d.hour_ending || d.sim_time)}`;
     $("w-progress").style.width = `${(100 * d.progress).toFixed(1)}%`;
     $("w-head").textContent = "";
@@ -240,7 +249,7 @@ function render() {
     $("s-impact-src").textContent = sc ? `estimate · ${fixed(sc.share_pct, 0)}% cut asked, on ${gw(sc.flexible_mw)}` : "appears once this Mac cuts";
     if (ev) {
       const fig = ev.people_out ? bigCount(ev.people_out) : `${wholeMw(ev.shed_mw)} MW`, c = cited(ev, fig);
-      versus({ fig, text: ev.people_out ? `${ev.people_unit || "people"} lost power` : "the grid had to find at the peak",
+      versus({ fig, text: ev.people_out ? `${ev.people_unit || "people"} ${ev.simulated ? "lose power (simulated)" : "lost power"}` : "the grid had to find at the peak",
         src: `${c.text} · ${c.source}`, gap: ev.shed_mw > 0 },
         withSide(sc, sc ? sc.share_of_shed_pct : null, `the ${wholeMw(ev.shed_mw)} MW it had to find`, waitingText(d.asked_cut_pct, d.nothing_to_shed),
           sc ? `estimate · this Mac's measured cut, as far as asked (${fixed(sc.share_pct, 0)}%), on ${gw(sc.flexible_mw)} of ${sc.flexible_source}${sc.people != null && ev.people_basis ? `; ${ev.people_basis}` : ""}` : "measured on this Mac, live"));
@@ -253,11 +262,8 @@ function render() {
   const mixNow = (g && g.fuel_mix_mw) || {};
   const served = Object.values(mixNow).filter((v) => v > 0).reduce((s, v) => s + v, 0) || null;
   const needed = liveNeeded(g);
-  const elsewhere = !!(g && g.iso !== "ERCOT");
   World.set({ mix: mixNow, served, needed, ours_w: p ? p.combined_w : null, baseline_w: null, cut_pct: null, alert: null, peaks: {},
-    with_mw: null, city: null, iso: g ? g.iso : null, places: g ? D.places[g.iso] || null : null, stand_in: standInNow(),
-    campus: D.scale ? { title: elsewhere ? "Texas · ERCOT large loads" : "ERCOT large loads", value: `up to ${gw(D.scale.large_loads_running_mw)}`,
-      sub: `${elsewhere ? "another grid · " : ""}each load's Sep 2026 peak, summed`, elsewhere } : null });
+    with_mw: null, city: null, iso: g ? g.iso : null, places: g ? D.places[g.iso] || null : null, stand_in: standInNow(), campus: campus() });
   if (live) {
     $("w-clock").textContent = g ? `Live · ${g.iso} · ${localClock(nowS())}` : "Live · waiting for the grid feed";
     $("w-progress").style.width = "0%";
@@ -265,8 +271,8 @@ function render() {
   } else if (ev) {
     $("w-clock").textContent = `${ev.title} · ${ev.when}`;
     $("w-progress").style.width = "0%";
-    $("w-head").textContent = ev.iso === "ERCOT" && D.scale && D.scale.demand_mw
-      ? `Texas right now: ERCOT is serving ${gw(D.scale.demand_mw)} (live). Press play to run ${ev.when} through the same software.`
+    $("w-head").textContent = ev.simulated
+      ? `Simulated: ${ev.simulated}. Press play to fetch both grids' hours live from the U.S. EIA.`
       : `Press play to fetch the hours live from the U.S. EIA. The software gets them one hour at a time.`;
   }
   setNum($("s-served"), gw(served)); $("s-served-src").textContent = g ? `${g.iso} fuel mix, live` : "";
@@ -274,8 +280,8 @@ function render() {
   setNum($("s-mac"), p ? `${fixed(p.combined_w, 1)} W` : "—");
   $("s-mac-src").textContent = p ? `measured by powermetrics · ${age(p.t)}` : "waiting for the meter";
   setNum($("s-impact"), D.scale ? `${wholeMw(D.scale.freed_mw)} MW` : "—");
-  $("s-impact-k").textContent = "ERCOT, if large loads cut like this Mac";
-  $("s-impact-src").textContent = D.scale ? `estimate · ${fixed(D.scale.share_of_demand_pct, 1)}% of ERCOT now` : "estimate";
+  $("s-impact-k").textContent = "per GW of data centers cutting like this Mac";
+  $("s-impact-src").textContent = D.scale ? `estimate · ${fixed(D.scale.share_of_demand_pct, 1)}% of ${D.scale.iso} now` : "estimate";
   setHTML($("w-sources"), html`Live grid data: ${g ? g.iso : "—"} via gridstatus. This Mac: macOS powermetrics. Detail and every graph: <a href="/info.html">Info</a>.`);
   overlayFault();
 }
@@ -283,6 +289,11 @@ function render() {
 // In the city map, the footer says what is real and what is drawn.
 function citySources() {
   if (!D.city) return;
+  if (D.city.dc) {
+    const m = D.dcMap;
+    setHTML($("w-sources"), html`Data centers in ${m.area} as mapped in OpenStreetMap (${m.license}), fetched ${m.fetched_at.slice(0, 10)}: what volunteers have mapped, not a census; addresses only. Each is joined to its nearest named PG&E substation as the crow flies: feeders are not public. Substations, lines, shoreline and streets: OpenStreetMap${m.missing && m.missing.length ? ` (not fetched yet: ${m.missing.join(", ")})` : ""}. This Mac's watts: measured by powermetrics, standing in for each.`);
+    return;
+  }
   const m = D.maps[D.city.id], h = (m && m.heights) || {};
   setHTML($("w-sources"), html`${D.city.name}${m ? `, ${m.area}` : ""}: buildings, heights, streets and power lines drawn 1:1 from ${m ? m.license : D.city.license}, fetched ${String((m || D.city).fetched_at).slice(0, 10)}${m ? `; ${h.estimated} of ${m.buildings.length} heights estimated from the building's type` : ""}. Homes lit: the grid's real served over needed. Which blocks go dark, and the feeder routing: illustrative.`);
 }
@@ -328,7 +339,7 @@ function cityNow() {
 // Francisco): when a replay of another region starts, or the grid changes, the camera flies to that city instead.
 let citySwitching = false;
 async function followCity() {
-  if (!D.city || citySwitching) return;
+  if (!D.city || D.city.dc || citySwitching) return;                  // the data centers' view stays until Back
   const want = cityNow();
   if (want && want.id === D.city.id) return;
   citySwitching = true;
@@ -356,6 +367,13 @@ async function openCity(city) {
   }
   D.city = city; World.openCity(city, D.maps[city.id]); $("w-back").hidden = false; render();
 }
+// A click on either data center opens San Francisco's, each joined to its substation, in the city view's camera
+// (Aryen, Sun 03:00: "data center needs to expand when clicked"; 04:00: "the datacenters connected to sf").
+function openDataCenters() {
+  if (!D.dcMap) { toast("emergency", "data centers", "The data centers' map is not loaded: run scripts/fetch_datacenters.py", ""); return; }
+  D.city = { id: DC_MAP, name: `${D.dcMap.area}'s data centers`, dc: true };
+  World.openCity(D.city, D.dcMap); $("w-back").hidden = false; render();
+}
 function closeCity() { D.city = null; World.closeCity(); $("w-back").hidden = true; render(); }
 $("w-back").addEventListener("click", closeCity);
 
@@ -364,19 +382,19 @@ function openPop(title, text, buttons, pt, words) {
   $("w-pop-t").textContent = title; $("w-pop-p").textContent = text;
   $("w-pop-f").hidden = !words; $("w-pop-read").textContent = ""; $("w-pop-read").className = ""; $("w-pop-in").value = "";
   POP.words = words || null;
-  const box = $("w-pop-b");
-  box.replaceChildren();
-  for (const [label, cls, fn] of buttons) {
+  const box = $("w-pop-b"), nav = $("w-pop-o");
+  box.replaceChildren(); nav.replaceChildren();
+  for (const [label, cls, fn] of buttons) {                    // a way into a map goes above, the actions below
     const b = document.createElement("button");
     b.type = "button"; b.className = cls; b.textContent = label; b.addEventListener("click", fn);
-    box.append(b);
+    (cls === "open" ? nav : box).append(b);
   }
   const pop = $("w-pop");
   pop.hidden = false;
   const r = pop.getBoundingClientRect();
   pop.style.left = `${Math.max(16, Math.min(innerWidth - r.width - 16, pt.x - r.width / 2))}px`;
   pop.style.top = `${Math.max(76, Math.min(innerHeight - r.height - 16, pt.y - r.height - 14))}px`;
-  (words ? $("w-pop-in") : box.firstChild).focus();
+  (words ? $("w-pop-in") : nav.firstChild || box.firstChild).focus();
 }
 function closePop() { $("w-pop").hidden = true; }
 const POP = { words: null };
@@ -401,7 +419,7 @@ $("w-pop-f").addEventListener("submit", async (e) => {
 });
 
 function confirmBreak(h, pt) {
-  const ts = World.targets().filter((t) => t.id.startsWith("plant:"));
+  const ts = breakable().filter((t) => t.id.startsWith("plant:"));
   const big = ts.reduce((a, b) => (b.mw > (a ? a.mw : 0) ? b : a), null);
   const card = h.id.startsWith("plant:")
     ? [`Trip the ${h.title.toLowerCase()} fleet?`, `What-if: the grid loses this fleet's output right now, ${gw(h.mw)}. Griddy responds live and this Mac's watts are measured.`, "Trip it"]
@@ -423,12 +441,16 @@ async function breakIt(id, share = 100, cause = "") {
     : "the grid still covers demand: no cut needed");
 }
 
-World.onPick((h, pt) => confirmBreak(h, pt));
+World.onPick((h, pt) => {
+  if (h.id === "datacenters") openDataCenters();
+  else if (!h.id.startsWith("dc:")) confirmBreak(h, pt);                // a pillar in the data centers' view: hover only
+});
+function breakable() { return World.targets().filter((t) => t.id.startsWith("plant:") || t.id === "hub" || t.id === "city"); }
 $("w-break-btn").addEventListener("click", async (e) => {
   if (faulted()) { await postJSON("/api/whatif", { target: "clear", who: "judge" }); D.whatif = null; render(); return; }
   const r = e.currentTarget.getBoundingClientRect();
   openPop("Break a part of the grid", "What-if: you invent the fault. Its size comes from the grid at this moment.",
-    [...World.targets().map((t) => [t.mw ? `${t.title} · ${gw(t.mw)}` : t.title, "", () => confirmBreak(t, { x: r.left + r.width / 2, y: r.top })]),
+    [...breakable().map((t) => [t.mw ? `${t.title} · ${gw(t.mw)}` : t.title, "", () => confirmBreak(t, { x: r.left + r.width / 2, y: r.top })]),
       ["Cancel", "", closePop]], { x: r.left + r.width / 2, y: r.top }, { target: null });
 });
 document.addEventListener("keydown", (e) => { if (e.key !== "Escape") return; if (!$("w-pop").hidden) closePop(); else if (D.city) closeCity(); });
@@ -472,5 +494,7 @@ new MutationObserver(keepClear).observe($("w-alerts"), { childList: true });
 addEventListener("resize", keepClear);
 getJSON("/api/replay/events").then((r) => { if (r.ok) { D.cat = r.data; render(); } });
 getJSON("/api/cities").then((r) => { if (r.ok) D.cities = r.data; });
+const DC_MAP = "san-francisco-datacenters";                     // docs/evidence/city/<id>-map.json (the Bay Area's is kept for later)
+getJSON(`/api/cities/${DC_MAP}/map`).then((r) => { if (r.ok) { D.dcMap = r.data; render(); } });
 setInterval(render, 1000);
 connectWS(handle, $("conn"));

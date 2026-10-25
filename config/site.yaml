@@ -2,19 +2,14 @@
 # Microsoft workshop, with permission; the header shows nothing until it is filled.
 quote: null        # {text: "...", who: "Name", role: "Title, Org"}
 
-# At grid scale: an ESTIMATE from public data, labelled so on the dashboard (Aryen, Sat 13:20: "public data sets").
-# Live: ERCOT's actual system demand (gridstatus, keyless). Cited: ERCOT's large loads (the sum of each one's own monthly
-# peak: an upper bound, not what runs at once), and the queue.
+# At grid scale: an ESTIMATE, labelled so on the pages (Aryen, Sat 13:20: "public data sets"; Sun 03:00: no Texas).
+# Live: the grid's demand served now (its fuel mix, the same total the Grid page shows). Stated: a unit of data center
+# load, 1 GW, because CAISO publishes no running-data-center figure we can cite (the replays of California use the same).
 # The cut is this Mac's measured one under the same call (evidence of record, DECISIONS 09:46: Brownout 14.34 W
 # vs ignore the call 20.85 W). A laptop's response is not a data center's: the page says "if".
 scale:
-  poll_s: 300
-  large_loads_running_mw: 4132     # non-simultaneous monthly peak of loads approved to energize, Sep 2026
-  large_loads_approved_mw: 9456
-  large_loads_source: "ERCOT Monthly Operational Overview, September 2026 (published 16 Oct 2026), PDF p. 9: the sum of each large load's own September peak (non-simultaneous)"
-  large_loads_url: https://www.ercot.com/files/docs/2026/10/16/ERCOT-Monthly-Operational-Overview-September.pdf
-  queue_gw: 474                    # large loads asking to connect, about 90 % data centers
-  queue_source: "Utility Dive, 5 Aug 2026, quoting Gov. Abbott's letter"
-  queue_url: https://www.utilitydive.com/news/texas-hits-pause-data-center-interconnections/827046/
+  poll_s: 60
+  flexible_mw: 1000
+  flexible_source: "per 1 GW of data centers (illustrative unit, not a CAISO figure)"
   our_cut_pct: 31.2
   our_cut_source: "this Mac, evidence of record (DECISIONS 09:46): 14.34 W vs 20.85 W under the same call"
