@@ -19,7 +19,9 @@ button { font: inherit; color: inherit; }
 .w-top { position: fixed; top: 16px; left: 16px; right: 16px; display: flex; align-items: center; gap: 16px; z-index: 2;
   padding: 10px 14px; border-radius: 999px; background: var(--glass); border: 1px solid var(--line);
   backdrop-filter: blur(18px) saturate(1.2); -webkit-backdrop-filter: blur(18px) saturate(1.2); }
-.w-brand { display: flex; align-items: baseline; gap: 12px; padding-left: 8px; }
+.w-brand { display: flex; align-items: baseline; gap: 12px; padding-left: 8px; min-width: 0; }
+.w-brand b, .w-nav a, .w-pill { white-space: nowrap; }
+.w-brand span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .w-brand b { font-size: 1.15rem; font-weight: 650; letter-spacing: -0.01em; }
 .w-brand span { color: var(--muted); font-size: 0.85rem; }
 .w-nav { margin-left: auto; display: flex; gap: 4px; padding: 4px; border-radius: 999px; background: rgba(255, 255, 255, 0.04); }
@@ -125,5 +127,24 @@ button { font: inherit; color: inherit; }
   .w-vs { padding: 6px 10px; }
   .w-vs span { font-size: 0.8rem; }
   .w-vs small { display: none; }
+}
+/* A laptop window (about 1000 x 650): the dock gives the 3D world room; every source line stays, smaller. */
+@media (max-height: 780px) and (min-width: 821px) {
+  .w-dock { bottom: 26px; padding: 10px 14px 12px; gap: 8px; }
+  .w-events button { padding: 5px 11px; min-height: 40px; font-size: 0.85rem; }
+  .w-play, .w-work { padding: 8px 16px; min-height: 40px; }
+  .w-row-time { gap: 10px; }
+  .w-versus { gap: 8px; }
+  .w-vs { padding: 6px 12px; }
+  .w-vs span { font-size: 0.85rem; }
+  .w-stats { gap: 8px; }
+  .w-stat { padding: 6px 12px; }
+  .w-stat b { font-size: clamp(1.3rem, 2.4vw, 1.8rem); }
+  .w-stat small, .w-vs small { font-size: 0.64rem; }
+  .w-headline { font-size: 0.82rem; }
+}
+@media (max-width: 1100px) and (min-width: 821px) {
+  .w-brand span { max-width: 26vw; }
+  .w-events button small { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { .w-bar i, .w-toast { transition: none; } }
