@@ -52,7 +52,7 @@ class Runtime:
         self.replay = Replay(self.tl, self.executor)         # real grid emergencies, replayed through the live software
         self.whatif = WhatIf(self.tl, self.executor, self.replay, (config.events or {}).get("whatif"))   # a judge breaks a part
         self.scale: dict | None = None                               # ERCOT-scale ESTIMATE (grid/scale.py)
-        self.agent = AgentBridge(self.tl, self.executor)
+        self.agent = AgentBridge(self.tl, self.executor, store=Path("runs/approvals.json"))   # survives a restart
         self.agent.snapshot = self.snapshot
         self.watcher: GridWatcher | None = None
         self.watcher_task: asyncio.Task | None = None

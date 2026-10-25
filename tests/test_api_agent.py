@@ -157,3 +157,22 @@ async def test_going_over_the_cap_takes_a_plain_yes(rig):
         assert agent.approvals[op.id].status == "pending"
     decision, _ = await agent.reply(op.id, "yes", "judge", acting_as=op.owner)
     assert decision.decision == "approve" and agent.approvals[op.id].status == "approved"
+
+
+async def test_pending_approvals_and_refusals_survive_a_restart(rig):
+    """HVE Core review (reliability): pending approvals lived in a dict and vanished on restart. With a store, a new
+    bridge (the runtime after a restart) still has the open question, and an owner's refusal is not asked again."""
+    e, _, tl, tmp = rig
+    store = tmp / "approvals.json"
+    agent = AgentBridge(tl, e, store=store)
+    await e.on_signal(signal([50.0] * 96))
+    await agent.request("grid alert, I need 50% off for the next 2 hours", "judge")
+    ask = agent.pending()[0]
+    again = AgentBridge(tl, e, store=store)                        # the runtime restarted
+    assert [a.id for a in again.pending()] == [ask.id] and again.approvals[ask.id].message == ask.message
+    await again.reply(ask.id, "no, it has to finish on time", "judge", acting_as=ask.owner)
+    third = AgentBridge(tl, e, store=store)                         # the refusal moved the question to the operator
+    assert ask.id not in third.approvals and [a.job_id for a in third.pending()] == [CAP_JOB]
+    assert third.refused.get(ask.job_id) == "it has to finish on time"
+    store.write_text("not json")
+    assert AgentBridge(tl, e, store=store).pending() == []        # a damaged file: start clean, and say so
