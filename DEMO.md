@@ -46,9 +46,9 @@ cutting like this Mac, per 1 GW of them (a stated unit, on screen). The two Cali
 with its report's page.
 
 (If asked "where are the data centers?") Click either data center: the camera flies into San Francisco's four, as
-OpenStreetMap maps them, by address (365 Main, 360 Spear, 630 3rd, 200 Paul), each joined to its nearest PG&E
-substation. Power pulses along each join at this Mac's measured watts, which stand in for each; under a cap it turns
-mint and flows back out. Hover one for its footprint. Back returns.
+OpenStreetMap maps them, by address (365 Main, 360 Spear, 630 3rd, 200 Paul), side by side, each beside its nearest
+PG&E substation (which one feeds it is not public, and neither are their sizes). Their racks are this Mac's, measured,
+standing in for each; under a cap the power turns mint and flows back out. Back returns.
 
 (If asked "what if X fails?") Break it. Click any plant, the substation or the city, or press Break a part and
 type it ("an ice storm freezes half the gas plants"). Read the reading aloud ("the gas fleet loses 50 %: -X GW of its

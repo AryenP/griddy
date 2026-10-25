@@ -117,7 +117,7 @@ def test_grid_scale_estimate_is_arithmetic_on_cited_numbers():
     assert x["estimate"] is True and x["iso"] == "CAISO"
     assert x["freed_mw"] == pytest.approx(cfg["flexible_mw"] * cfg["our_cut_pct"] / 100)
     assert x["share_of_demand_pct"] == pytest.approx(100 * x["freed_mw"] / 19400.0)
-    assert "illustrative" in x["flexible_source"] and "evidence of record" in x["our_cut_source"]
+    assert "no fleet total" in x["flexible_source"] and "evidence of record" in x["our_cut_source"]   # a rate, never a fleet
     assert estimate(cfg, "CAISO", None, None)["share_of_demand_pct"] is None
 
 

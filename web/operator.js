@@ -228,9 +228,9 @@ function renderReplay() {
   const d = P.evLast, sc = d.scale, cut = d.measured_cut_pct;
   setHTML($("ev-now"), html`
     <div><div class="label">Hour (${ev ? ev.ba : ""})</div><div class="value">${isoClock(d.hour_ending)}</div><div class="src">${isoLabel(d.hour_ending)} · the last hour that has ended</div></div>
-    <div><div class="label">Served / needed</div><div class="value">${fixed(d.demand_mw / 1000, 1)}<small> / ${fixed(d.forecast_mw / 1000, 1)} GW</small></div><div class="src">EIA-930 demand and the operator's day-ahead forecast</div></div>
+    <div><div class="label">Served / needed</div><div class="value">${fixed(d.demand_mw / 1000, 1)}<small> / ${fixed(d.forecast_mw / 1000, 1)} GW</small></div><div class="src">${ev && ev.simulated ? "simulated: the forecast × Texas's share served each hour (EIA-930)" : "EIA-930 demand and the operator's day-ahead forecast"}</div></div>
     <div><div class="label">Our sites (measured)</div><div class="value">${fixed(d.ours_w, 1)}<small> W</small></div><div class="src">${d.nothing_to_shed ? "nothing running to shed" : cut != null ? `${fixed(Math.abs(cut), 0)}% ${cut >= 0 ? "below" : "above"} the ${fixed(d.baseline_w, 1)} W baseline` : "no cut asked yet"}</div></div>
-    <div><div class="label">With Griddy (estimate)</div><div class="value">${sc ? (sc.people != null ? compactN(sc.people) : `${fixed(sc.freed_mw, 0)}`) : "—"}<small>${sc ? (sc.people != null ? ` ${sc.people_unit}` : " MW") : ""}</small></div><div class="src">${sc ? `${sc.people != null ? "kept on · " : ""}${fixed(sc.freed_mw, 0)} MW freed, ${fixed(sc.share_pct, 0)}% cut asked on ${fixed(sc.flexible_mw, 0)} MW` : "appears once our sites cut"}</div></div>`);
+    <div><div class="label">With Griddy (estimate)</div><div class="value">${sc ? fixed(sc.freed_mw, 0) : "—"}<small>${sc ? " MW per GW" : ""}</small></div><div class="src">${sc ? `a rate: every 1 GW of data centers cutting the ${fixed(sc.share_pct, 0)}% asked${ev && ev.shed_mw && sc.freed_mw > 0 ? `; ${fixed(ev.shed_mw / sc.freed_mw, 0)} GW would cover the gap` : ""}` : "appears once our sites cut"}</div></div>`);
   const src = d.data || {};
   $("ev-src").textContent = `${src.source === "live" ? `Fetched live from api.eia.gov at ${src.fetched_at ? new Date(src.fetched_at).toTimeString().slice(0, 5) : "—"}`
     : `Evidence copy of EIA-930 (${src.why || "api.eia.gov not reached"})`} · ${fixed(100 * d.progress, 0)}% through the replay`;
@@ -294,7 +294,7 @@ function renderWhatIf() {
     <div><div class="label">What-if · ${fixed(w.remaining_s, 0)} s left</div><p>${w.label}</p></div>
     <div><div class="label">Without Griddy</div><div class="value${w.shortfall_mw > 0 ? " bad" : ""}">${fixed(w.shortfall_mw / 1000, 1)}<small> GW short</small></div><div class="src">${fixed(w.served_after / 1000, 1)} served of ${fixed(w.needed_after / 1000, 1)} GW needed</div></div>
     <div><div class="label">Our sites (measured)</div><div class="value">${fixed(w.ours_w, 1)}<small> W</small></div><div class="src">${w.nothing_to_shed ? "nothing running to shed" : cut != null ? `${fixed(Math.abs(cut), 0)}% ${cut >= 0 ? "below" : "above"} baseline, ${fixed(w.asked_cut_pct, 0)}% asked` : w.asked_cut_pct ? `${fixed(w.asked_cut_pct, 0)}% cut asked` : "no cut needed"}</div></div>
-    <div><div class="label">With Griddy (estimate)</div><div class="value">${sc ? fixed(sc.freed_mw, 0) : "—"}<small>${sc ? " MW" : ""}</small></div><div class="src">${sc ? `${fixed(sc.share_of_shortfall_pct, 1)}% of the shortfall, on ${fixed(sc.flexible_mw, 0)} MW of ${sc.flexible_source}` : "appears once our sites cut"}</div></div>`);
+    <div><div class="label">With Griddy (estimate)</div><div class="value">${sc ? fixed(sc.freed_mw, 0) : "—"}<small>${sc ? " MW per GW" : ""}</small></div><div class="src">${sc ? `a rate: every 1 GW of data centers cutting like this Mac${w.shortfall_mw > 0 && sc.freed_mw > 0 ? `; ${fixed(w.shortfall_mw / sc.freed_mw, 0)} GW would cover the gap` : ""}` : "appears once our sites cut"}</div></div>`);
   $("wi-src").textContent = `arithmetic on ${w.source}`;
 }
 
