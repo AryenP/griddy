@@ -101,8 +101,15 @@ Grid watcher → CP-SAT dispatcher → controller on the Mac → powermetrics �
 report and comparison. The LLM handles messy intake, owner negotiation and explanations; it never
 touches a knob. To show the loop at grid scale with nothing invented, a judge replays a real grid emergency (Winter
 Storm Uri, Texas 2021; California's rotating outages, 2020; California's record heat wave, 2022): the operator's own
-hourly demand and forecast play on screen, each alert reaches the real dispatcher at the moment it was issued, and
-this Mac's measured response is set against what the event cost (replay/engine.py, config/events.yaml).
+hourly demand, forecast and fuel mix are fetched live from the U.S. EIA's API when the judge presses play and reach the
+software one hour at a time, only once each hour has ended (tests/test_replay.py deletes every later hour and checks
+nothing changes; Griddy is not trained on any event); each alert reaches the real dispatcher at the moment it was
+issued, and this Mac's measured response is set against what the event cost (replay/engine.py, replay/eia.py,
+config/events.yaml). A judge can also break any part of the grid, by clicking it or by describing the failure in their
+own words: the fault is a labelled what-if, its size is the grid's real output at that moment, and the response is
+the same live dispatcher (replay/whatif.py, agent/faults.py). Clicking the city opens its map: the real hospitals
+(OpenStreetMap), homes dark by the grid's real unserved share, and the blocks Griddy's freed power relights; the
+feeders are an illustrative layout and the page says so.
 
 ![How Griddy fits together](docs/judging/architecture.svg)
 

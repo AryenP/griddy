@@ -35,13 +35,19 @@ a 30 % cut, and by design chat keeps full speed and the operator is asked instea
 chat during the cut, show that: "chat is serving 1 request at full speed (slowing chat is the operator's call)".
 
 **2:20 A real emergency, replayed live (the judge picks).** Three cards: Winter Storm Uri (Texas, 2021),
-California's rotating outages (2020), California's record heat wave (2022). They press **Replay it live**. In two
-minutes the operator's own hourly data plays: for Uri, the forecast pulls away from the demand Texas could serve
+California's rotating outages (2020), California's record heat wave (2022). They press **Replay it live**; the
+hours are fetched live from the EIA's API right then (the footer says so) and reach the software one hour at a time,
+never a later one. In two minutes the operator's own hourly data plays: for Uri, the forecast pulls away from the demand Texas could serve
 and the gap fills red. The warnings issued days before fire first, and Griddy's own flag (the day-ahead forecast
 above the record before the event); the Mac shifts its work. At 1:20 a.m. ERCOT's EEA 3 reaches the real
 dispatcher and the Mac cuts deeper, measured. Read the panel: "More than 4.5 million people lost power; 210 died"
 (the report's page is on the line), this Mac's measured cut, and the cut the grid asked applied to the 4.1 GW of
 large loads ERCOT sees running today: the megawatts and the people that is, from the event's own numbers.
+
+**(If asked "what if X fails?") Break it.** Click any plant, the substation or the city, or press **Break a part** and
+type it ("an ice storm freezes half the gas plants"). Read the reading aloud ("the gas fleet loses 50 %: -X GW of its
+real Y GW now"), confirm, and point at Without Griddy / With Griddy and the "Griddy acts" card. Click the city to open
+its map: real hospitals stay lit, dark blocks rotate, mint blocks are the ones Griddy's freed power relights.
 
 **3:10 Receipts.** Open the proof page: the same utility call measured under three policies (DECISIONS 09:46):
 ignore the call 20.85 W and 0 % of seconds under the cap; pause everything 0.80 W, 99 %, 19 training steps;
