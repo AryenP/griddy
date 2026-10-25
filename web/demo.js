@@ -162,6 +162,7 @@ function render() {
   if (g) { $("w-feed").textContent = `${g.iso} · ${g.stale ? "stale" : "live"} · ${fixed(g.feed_age_s, 0)} s`; $("w-feed").className = `badge ${g.stale ? "bad" : "ok"}`; }
   $("w-versus").hidden = true;
   World.set({ racks: rackStates(), cap: capNow() });
+  followCity();
   if (running()) {
     const d = D.last, sc = d.scale;
     if (d.mix_mw) for (const [k, v] of Object.entries(d.mix_mw)) D.peaks[k.toLowerCase()] = Math.max(D.peaks[k.toLowerCase()] || 0, v);
@@ -264,6 +265,16 @@ function cityNow() {
   const ev = D.cat.find((e) => e.id === (running() ? D.last.event : D.pick));
   const iso = ev ? ev.iso : D.grid ? D.grid.iso : null;
   return D.cities.find((c) => c.iso === iso) || null;
+}
+// The city view always shows the city of what is on screen (Aryen, Sun 00:35: Uri's Texas numbers were drawn on San
+// Francisco): when a replay of another region starts, or the grid changes, the camera flies to that city instead.
+let citySwitching = false;
+async function followCity() {
+  if (!D.city || citySwitching) return;
+  const want = cityNow();
+  if (want && want.id === D.city.id) return;
+  citySwitching = true;
+  try { if (want) await openCity(want); else closeCity(); } finally { citySwitching = false; }
 }
 async function openCity(city) {
   if (!D.maps[city.id]) {                                       // one real square of the city, 1:1 (OpenStreetMap)

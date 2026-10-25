@@ -499,7 +499,9 @@ const World = (() => {
       const cx = b.p.reduce((s, p) => s + p[0], 0) / b.p.length, cz = b.p.reduce((s, p) => s + p[1], 0) / b.p.length;
       return { pts, h: b.h * MU, h0: (b.h0 || 0) * MU, hospital: !!b.hospital, cx: cx * MU, cz: cz * MU, zone: zoneOf(cx, cz) };
     });
-    const roads = m.roads.map((r) => ({ w: r.w, pts: r.p.map(([x, z]) => [x * MU, 0.04, z * MU]),
+    const lim = half * 1.02;                                           // streets stop at the square's edge (the Bay Bridge did not)
+    const roads = m.roads.map((r) => ({ ...r, p: r.p.filter(([x, z]) => Math.abs(x) <= lim && Math.abs(z) <= lim) })).filter((r) => r.p.length > 1)
+      .map((r) => ({ w: r.w, pts: r.p.map(([x, z]) => [x * MU, 0.04, z * MU]),
       zone: zoneOf(r.p[Math.floor(r.p.length / 2)][0], r.p[Math.floor(r.p.length / 2)][1]) }));
     return { ...m, half: half * MU, buildings, roads,
       parks: m.parks.map((ps) => ps.map(([x, z]) => [x * MU, z * MU])), water: m.water.map((ps) => ps.map(([x, z]) => [x * MU, z * MU])),
@@ -556,7 +558,7 @@ const World = (() => {
   const LOOK = {
     on: { wall: [78, 138, 168], alpha: 0.95, floors: "rgba(200,238,255,0.4)", edge: "rgba(185,245,255,0.95)" },
     griddy: { wall: [52, 150, 120], alpha: 0.97, floors: "rgba(160,255,215,0.7)", edge: "rgba(140,255,205,1)" },
-    off: { wall: [14, 17, 22], alpha: 0.97, floors: null, edge: "rgba(255,90,90,0.4)" },
+    off: { wall: [16, 19, 24], alpha: 0.97, floors: null, edge: "rgba(110,130,150,0.22)" },   // unlit: dark, not burnt
     hospital: { wall: [214, 226, 234], alpha: 1, floors: "rgba(255,255,255,0.45)", edge: "rgba(255,255,255,0.9)" },
   };
   function drawCityStatic(st) {
