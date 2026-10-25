@@ -124,3 +124,11 @@ def test_a_judge_can_say_how_it_breaks_and_confirms_the_reading_first():
     size and breaks nothing until the judge confirms. Griddy's executed actions show as they happen."""
     assert 'id="w-pop-in"' in WORLD_HTML and "/api/whatif/read" in DEMO_JS and "Break it like that" in DEMO_JS
     assert 'case "action"' in DEMO_JS and "Griddy acts" in DEMO_JS
+
+
+def test_the_city_map_says_what_is_real_and_what_is_drawn():
+    """Sat 18:06: clicking the city opens its map. Hospitals are real (OpenStreetMap via /api/cities), the share of
+    homes dark is the grid's real served / needed, and the page names the substations, feeders and blocks illustrative."""
+    assert "/api/cities" in DEMO_JS and "openCity" in DEMO_JS and 'id="w-back"' in WORLD_HTML
+    assert "illustrative layout" in DEMO_JS and "license" in DEMO_JS
+    assert "function drawCity" in WORLD_JS and "d.served" in WORLD_JS.split("function drawCity")[1][:600]

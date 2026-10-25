@@ -25,7 +25,7 @@ const World = (() => {
     drag: null, last: 0, t: 0, running: false, labels: [], smoke: [], smokeAcc: 0, safe: { top: 72, bottom: 230 },
     data: { mix: {}, served: null, needed: null, ours_w: null, baseline_w: null, cut_pct: null, alert: null, campus: null, peaks: {},
       tripped: null, tripped_mw: null, fault: null, with_mw: null, city: null },
-    hits: [], hover: null, onPick: null, down: null,
+    hits: [], hover: null, onPick: null, down: null, city: null, cityLayout: null,
     v: { served: 0, needed: 0, lit: 1, ours: 0.5, mix: {}, tint: { gen: [...C.lineOk], city: [...C.lineCity] } },
   };
 
@@ -52,8 +52,8 @@ const World = (() => {
     const c = Math.cos(S.yaw), s = Math.sin(S.yaw), cp = Math.cos(S.pitch), sp = Math.sin(S.pitch);
     const xr = x * c - z * s, zr = x * s + z * c;
     const depth = zr * cp + y * sp;
-    const k = S.scale / (1 - depth / 120);
-    return [S.cx + xr * k, S.cy - (y * cp - zr * sp) * k, depth];
+    const k = (S.city ? S.scale * 0.7 : S.scale) / (1 - depth / 120);   // the city map is wider: pull the camera back
+    return [S.cx + xr * k, (S.city ? S.cy - S.h * 0.07 : S.cy) - (y * cp - zr * sp) * k, depth];
   }
   const rgb = (a, al = 1) => `rgba(${a[0] | 0},${a[1] | 0},${a[2] | 0},${al})`;
   const mix = (a, b, f) => [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f];
@@ -357,6 +357,7 @@ const World = (() => {
       line3([i, 0, -18], [i, 0, 18], `${C.grid}${al})`, 1);
       line3([-28, 0, i * 0.7], [28, 0, i * 0.7], `${C.grid}${al})`, 1);
     }
+    if (S.city) { drawCity(); S.hits = []; smoke(dt); drawLabels(); return; }
     const flow = v.served ? Math.min(2.2, 0.4 + v.served / 40000) : 0.4;
     route(ROUTES.gen, v.tint.gen, flow);
     route(ROUTES.city, v.tint.city, flow);
@@ -422,6 +423,74 @@ const World = (() => {
     smoke(dt);
     drawLabels();
   }
+
+  // ------------------------------------------------------------------ the city (Aryen: "if the judges click the city
+  // it expands to the city map ... hospitals, houses ... take damage ... lines to see how power is re-routed").
+  // REAL: the hospitals (OpenStreetMap places at their positions) and the share of homes dark (1 - served / needed, the
+  // grid's own numbers). ILLUSTRATIVE, and the page says so: the substations, feeders and blocks. Dark blocks rotate every
+  // 8 s, as rotating outages do; hospitals stay on as critical loads; Griddy's freed MW relights blocks, fed from the
+  // data centers along the mint path.
+  const nearest = (pts, p) => pts.reduce((b, q, i) => (Math.hypot(q[0] - p[0], q[1] - p[1]) < Math.hypot(pts[b][0] - p[0], pts[b][1] - p[1]) ? i : b), 0);
+  function cityLayout(city) {
+    const [w, n, e, s] = city.viewbox, cx = (w + e) / 2, cy = (n + s) / 2, kx = Math.cos((cy * Math.PI) / 180);
+    const k = 40 / Math.max((e - w) * kx, n - s);
+    const at = (lon, lat) => [(lon - cx) * kx * k, -(lat - cy) * k];   // x east, z south (toward the viewer)
+    const hx = city.hospitals.map((h) => ({ ...h, p: at(h.lon, h.lat) }));
+    const subs = [];
+    for (let i = 0; i < 6; i++) subs.push([-13 + (i % 3) * 13 + (hash(i + 3) - 0.5) * 4, -6.5 + Math.floor(i / 3) * 13 + (hash(i + 9) - 0.5) * 3]);
+    const cells = [];
+    for (let i = 0; i < 10; i++) for (let j = 0; j < 7; j++) {
+      const x = -19 + i * 4.2 + (hash(i * 7 + j) - 0.5) * 1.2, z = -12 + j * 4 + (hash(i * 13 + j) - 0.5) * 1.2;
+      if (hx.some((h) => Math.hypot(h.p[0] - x, h.p[1] - z) < 1.4)) continue;   // a hospital stands here
+      cells.push({ x, z, sub: nearest(subs, [x, z]), h: 0.3 + 0.5 * hash(i * 31 + j * 17), key: hash(i * 101 + j * 37) });
+    }
+    for (const h of hx) h.sub = nearest(subs, h.p);
+    return { hx, subs, cells, entry: [-25, -1], dc: [21, 10] };
+  }
+  function drawCity() {
+    const d = S.data, v = S.v, L = S.cityLayout, y = 0.36;
+    platform(-23.5, -14.5, 47, 29, 0.3);
+    const dark = d.needed ? Math.max(0, 1 - (d.served || 0) / d.needed) : 0;            // the grid's real unserved share
+    const relit = d.with_mw && d.needed ? Math.min(dark, d.with_mw / d.needed) : 0;    // what Griddy's freed MW covers
+    const turn = REDUCE ? 0 : Math.floor(S.t / 8), N = L.cells.length;
+    const order = L.cells.map((c, i) => [hash(c.key * 977 + turn * 0.137), i]).sort((a, b) => a[0] - b[0]).map((x) => x[1]);
+    const state = new Array(N).fill("on"), nDark = Math.round(dark * N), nRelit = Math.round(relit * N);
+    order.slice(0, nDark).forEach((i, r) => { state[i] = r < nRelit ? "griddy" : "off"; });
+    const tint = v.tint.city;
+    L.subs.forEach((sb) => route([[L.entry[0], 0.05, L.entry[1]], [sb[0], 0.05, L.entry[1]], [sb[0], 0.05, sb[1]]], tint, 0.5));
+    const fed = [...new Set(L.cells.filter((c, i) => state[i] === "griddy").map((c) => c.sub))];
+    fed.forEach((k) => route([[L.dc[0], 0.05, L.dc[1]], [L.subs[k][0], 0.05, L.dc[1]], [L.subs[k][0], 0.05, L.subs[k][1]]], C.mint, 1.2));
+    const items = [];
+    L.cells.forEach((c, i) => items.push({ x: c.x, z: c.z, draw: () => {
+      const st = state[i], col = st === "off" ? "rgba(255,90,90,0.22)" : st === "griddy" ? "rgba(125,240,191,0.7)" : "rgba(120,190,255,0.28)";
+      line3([L.subs[c.sub][0], 0.06, L.subs[c.sub][1]], [c.x + 0.7, 0.06, c.z + 0.7], col, st === "griddy" ? 1.4 : 0.8);
+      box(c.x, c.z, 1.4, 1.4, c.h, { y, color: st === "off" ? [70, 78, 86] : [200, 214, 226], windows: true, cols: 3, floor: 0.4,
+        lit: st === "off" ? 0 : 0.85, seed: i + 300, litColor: st === "griddy" ? C.mint : C.lit, cap: true });
+    } }));
+    L.subs.forEach((sb, k) => items.push({ x: sb[0], z: sb[1], draw: () => {
+      box(sb[0] - 0.6, sb[1] - 0.5, 1.2, 1.0, 0.7, { y, color: C.steel });
+      glowDot(sb[0], y + 0.9, sb[1], 6, fed.includes(k) ? C.mint : tint, 0.8);
+    } }));
+    L.hx.forEach((h, i) => items.push({ x: h.p[0], z: h.p[1], draw: () => {
+      line3([L.subs[h.sub][0], 0.07, L.subs[h.sub][1]], [h.p[0], 0.07, h.p[1]], "rgba(125,240,191,0.45)", 1);
+      box(h.p[0] - 0.45, h.p[1] - 0.45, 0.9, 0.9, 1.1, { y, color: [236, 240, 242], windows: true, cols: 2, floor: 0.35, lit: 0.9, seed: i + 700, cap: true });
+      const c = [h.p[0], y + 1.32, h.p[1]];
+      line3([c[0] - 0.28, c[1], c[2]], [c[0] + 0.28, c[1], c[2]], "rgba(255,70,70,0.95)", 2.4);
+      line3([c[0], c[1], c[2] - 0.28], [c[0], c[1], c[2] + 0.28], "rgba(255,70,70,0.95)", 2.4);
+      if (i < 3) label(h.p[0], y + 3.2, h.p[1], "Hospital · kept on", h.name.length > 28 ? `${h.name.slice(0, 27)}…` : h.name, "OpenStreetMap place, critical load", y + 1.4);
+    } }));
+    items.push({ x: L.dc[0], z: L.dc[1], draw: () => {
+      box(L.dc[0] - 1.6, L.dc[1] - 1.1, 3.2, 2.2, 1.0, { y, color: [205, 218, 228], band: Math.min(1, v.ours), cap: true });
+      label(L.dc[0], y + 3.4, L.dc[1], "Data centers", relit ? `${Math.round(d.with_mw)} MW freed` : "running", relit ? "rerouted to the mint blocks" : "AI compute, flexible", y + 1.1);
+    } });
+    items.sort((a, b) => P(a.x, 0, a.z)[2] - P(b.x, 0, b.z)[2]);
+    items.forEach((it) => it.draw());
+    const lit = 1 - dark + relit;
+    label(-16, 6.5, -13, S.city.name, d.needed ? `${Math.round((1 - dark) * 100)}% of homes lit` : "—",
+      relit ? `${Math.round(lit * 100)}% with Griddy's ${Math.round(d.with_mw)} MW` : d.needed ? `${(d.served / 1000).toFixed(1)} of ${(d.needed / 1000).toFixed(1)} GW served` : "", 0.4);
+  }
+  function openCity(city) { S.city = city; S.cityLayout = cityLayout(city); S.hover = null; if (!S.running) { step(1); draw(); } }
+  function closeCity() { S.city = null; S.cityLayout = null; if (!S.running) { step(1); draw(); } }
 
   // ------------------------------------------------------------------ smoke: spawned at a rate per second, not per frame
   function smokeFrom(x, y, z, rate, steam) {
@@ -508,5 +577,5 @@ const World = (() => {
   // what can be broken right now: the plants on screen, the substation, the city (for the keyboard menu)
   function targets() { return S.hits.map(({ id, title, mw }) => ({ id, title, mw })); }
   function onPick(cb) { S.onPick = cb; }
-  return { mount, set, safeArea, onPick, targets };
+  return { mount, set, safeArea, onPick, targets, openCity, closeCity };
 })();

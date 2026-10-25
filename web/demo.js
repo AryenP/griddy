@@ -6,6 +6,7 @@
 "use strict";
 
 const D = { grid: null, power: null, replay: null, last: null, whatif: null, cat: [], pick: "live", scale: null, fetching: false,
+  cities: [], city: null,
   shown: new Set(), peaks: {}, specs: {}, jobs: {} };
 
 const gw = (mw) => (mw == null ? "—" : `${fixed(mw / 1000, 1)} GW`);
@@ -168,8 +169,15 @@ function render() {
   overlayFault();
 }
 
+// In the city map, the footer says what is real and what is drawn.
+function citySources() {
+  if (!D.city) return;
+  setHTML($("w-sources"), html`${D.city.name}: hospitals are real places, ${D.city.license}, fetched ${String(D.city.fetched_at).slice(0, 10)}. Homes lit: the grid's real served over needed. Substations, feeders and blocks: an illustrative layout. Dark blocks rotate, as rotating outages do.`);
+}
+
 // A judge's what-if on top of whatever the world shows: the broken part, the grid's real numbers after it, our cut.
 function overlayFault() {
+  citySources();
   if (!faulted()) { World.set({ tripped: null, tripped_mw: null, fault: null }); return; }
   const w = D.whatif, sc = w.scale;
   World.set({ tripped: w.target === "city" ? null : w.fuel, tripped_mw: w.lost_mw, fault: w.target, served: w.served_after, needed: w.needed_after,
@@ -196,6 +204,16 @@ function waitingText(asked, nothing) {
   if (nothing || (asked && !busy)) return `Griddy asked our sites for ${asked ? `a ${fixed(asked, 0)}%` : "a"} cut, but nothing deferrable is running on this Mac to shed: give training a deadline, then run it again`;
   return asked ? `Griddy asked our sites for a ${fixed(asked, 0)}% cut: waiting for this Mac's measured drop` : "Waiting for the first alert: this Mac's measured cut decides the number";
 }
+
+// ---------------------------------------------------------------- the city map: the real city of what is on screen
+function cityNow() {
+  const ev = D.cat.find((e) => e.id === (running() ? D.last.event : D.pick));
+  const iso = ev ? ev.iso : D.grid ? D.grid.iso : null;
+  return D.cities.find((c) => c.iso === iso) || null;
+}
+function openCity(city) { D.city = city; World.openCity(city); $("w-back").hidden = false; render(); }
+function closeCity() { D.city = null; World.closeCity(); $("w-back").hidden = true; render(); }
+$("w-back").addEventListener("click", closeCity);
 
 // ---------------------------------------------------------------- breaking a part: a confirm card, then the server
 function openPop(title, text, buttons, pt, words) {
@@ -246,7 +264,9 @@ function confirmBreak(h, pt) {
     : h.id === "hub"
       ? ["Fail the main substation?", `What-if: it cuts off the largest fleet${big ? `, ${big.title.toLowerCase()} (${gw(big.mw)}, its real output)` : ""}. Griddy reacts live.`, "Fail it"]
       : [`Surge demand in ${h.title === "City" ? "the city" : h.title}?`, "What-if: demand jumps to the highest forecast for the rest of today, the operator's real published forecast. Griddy reacts live.", "Surge it"];
-  openPop(card[0], card[1], [[card[2], "go", () => breakIt(h.id)], ["Cancel", "", closePop]], pt, { target: h.id });
+  const city = h.id === "city" ? cityNow() : null;
+  openPop(card[0], card[1], [...(city ? [[`Open the ${city.name} map`, "open", () => { closePop(); openCity(city); }]] : []),
+    [card[2], "go", () => breakIt(h.id)], ["Cancel", "", closePop]], pt, { target: h.id });
 }
 async function breakIt(id, share = 100, cause = "") {
   closePop();
@@ -267,7 +287,7 @@ $("w-break-btn").addEventListener("click", async (e) => {
     [...World.targets().map((t) => [t.mw ? `${t.title} · ${gw(t.mw)}` : t.title, "", () => confirmBreak(t, { x: r.left + r.width / 2, y: r.top })]),
       ["Cancel", "", closePop]], { x: r.left + r.width / 2, y: r.top }, { target: null });
 });
-document.addEventListener("keydown", (e) => { if (e.key === "Escape") closePop(); });
+document.addEventListener("keydown", (e) => { if (e.key !== "Escape") return; if (!$("w-pop").hidden) closePop(); else if (D.city) closeCity(); });
 document.addEventListener("pointerdown", (e) => { if (!$("w-pop").hidden && !e.target.closest("#w-pop, #w-break-btn")) closePop(); });
 
 $("w-picks").addEventListener("click", async (e) => {
@@ -304,5 +324,6 @@ const keepClear = () => World.safeArea($("conn").closest("header").getBoundingCl
 new ResizeObserver(keepClear).observe(document.querySelector(".w-dock"));
 addEventListener("resize", keepClear);
 getJSON("/api/replay/events").then((r) => { if (r.ok) { D.cat = r.data; render(); } });
+getJSON("/api/cities").then((r) => { if (r.ok) D.cities = r.data; });
 setInterval(render, 1000);
 connectWS(handle, $("conn"));
