@@ -319,3 +319,10 @@ ERCOT scale, "Griddy acts" card seen. Fixed: a failed EIA fetch no longer shows 
 Training's deadline restored to 26 Oct 09:00.
 Blockers / needs Aryen: **EIA_API_KEY in .env before the demo** (free, instant: https://www.eia.gov/opendata/register.php).
 The public DEMO_KEY is exhausted for about 22 hours; without a key, replays run on the evidence copy and say so.
+
+## 2026-10-24 19:17 PT — fixes from Aryen's screenshot; a Gemini intro prompt
+Done (3a90f34, ab9aeb4): the city surge names its peak hour and refuses under 0.5 GW; pages are served no-cache (a
+browser had kept an hours-old index.html); at a 1000 x 650 window the header stays on one line, the dock compacts and
+the 3D scene centres between the bars. Gave Aryen a Gemini prompt for an intro screen (real numbers only, one HTML
+file, Inter, the app's palette); I wire it in once he brings it back. Teammates still quiet.
+Blockers / needs Aryen: EIA_API_KEY in .env (a helper script prompts for it without showing it); dispatch decision.
