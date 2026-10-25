@@ -15,15 +15,23 @@ function shortfallFacts(sf) {
   return `${sf.kind} shortfall: ${what}`;
 }
 
+const SETTLE_MS = 1600;      // an answered request stays on the board this long, showing its decision, then archives
+
 class ApprovalBoard {
-  // opts: filter(req) -> bool, who() -> name, schedule() -> current Schedule, empty() -> text, placeholder
+  // opts: filter(req) -> bool, who() -> name, schedule() -> current Schedule, empty() -> text, placeholder.
+  // Optional (operator page): archive (a box for answered and expired requests: the board then holds open ones
+  // only), quick (Approve / Refuse… buttons that fill the reply), onNew(req), onResolved(req), changed().
   constructor(box, opts) { this.box = box; this.opts = opts; this.cards = new Map(); this.renderEmpty(); }
 
-  reset() { this.cards.clear(); this.box.replaceChildren(); this.renderEmpty(); }
+  reset() {
+    this.cards.clear(); this.box.replaceChildren();
+    if (this.opts.archive) this.opts.archive.replaceChildren();
+    this.renderEmpty();
+  }
 
   renderEmpty() {
     let e = this.box.querySelector(".board-empty");
-    if (this.cards.size) { if (e) e.remove(); return; }
+    if (this.box.querySelector(".ask")) { if (e) e.remove(); return; }
     if (!e) { e = document.createElement("p"); e.className = "empty board-empty"; this.box.appendChild(e); }
     e.textContent = this.opts.empty();
   }
@@ -31,10 +39,36 @@ class ApprovalBoard {
   upsert(req) {
     if (!req || !req.id || !this.opts.filter(req)) return;
     let c = this.cards.get(req.id);
-    if (!c) { c = this.build(req); this.cards.set(req.id, c); this.box.prepend(c.el); }
+    const fresh = !c;
+    if (!c) {
+      c = this.build(req); this.cards.set(req.id, c);
+      if (!this.opts.archive) this.box.prepend(c.el);      // with an archive, paint() places it
+    }
     c.req = { ...c.req, ...req };
     this.paint(c);
     this.renderEmpty();
+    if (fresh && this.opts.onNew) this.opts.onNew(c.req, c.el);
+  }
+
+  // Every card again: the "asked … ago" ages move on even when nothing new arrives.
+  refresh() { for (const c of this.cards.values()) this.paint(c); }
+
+  // With an archive: an open request stays on the board; an answered or expired one shows its decision for a moment,
+  // then moves to the archive (newest first). Cards already closed when the page loads go straight there.
+  place(c) {
+    const open = c.req.status === "pending";
+    const target = open ? this.box : this.opts.archive;
+    clearTimeout(c.settle);
+    if (c.el.parentNode === target) return;
+    if (!open && c.el.parentNode === this.box) {
+      c.el.classList.add("settling");
+      c.settle = setTimeout(() => {
+        c.el.classList.remove("settling");
+        if (c.req.status !== "pending") { this.opts.archive.prepend(c.el); this.renderEmpty(); if (this.opts.changed) this.opts.changed(); }
+      }, SETTLE_MS);
+      return;
+    }
+    target.prepend(c.el);
   }
 
   // {"request_id", "who", "decision": OwnerDecision} from the WebSocket (a reply from any device).
@@ -68,6 +102,17 @@ class ApprovalBoard {
     const btn = document.createElement("button"); btn.type = "submit"; btn.className = "primary"; btn.textContent = "Send reply";
     const note = document.createElement("span"); note.className = "src";
     row.append(btn, note);
+    if (this.opts.quick) {                // a plain yes, or a no that still needs its reason: the same words, one tap
+      const yes = document.createElement("button"); yes.type = "button"; yes.className = "primary quick-yes"; yes.textContent = "Approve";
+      const no = document.createElement("button"); no.type = "button"; no.className = "quick-no"; no.textContent = "Refuse…";
+      yes.addEventListener("click", () => { ta.value = "yes"; form.requestSubmit(); });
+      no.addEventListener("click", () => {
+        if (!/^\s*no\b/i.test(ta.value)) ta.value = "no, ";
+        ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length);
+      });
+      btn.className = "";                 // the typed reply is the second way
+      row.prepend(yes, no);
+    }
     form.append(ta, row);
     const decisionEl = document.createElement("div"); decisionEl.className = "ask-decision";
     const changeEl = document.createElement("div"); changeEl.className = "ask-change";
@@ -137,5 +182,11 @@ class ApprovalBoard {
     } else {
       setHTML(c.changeEl, html``);
     }
+
+    const was = c.status;
+    c.status = q.status;
+    if (this.opts.archive) this.place(c);
+    if (was === "pending" && q.status !== "pending" && this.opts.onResolved) this.opts.onResolved(q, c.el);
+    if (this.opts.changed) this.opts.changed();
   }
 }

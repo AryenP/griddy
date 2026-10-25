@@ -23,9 +23,33 @@ const board = new ApprovalBoard($("op-approvals"), {
   filter: (q) => q.job_id === "power_cap" && (!P.operator || q.owner === P.operator),
   who: () => P.operator || "operator",
   schedule: () => P.schedule,
-  empty: () => "Nothing waiting for you. If the solver can only hold a cap by breaking a deadline the owner kept, it asks you here.",
-  placeholder: "e.g. approve going over the cap · or: no, hold the cap",
+  empty: () => "All clear. A new request lands here with a ping.",
+  placeholder: "or type a reply: yes · no, training has a deadline tonight",
+  archive: $("op-archive"),
+  quick: true,
+  onNew: (q, el) => {                 // a request asked in the last minute is news; older ones are history on load
+    if (q.status !== "pending" || q.t == null || nowS() - q.t > 60) return;
+    OpFx.ping("ask");
+    el.classList.add("fresh");
+    setTimeout(() => el.classList.remove("fresh"), 2600);
+  },
+  onResolved: () => OpFx.ping("done"),
+  changed: () => renderCounts(),
 });
+
+// What waits, and what is archived: the counts, the tab title, and the archive's empty line.
+function renderCounts() {
+  const open = $("op-approvals").querySelectorAll(".ask:not(.closed)").length;
+  const archived = $("op-archive").querySelectorAll(".ask").length;
+  const wc = $("wait-count");
+  if (wc.textContent !== String(open) || wc.hidden !== !open) {
+    wc.textContent = String(open); wc.hidden = !open;
+    if (open) OpFx.bump(wc);
+  }
+  $("archive-count").textContent = String(archived);
+  $("archive-empty").hidden = archived > 0;
+  document.title = open ? `(${open}) Griddy · operator` : "Griddy · operator";
+}
 
 // ---------- measured power ----------
 function addPower(r) {
@@ -46,12 +70,27 @@ function meanAt(t) {
   return n ? sum / n : null;
 }
 
+// The cap in force at time t (watts resolved), or null.
+function activeCap(t) {
+  for (const ev of P.events.values()) {
+    const start = Date.parse(ev.start) / 1000;
+    if (ev.target_w != null && start <= t && t < start + ev.duration_s) return ev;
+  }
+  return null;
+}
+
 function renderPower() {
   const last = P.power[P.power.length - 1];
   if (!last) { $("power-src").textContent = "waiting for powermetrics"; return; }
-  $("power-now").textContent = fixed(last.w, 1);
-  $("power-mean").textContent = fixed(meanAt(last.t), 1);
-  $("power-src").textContent = `SoC power, measured by macOS powermetrics, last reading ${age(last.t)}`;
+  const mean = meanAt(last.t), cap = activeCap(nowS());
+  OpFx.tween($("power-now"), last.w, 1);
+  OpFx.tween($("power-mean"), mean, 1);
+  OpFx.spark($("power-spark"), P.power, cap ? cap.target_w : null);
+  const st = $("power-state");
+  if (!cap) { st.className = "op-state idle"; st.textContent = "no cap in force"; }
+  else if (mean != null && mean <= cap.target_w) { st.className = "op-state ok"; st.textContent = `under the ${fixed(cap.target_w, 1)} W cap`; }
+  else { st.className = "op-state over"; st.textContent = `${fixed((mean ?? last.w) - cap.target_w, 1)} W over the ${fixed(cap.target_w, 1)} W cap`; }
+  $("power-src").textContent = `SoC power, measured by macOS powermetrics, last reading ${age(last.t)} · line: the last 2 min`;
 }
 
 // ---------- cap events: countdown and time to compliance ----------
@@ -331,6 +370,21 @@ async function loadPending() {
   for (const q of r.data || []) { P.reqs.set(q.id, q); board.upsert(q); }
 }
 
+// The run's measured watts from before this page opened (GET /api/runs/{id}/series), so the sparkline starts full and
+// a cap that began earlier still gets its time to compliance. Readings the page already has are kept as they are.
+async function seedPower(runId) {
+  if (!runId || P.seeded === runId) return;
+  P.seeded = runId;
+  const r = await getJSON(`/api/runs/${encodeURIComponent(runId)}/series`);
+  if (!r.ok || !r.data || !Array.isArray(r.data.power)) return;
+  const first = P.power.length ? P.power[0].t : Infinity;
+  const older = r.data.power.filter(([t, w]) => t < first && w != null).map(([t, w]) => ({ t, w }));
+  P.power = older.concat(P.power);
+  const cut = P.power.length ? P.power[P.power.length - 1].t - POWER_KEEP_S : 0;
+  while (P.power.length && P.power[0].t < cut) P.power.shift();
+  renderPower(); renderEvents();
+}
+
 function renderBadges() {
   const a = $("agent");
   a.textContent = P.agent === "online" ? `agent online${P.agentModel ? ` · ${P.agentModel}` : ""}` : P.agent === "offline" ? "agent offline: plain forms only" : "agent ?";
@@ -353,6 +407,7 @@ function handle(msg) {
       P.evLast = (d.replay && d.replay.last) || null;
       P.wiLast = d.whatif || null;
       renderBadges(); renderPower(); renderSlot(); renderEvents(); renderReplay(); renderWhatIf(); loadPending();
+      seedPower(d.run_id);
       break;
     case "plan": P.plan = d; renderSlot(); break;
     case "power": addPower(d); renderPower(); break;
@@ -393,8 +448,19 @@ $("ask-text").addEventListener("keydown", (e) => {
 });
 hotkeys({ e: () => $("req-text").focus(), a: () => $("ask-text").focus(), b: () => $("wi-text").focus() });
 setupDictation();
-// Countdowns, compliance counters and ages tick every second even when no message arrives.
-setInterval(() => { renderPower(); renderEvents(); renderReplay(); renderWhatIf(); }, 1000);
+OpFx.bindSound($("sound"));
+// An archived card opens to its full message and facts on a click, and folds again on the next.
+$("op-archive").addEventListener("click", (e) => {
+  const card = e.target.closest(".ask");
+  if (card && !e.target.closest("button, textarea, a")) card.classList.toggle("expanded");
+});
+// Countdowns, compliance counters and ages tick every second even when no message arrives; the cards' own
+// "asked … ago" every 15 s.
+let ticks = 0;
+setInterval(() => {
+  renderPower(); renderEvents(); renderReplay(); renderWhatIf();
+  if (++ticks % 15 === 0) board.refresh();
+}, 1000);
 getJSON("/api/replay/events").then((r) => { if (r.ok) { P.cat = r.data || []; renderReplay(); } });
 window.brownout = { handle };   // the WebSocket's handler, exposed for feeding real timelines from the console
 renderSlot();
