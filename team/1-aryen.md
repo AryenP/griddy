@@ -6,6 +6,26 @@ lands in it. You own the contract (HANDOFF.md API, `core/types.py`) and merge al
 **Owns:** `api/`, `controller/`, `dispatcher/`, `grid/`, `meter/`, `workloads/`, `core/`, `config/jobs.yaml`,
 `config/policy.yaml`, `Makefile`, `pyproject.toml`, `team/`, `HANDOFF.md`, tests for those, fixtures.
 
+## Fetch three-agent support (Sun 01:05, from Aryen; machine 2 builds the agents, see team/2-anuraag.md FA1-FA7)
+Small and first, so machine 2 can test end to end:
+1. **Roster.** Already done in this commit: member 2 owns `fetch_agents/**` (a new top-level folder, so it does not
+   overlap your `agent/channels/**`) and `tests/test_fetch_three*.py`; the runbook goes in `docs/judging/` (already
+   theirs). `tests/test_team.py` passes.
+2. **`POST /request` with `"source": "fetch"`, loopback only.**
+   - Intake parses the request as usual, but it is **not applied**. It becomes a pending operator approval
+     (`job_id` "power_cap", owner `policy.operator`), with the readback and "asked by Grid Desk on ASI:One".
+   - The response returns the approval id plus the readback and schedule preview.
+   - The cap applies only on the operator's yes, from the operator phone page; a no is logged as a refusal.
+   - Any other source keeps today's behaviour.
+   - Tests cover all of this. Log one line in DECISIONS.
+3. **`make fetch-three`** starts `fetch_agents/grid_desk.py`, `facility.py` and `verifier.py` in the same
+   pinned uagents environment as `make fetch-agent`.
+4. **.env.example:** add `FETCH_GRID_SEED`, `FETCH_FACILITY_SEED`, `FETCH_VERIFIER_SEED` and
+   `FETCH_GRID_ADDRESS` (the address Facility and Verifier accept), with the same printf hint as
+   `FETCH_AGENT_SEED`.
+5. **When machine 2's PR lands:** merge it, run FA7 live with Aryen, and paste the README block and the Devpost
+   Fetch line it sends. If FA7 doesn't pass, keep the single read-only agent and say so honestly in Devpost.
+
 ## Tasks, in order
 1. **M4 execution loop** — DONE Fri 23:45 (DECISIONS.md). `make demo` up; watts follow the schedule across a
    slot boundary with no human input. Done when: a timeline shows a `plan` change at a slot boundary and
