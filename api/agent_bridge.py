@@ -12,8 +12,10 @@ always through the executor's public methods, never through a knob.
 """
 from __future__ import annotations
 
+import json
 import time
 from datetime import datetime
+from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from agent import explainer, intake, negotiator
@@ -26,8 +28,10 @@ from core.types import ApprovalRequest, Explanation, IntakeResult, Schedule
 
 
 class AgentBridge:
-    def __init__(self, tl: Timeline, executor: Executor):
-        self.tl, self.ex = tl, executor
+    def __init__(self, tl: Timeline, executor: Executor, store: Path | None = None):
+        """`store`: a file that keeps pending approvals and owners' refusals across a restart (HVE Core review:
+        "pending approvals live in a dict and vanish on restart"); the runtime passes runs/approvals.json."""
+        self.tl, self.ex, self.store = tl, executor, store
         self.llm = get_llm()
         self.approvals: dict[str, ApprovalRequest] = {}
         self.refused: dict[str, str] = {}        # job id -> the owner's reason for refusing a slip
@@ -35,6 +39,31 @@ class AgentBridge:
         self.explanation: Explanation | None = None
         self.snapshot = None                     # set by the Runtime: () -> the /api/state dict
         executor.schedule_listeners.append(self.on_schedule)
+        self._restore()
+
+    def _restore(self) -> None:
+        if not self.store or not self.store.exists():
+            return
+        try:
+            d = json.loads(self.store.read_text())
+            reqs = [ApprovalRequest.model_validate(a) for a in d.get("pending", [])]
+        except (OSError, ValueError) as e:              # a damaged file: start clean, and say so
+            self.tl.log("note", level="warning", msg=f"approvals not restored: {e!r}"[:300])
+            return
+        self.approvals.update({r.id: r for r in reqs})
+        self.refused.update(d.get("refused", {}))
+        self.ex.needs_approval = [r.id for r in reqs]
+        if reqs or self.refused:
+            self.tl.log("note", msg=f"restored {len(reqs)} pending approvals and {len(self.refused)} refusals from before the restart",
+                        approvals=[r.id for r in reqs], refused=sorted(self.refused))
+
+    def _save(self) -> None:
+        if not self.store:
+            return
+        tmp = self.store.with_suffix(".tmp")
+        tmp.parent.mkdir(parents=True, exist_ok=True)
+        tmp.write_text(json.dumps({"pending": [a.model_dump(mode="json") for a in self.pending()], "refused": self.refused}))
+        tmp.replace(self.store)                          # whole file or nothing
 
     @property
     def status(self) -> str:
@@ -49,6 +78,7 @@ class AgentBridge:
     def _log(self, req: ApprovalRequest, **extra) -> None:
         self.tl.log("approval", **req.model_dump(mode="json"), **extra)
         self.ex.needs_approval = [a.id for a in self.approvals.values() if a.status == "pending"]
+        self._save()
 
     def pending(self, owner: str | None = None, status: str | None = "pending") -> list[ApprovalRequest]:
         return [a for a in self.approvals.values()
