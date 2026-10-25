@@ -176,3 +176,16 @@ button { font: inherit; color: inherit; }
   .w-load { animation: w-load-out 0.2s ease 3s forwards; }
   .w-load.done { animation: w-load-out 0.2s ease forwards; }
 }
+
+/* Switching between the four picks (demo.js setNum, clearAlerts, swapIn; world.js glide): cards slide, the
+   with/without panel rises, the headline fades in. Only on a change; none under reduced motion. */
+.w-toast { animation: w-card-in .35s cubic-bezier(.2, .7, .2, 1) both; }
+.w-toast.leaving { animation: w-card-out .2s ease forwards; pointer-events: none; }
+@keyframes w-card-in { from { opacity: 0; transform: translateX(16px); } }
+@keyframes w-card-out { to { opacity: 0; transform: translateX(16px); } }
+.w-versus.enter { animation: w-rise .38s cubic-bezier(.2, .7, .2, 1) both; }
+@keyframes w-rise { from { opacity: 0; transform: translateY(8px); } }
+.w-swap { animation: w-fade .4s ease both; }
+@keyframes w-fade { from { opacity: 0; } }
+.w-events button { transition: border-color .2s ease, background-color .2s ease, color .2s ease; }
+@media (prefers-reduced-motion: reduce) { .w-toast, .w-toast.leaving, .w-versus.enter, .w-swap { animation: none; } }

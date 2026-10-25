@@ -95,6 +95,36 @@ function rackStates() {
   });
 }
 
+// ---------------------------------------------------------------- switching picks, cleanly
+// Numbers roll to their new value (about half a second), alert cards slide out and in, the headline fades in; the
+// camera glide is world.js glide(). All of it runs on a change, never on a timer, and not at all under reduced motion.
+const ROLLS = new WeakMap();
+function setNum(el, text) {
+  const m = /^(-?)(\d[\d,]*\.?\d*)(.*)$/.exec(text), prev = ROLLS.get(el);
+  if (prev && prev.raf) cancelAnimationFrame(prev.raf);
+  const to = m ? (m[1] ? -1 : 1) * parseFloat(m[2].replace(/,/g, "")) : null, unit = m ? m[3] : null;
+  const from = prev && prev.v != null && prev.unit === unit ? prev.v : null;
+  if (!m || STILL || from == null || from === to) { el.textContent = text; ROLLS.set(el, { v: to, unit }); return; }
+  const dec = (m[2].split(".")[1] || "").length, t0 = performance.now(), st = { v: to, unit, raf: 0 };
+  const tick = (now) => {
+    const f = Math.min(1, (now - t0) / 520), v = from + (to - from) * (1 - Math.pow(1 - f, 3));
+    el.textContent = f < 1 ? `${v < 0 ? "-" : ""}${Math.abs(v).toFixed(dec)}${unit}` : text;
+    if (f < 1) st.raf = requestAnimationFrame(tick);
+  };
+  st.raf = requestAnimationFrame(tick);
+  ROLLS.set(el, st);
+}
+function clearAlerts() {
+  const box = $("w-alerts"), old = [...box.children];
+  if (STILL || !old.length) { box.replaceChildren(); return; }
+  old.forEach((el) => el.classList.add("leaving"));
+  setTimeout(() => old.forEach((el) => el.remove()), 220);
+}
+function swapIn(...els) {
+  if (STILL) return;
+  for (const el of els) { el.classList.remove("w-swap"); void el.offsetWidth; el.classList.add("w-swap"); }
+}
+
 function onAlerts(d) {
   const ev = D.cat.find((e) => e.id === d.event);
   for (const label of d.fired || []) {
@@ -139,7 +169,10 @@ function provenance(ev, data) {
 }
 
 function versus(without, withText, withoutSrc, withSrc) {
-  $("w-versus").hidden = false;
+  const el = $("w-versus");
+  el.hidden = false;
+  if (!D.versusPrev && !STILL) { el.classList.remove("enter"); void el.offsetWidth; el.classList.add("enter"); }   // it rises in once
+  D.versusOn = true;
   $("w-without").textContent = without; $("w-without-src").textContent = withoutSrc;
   $("w-with").textContent = withText; $("w-with-src").textContent = withSrc;
 }
@@ -160,6 +193,7 @@ function render() {
   $("w-work-btn").hidden = running() || !train || train.state === "running" || train.state === "done";
   const g = D.grid, p = D.power;
   if (g) { $("w-feed").textContent = `${g.iso} · ${g.stale ? "stale" : "live"} · ${fixed(g.feed_age_s, 0)} s`; $("w-feed").className = `badge ${g.stale ? "bad" : "ok"}`; }
+  D.versusPrev = D.versusOn; D.versusOn = false;
   $("w-versus").hidden = true;
   World.set({ racks: rackStates(), cap: capNow() });
   followCity();
@@ -173,15 +207,15 @@ function render() {
     $("w-clock").textContent = `${ev ? ev.title : d.title} · ${isoLabel(d.hour_ending || d.sim_time)}`;
     $("w-progress").style.width = `${(100 * d.progress).toFixed(1)}%`;
     $("w-head").textContent = "";
-    $("s-served").textContent = gw(d.demand_mw); $("s-served-src").textContent = `EIA-930 · ${ev ? ev.ba : ""} · hour ending ${isoClock(d.hour_ending)}`;
-    $("s-needed").textContent = gw(d.forecast_mw); $("s-needed-src").textContent = "the operator's day-ahead forecast";
-    $("s-mac").textContent = d.ours_w == null ? "—" : `${fixed(d.ours_w, 1)} W`;
+    setNum($("s-served"), gw(d.demand_mw)); $("s-served-src").textContent = `EIA-930 · ${ev ? ev.ba : ""} · hour ending ${isoClock(d.hour_ending)}`;
+    setNum($("s-needed"), gw(d.forecast_mw)); $("s-needed-src").textContent = "the operator's day-ahead forecast";
+    setNum($("s-mac"), d.ours_w == null ? "—" : `${fixed(d.ours_w, 1)} W`);
     const cut = d.measured_cut_pct;
     $("s-mac-src").textContent = d.nothing_to_shed ? "nothing running to shed" : cut != null
       ? `${fixed(Math.abs(cut), 0)}% ${cut >= 0 ? "below" : "above"} its baseline · measured` : "measured by powermetrics";
-    if (sc && sc.people != null) { $("s-impact").textContent = compact(sc.people); $("s-impact-k").textContent = `${sc.people_unit} kept on`; }
-    else if (sc) { $("s-impact").textContent = `${fixed(sc.freed_mw, 0)} MW`; $("s-impact-k").textContent = "freed at grid scale"; }
-    else { $("s-impact").textContent = "—"; $("s-impact-k").textContent = "at grid scale"; }
+    if (sc && sc.people != null) { setNum($("s-impact"), compact(sc.people)); $("s-impact-k").textContent = `${sc.people_unit} kept on`; }
+    else if (sc) { setNum($("s-impact"), `${fixed(sc.freed_mw, 0)} MW`); $("s-impact-k").textContent = "freed at grid scale"; }
+    else { setNum($("s-impact"), "—"); $("s-impact-k").textContent = "at grid scale"; }
     $("s-impact-src").textContent = sc ? `estimate · ${fixed(sc.share_pct, 0)}% cut asked, on ${gw(sc.flexible_mw)}` : "appears once this Mac cuts";
     if (ev) {
       const withText = sc
@@ -212,11 +246,11 @@ function render() {
       ? `Texas right now: ERCOT is serving ${gw(D.scale.demand_mw)} (live). Press play to run ${ev.when} through the same software.`
       : `Press play to fetch the hours live from the U.S. EIA. The software gets them one hour at a time.`;
   }
-  $("s-served").textContent = gw(served); $("s-served-src").textContent = g ? `${g.iso} fuel mix, live` : "";
-  $("s-needed").textContent = gw(needed); $("s-needed-src").textContent = needed ? `${g.iso} load forecast` : "no forecast for this hour";
-  $("s-mac").textContent = p ? `${fixed(p.combined_w, 1)} W` : "—";
+  setNum($("s-served"), gw(served)); $("s-served-src").textContent = g ? `${g.iso} fuel mix, live` : "";
+  setNum($("s-needed"), gw(needed)); $("s-needed-src").textContent = needed ? `${g.iso} load forecast` : "no forecast for this hour";
+  setNum($("s-mac"), p ? `${fixed(p.combined_w, 1)} W` : "—");
   $("s-mac-src").textContent = p ? `measured by powermetrics · ${age(p.t)}` : "waiting for the meter";
-  $("s-impact").textContent = D.scale ? `${fixed(D.scale.freed_mw, 0)} MW` : "—";
+  setNum($("s-impact"), D.scale ? `${fixed(D.scale.freed_mw, 0)} MW` : "—");
   $("s-impact-k").textContent = "ERCOT, if large loads cut like this Mac";
   $("s-impact-src").textContent = D.scale ? `estimate · ${fixed(D.scale.share_of_demand_pct, 1)}% of ERCOT now` : "estimate";
   setHTML($("w-sources"), html`Live grid data: ${g ? g.iso : "—"} via gridstatus. This Mac: macOS powermetrics. Detail and every graph: <a href="/info.html">Info</a>.`);
@@ -238,12 +272,12 @@ function overlayFault() {
   World.set({ tripped: w.target === "city" ? null : w.fuel, tripped_mw: w.lost_mw, fault: w.target, served: w.served_after, needed: w.needed_after,
     alert: w.shortfall_mw > 0 ? "emergency" : null, with_mw: sc ? sc.freed_mw : null, ours_w: w.ours_w, baseline_w: w.baseline_w,
     cut_pct: w.measured_cut_pct });
-  $("s-served").textContent = gw(w.served_after);
+  setNum($("s-served"), gw(w.served_after));
   $("s-served-src").textContent = `what-if: ${w.lost_mw ? `−${gw(w.lost_mw)}` : "no supply lost"} from ${w.source}`;
-  $("s-needed").textContent = gw(w.needed_after);
+  setNum($("s-needed"), gw(w.needed_after));
   $("s-needed-src").textContent = w.surge_mw ? `what-if: +${gw(w.surge_mw)}, the published forecast peak` : "the operator's forecast";
   if (sc) {
-    $("s-impact").textContent = `${fixed(sc.freed_mw, 0)} MW`; $("s-impact-k").textContent = "freed at grid scale";
+    setNum($("s-impact"), `${fixed(sc.freed_mw, 0)} MW`); $("s-impact-k").textContent = "freed at grid scale";
     $("s-impact-src").textContent = `estimate · ${fixed(sc.share_of_shortfall_pct, 1)}% of the shortfall`;
   }
   $("w-head").textContent = `${w.label}. ${Math.round(w.remaining_s)} s left.`;
@@ -366,7 +400,8 @@ $("w-picks").addEventListener("click", async (e) => {
   const b = e.target.closest("button[data-pick]");
   if (!b) return;
   if (running()) await postJSON("/api/replay", { action: "stop" });
-  D.pick = b.dataset.pick; D.last = null; D.shown.clear(); $("w-alerts").replaceChildren();
+  D.pick = b.dataset.pick; D.last = null; D.shown.clear(); clearAlerts();
+  World.glide(D.pick); swapIn($("w-head"), $("w-clock"));
   render();
 });
 // A replay needs something on this Mac to shed. The owner's deadline is the honest lever: with the deadline exactly
@@ -380,7 +415,7 @@ $("w-work-btn").addEventListener("click", async () => {
 $("w-play-btn").addEventListener("click", async () => {
   if (running()) { await postJSON("/api/replay", { action: "stop" }); D.last = null; render(); return; }
   if (D.pick === "live") return;
-  D.shown.clear(); $("w-alerts").replaceChildren();
+  D.shown.clear(); clearAlerts();
   D.fetching = true; render();
   const r = await postJSON("/api/replay", { action: "start", event: D.pick });
   D.fetching = false;
