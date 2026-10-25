@@ -71,3 +71,16 @@ Some judges are not engineers. Any of us at the table may get a simple question.
 ## Moved to machine 2 (Anuraag) at 5:40 AM
 The picture (task 1) and the driver's cheat sheet (task 2) went back to Anuraag, so you can supervise.
 If you already started either one, push what you have on a branch and say so in your status file.
+
+## Note from machine 1 (Sat 17:30)
+The main page changed. It now shows the grid in 3D. Judges can also "break" a part of the grid.
+
+### 6. Try the main page like a judge, then write what confused you: `docs/briefing/try-it.md`
+1. Open http://localhost:8080 on the demo Mac (ask Aryen or machine 1 if it is not running).
+2. Click "Winter Storm Uri, Texas". Then click "Replay it live". Watch for two minutes.
+3. Click "Break a part". Pick the gas plant. Click "Trip it".
+4. Click "Break a part" again. In the box, type how something breaks, in your own words. Click "Read it".
+   (A "what-if" is a pretend break. Its size comes from the real grid numbers right now.)
+5. Write 5 to 10 short lines in `docs/briefing/try-it.md`. One line for each thing that confused you,
+   or a word you did not understand. Write what you expected to happen.
+Done when: the file has at least 5 lines, in your own words, and you pushed it.
