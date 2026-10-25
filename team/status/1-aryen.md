@@ -406,3 +406,11 @@ to every page's wording, no fact changed. 502 tests pass. Next: the docs' wordin
 - Needs Aryen (new, once): the Fetch.ai opt-in line in docs/devpost.md: opt in with the one read-only agent (and say
   so) or leave Fetch out. TRACKS.md's three-agent condition is not met.
 - Next: the Uri replay timeline into docs/evidence/runs with a claims entry (28.2 W to 10.9 W).
+
+## Sat 22:19 tick
+- Done: Krish's K20 (README in five minutes as a judge) fixed in a934ce6: shorter Uri sentence, a folded terms list,
+  sponsor rows say Claude runs tonight and Application Insights is not connected, carbon held flat stated, deadline
+  column explained. verify 82/82, pytest 502. Krish has K21 (the "40 % in seconds at a real site?" answer, sourced).
+  No open PR besides #23; no issues; Anuraag and Arumalla quiet, two tasks each.
+- Next: the Uri replay timeline with a claims entry; the Grid Desk Fetch flow only on Aryen's yes.
+- Blockers: needs-Aryen items unchanged (App Insights line, repo public, EIA key rotation, Fetch opt-in, the quote).
