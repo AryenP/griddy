@@ -203,3 +203,18 @@ Thank you: citations (p. 9, pp. 15/136, "at least 210", "up to 4.1 GW"), the Inf
 head, preflight FAILs on DEMO_KEY, "200 %" refused by rule, fcntl imported only in the lock (pytest collects on
 Windows), README no-Mac block + impact line, /join backslash, empty token file. K12 #5 was fixed at 20:24 (role
 tokens). I opened PRs for your branches; they merge when CI is green. Please re-run K14 on Windows when you can.
+
+### K17 (Sat 20:49). Re-run the judge dry run on Windows with tonight's fixes (about 20 min), do first
+Pull main (demo-stable-6 or later). From a fresh clone on Windows, follow only the README's "Check it without a Mac"
+block. Done when: `team/review/judge-dry-run.md` has a dated second section with each command's result (does
+`uv run pytest -q` now collect and how many pass/fail/skip, does verify give 74/74, evals offline), and anything the
+README still leaves unanswered.
+
+### K18 (Sat 20:49). Two phones, two roles (about 20 min), once the demo is up on the demo Mac
+The HVE Core re-check's last demo fix (DECISIONS 20:24): owners and the operator now join with separate tokens.
+1. `make qr` on the demo Mac; scan the owner code with one phone and the operator code with another.
+2. Operator phone: type "grid alert, I need 30% off for the next twenty minutes". Owner phone: refuse the slip.
+3. From the owner phone, try the operator's over-cap request (expect "this phone joined as the owner"), and try the
+   dispatcher switch if your phone can reach it (expect 403). From the operator phone, approve or refuse it.
+Done when: `team/review/two-phones.md` lists each step, what each phone showed, and the timeline's "who" for each
+action ("joined owner device ..." / "joined operator device ...").

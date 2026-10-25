@@ -352,3 +352,7 @@ Done: 7088195 (citations and "up to 4.1 GW"; replay chart clipped at the head, c
 tests collect on Windows; README no-Mac block and impact line; /join and token hardening). Opened PRs #25-#27 for
 Krish's review branches; they merge when CI is green. Krish is active again (status 20:34); Anuraag and Arumalla quiet.
 Blockers / needs Aryen: Prompt Shields decision; an operator or FDE quote.
+
+## 2026-10-24 20:49 PT — merged Krish's reviews (#25-#27); queued K17 and K18
+Done: PRs #25, #26, #27 merged (review files only, CI green); 499 tests pass on main. Krish's queue: K17 (Windows dry
+run again with the fixes), K18 (two phones, two roles). Anuraag and Arumalla still quiet.
