@@ -10,14 +10,18 @@
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="info.css">
   <link rel="stylesheet" href="proof.css">
+  <link rel="stylesheet" href="chrome.css">
 </head>
 <body class="proof p">
-  <div class="i-nav"><b>Griddy</b><nav aria-label="Pages"><a href="/">Grid</a><a href="/info.html">Info</a><a href="/proof.html" aria-current="page">Proof</a></nav></div>
+  <header class="g-top i-top">
+    <a class="g-brand" href="/" aria-label="Griddy home"><svg class="g-mark" viewBox="0 0 120 120" aria-hidden="true"><path d="M96 30H30V90H90V62H64"/><circle cx="30" cy="90" r="9"/></svg><b>Griddy</b></a>
+    <nav class="g-nav" aria-label="Pages"><a href="/">Grid</a><a href="/info.html">Info</a><a href="/proof.html" aria-current="page">Proof</a></nav>
+  </header>
   <header class="top">
     <div class="claim">
       <h1>Proof: one utility call, three answers</h1>
       <p>The same scripted cap on the same Mac, answered three ways: ignore the call, pause everything, or Griddy.
-        Every number is measured by macOS powermetrics and recorded, not live.</p>
+        macOS powermetrics measured every number here during recorded runs.</p>
     </div>
     <div class="controls">
       <span class="badge warn">recorded, not live</span>
@@ -37,8 +41,7 @@
 
     <section class="panel">
       <h2>Measured power, aligned at each run's cap start</h2>
-      <p class="cap">Each line is one run's measured watts at 1 Hz; 0 s is the moment its cap began. The red line is
-        Griddy's cap; the other runs' caps are in the legend.</p>
+      <p class="cap">Measured watts at 1 Hz. 0 s is when each run's cap began; red is Griddy's cap.</p>
       <div id="trace" class="proof-trace"><p class="empty">loading the runs…</p></div>
       <div class="legend" id="trace-legend"></div>
       <div class="src" id="trace-src"></div>
@@ -57,7 +60,6 @@
 
     <section class="panel">
       <h2>What each run did during the call</h2>
-      <p class="cap">The control actions and shortfall messages each run logged, as recorded.</p>
       <div id="actions" class="receipt-grid"></div>
     </section>
   </main>

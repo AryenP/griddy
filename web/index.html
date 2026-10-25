@@ -9,6 +9,9 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="world.css">
+  <link rel="stylesheet" href="chrome.css">
+  <script src="common.js"></script>
+  <script src="seen.js"></script>
 </head>
 <body class="w">
   <div id="w-load" class="w-load" role="status" aria-label="Griddy is loading">
@@ -21,10 +24,10 @@
     </svg>
     <div class="w-load-word"><b>Griddy</b><span>the grid's shock absorber</span></div>
   </div>
-  <header class="w-top">
-    <div class="w-brand"><b>Griddy</b><span>the grid's shock absorber: when any part fails, AI compute gives power back</span></div>
-    <nav class="w-nav" aria-label="Pages"><a href="/" aria-current="page">Grid</a><a href="/info.html">Info</a><a href="/proof.html">Proof</a></nav>
-    <div class="w-status"><span id="w-feed" class="w-pill">grid feed —</span><span id="conn" class="w-pill">connecting</span></div>
+  <header class="w-top g-top">
+    <a class="g-brand" href="/" aria-label="Griddy home"><svg class="g-mark" viewBox="0 0 120 120" aria-hidden="true"><path d="M96 30H30V90H90V62H64"/><circle cx="30" cy="90" r="9"/></svg><b>Griddy</b></a>
+    <nav class="g-nav" aria-label="Pages"><a href="/" aria-current="page">Grid</a><a href="/info.html">Info</a><a href="/proof.html">Proof</a></nav>
+    <div class="g-status"><span id="w-feed" class="badge">grid feed</span><span id="conn" class="badge">connecting</span></div>
   </header>
 
   <canvas id="world" class="w-world" role="img" aria-label="The grid as a 3D world: power plants from the real fuel mix, the city lit by the demand served, this Mac's data center by its measured watts"></canvas>
@@ -65,7 +68,6 @@
   </section>
   <footer id="w-sources" class="w-src"></footer>
 
-  <script src="common.js"></script>
   <script src="world.js"></script>
   <script src="demo.js"></script>
 </body>

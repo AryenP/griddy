@@ -203,7 +203,7 @@ function renderReplay() {
     <p>${running && d && d.baseline_w ? html`Baseline ${fixed(d.baseline_w, 1)} W before the replay; now ${d.ours_w == null ? "—" : `${fixed(d.ours_w, 1)} W`}${d.measured_cut_pct != null ? html`, <b>${fixed(d.measured_cut_pct, 0)}% below</b>` : ""}.` : "Starts when you press Replay."}</p>
     <h3>At the operator's scale <span class="d-sim">estimate</span></h3>
     <p>${sc ? html`The ${fixed(sc.share_pct, 0)}% cut the grid asked, which this Mac delivered (measured), on ${gwOf(sc.flexible_mw)} of flexible load frees about <b>${fixed(sc.freed_mw, 0)} MW</b>${sc.share_of_shed_pct != null ? html`, <b>${fixed(sc.share_of_shed_pct, 1)}%</b> of the ${fixed(ev.shed_mw, 0)} MW in this event` : ""}${sc.people != null ? html`: about <b>${Math.round(sc.people).toLocaleString()}</b> ${sc.people_unit} at this event's own ratio` : ""}.` : "Appears once our sites have cut."}</p>
-    <div class="src">${ev.flexible_source}. Arithmetic on the event's own published numbers and our measured cut; a laptop is not a data center.</div>`);
+    <div class="src">${ev.flexible_source}. Arithmetic on the event's published numbers and one laptop's measured cut.</div>`);
   setHTML($("replay-src"), html`Data: ${ev.data_source}. Alerts and impact: <a href="${ev.report_url}" target="_blank" rel="noopener">the official report</a> (pages cited per line).`);
 }
 
@@ -220,7 +220,7 @@ function renderScale() {
       Another ${fixed(x.queue_gw, 0)} GW of large loads, mostly data centers, are asking to connect.</p>
     <div class="src">Running and approved (${gw(x.large_loads_approved_mw)}) large loads: <a href="${x.large_loads_url}" target="_blank" rel="noopener">${x.large_loads_source}</a>.
       Queue: <a href="${x.queue_url}" target="_blank" rel="noopener">${x.queue_source}</a>. Demand: ERCOT real-time system conditions${x.demand_t ? `, ${localClock(Date.parse(x.demand_t) / 1000)}` : ""}.
-      The cut: ${x.our_cut_source}. A laptop's response is not a data center's; this is arithmetic on public numbers, not a measurement.</div>`);
+      The cut: ${x.our_cut_source}. It scales one laptop's measured cut with public numbers, so read it as an estimate.</div>`);
 }
 
 // ---------- the laptops (fleet/hub.py): each one's status, its own battery's watts, its job ----------
@@ -282,7 +282,8 @@ function renderNumbers() {
 // Chat SLA is time to first token (policy.sla.chat_ttft_p95_s); total latency depends on reply length.
 function renderChatTile() {
   const c = S.jobs.chat, sla = S.policy && S.policy.sla ? S.policy.sla.chat_ttft_p95_s : null;
-  $("ttft-label").textContent = "Chat time to first token, p95 over 60 s" + (sla != null ? `, SLA ${sla} s` : "");
+  $("ttft-label").textContent = "Chat response";
+  $("ttft-label").title = "Time to first token, p95 over the last 60 s" + (sla != null ? `; the promise is ${sla} s` : "");
   if (!c || c.t == null) { $("ttft-src").textContent = "no chat proxy status yet"; return; }
   const stale = nowS() - c.t > STALE_STATUS_S;
   if (c.ttft_p95_60s != null) {
@@ -293,7 +294,8 @@ function renderChatTile() {
     $("ttft").classList.remove("bad");
   }
   $("ttft").classList.toggle("stale", stale);
-  $("total-p95").textContent = c.p95_60s != null ? `whole reply ${c.p95_60s.toFixed(1)} s, which depends on its length` : "no replies in the last 60 s";
+  $("total-p95").textContent = c.ttft_p95_60s != null
+    ? `first token, p95 over 60 s${sla != null ? ` · promise ${sla} s` : ""}` : "no replies in the last 60 s";
   $("ttft-src").textContent = (stale ? "STALE. " : "") + (c.n_60s ? `chat proxy, measured over ${plural(c.n_60s, "reply", "replies")} in 60 s` : "chat proxy: no chat requests in the last 60 s") +
     (sla != null ? ", SLA from policy" : ", no TTFT SLA in policy") + `, ${age(c.t)}`;
 }
@@ -304,7 +306,8 @@ function renderFeedBadge() {
   const b = $("feed-age"), g = S.grid;
   if (!g) { b.textContent = "no grid feed yet"; b.className = "badge warn"; return; }
   const stale = g.stale || (S.plan && S.plan.on_last_known_data);
-  b.textContent = `${g.iso} feed ${age(feedT())}` + (stale ? ": STALE, plan on last known data" : "");
+  b.textContent = `${g.iso} · ${stale ? "stale" : "live"} · ${age(feedT())}`;
+  b.title = stale ? "The grid feed is stale: the plan runs on the last known data" : `${g.iso} feed, ${age(feedT())}`;
   b.className = "badge " + (stale ? "bad" : "ok");
 }
 
@@ -545,7 +548,8 @@ function renderControls() {
     b.classList.toggle("off", !S.dispatcherEnabled);
   }
   const ag = $("agent");
-  ag.textContent = S.agent === "online" ? `agent online${S.agentModel ? `, ${S.agentModel}` : ""}` : S.agent === "offline" ? "agent offline: solver and controller still run" : "agent ?";
+  ag.textContent = S.agent === "online" ? "agent" : S.agent === "offline" ? "agent offline" : "agent";
+  ag.title = S.agent === "online" ? `Agent online${S.agentModel ? `: ${S.agentModel}` : ""}` : "Agent offline. The solver and the controller keep running.";
   ag.className = "badge " + (S.agent === "online" ? "ok" : "warn");
   const q = S.quote;
   if (q && q.text) setHTML($("quote"), html`<blockquote>“${q.text}”</blockquote><cite>${q.who}${q.role ? `, ${q.role}` : ""}</cite>`);
@@ -614,7 +618,7 @@ setInterval(() => { renderNumbers(); renderJobs(); renderLoad(); if (S.replayLas
 setInterval(() => { if (S.fleet.length) refreshFleet(); }, 5000);
 // Driver hotkeys for the table demo (shown in the header): D dispatcher, 1/2/3 objective, R receipts.
 hotkeys({ d: toggleDispatcher, 1: () => setObjective("cost"), 2: () => setObjective("carbon"),
-  3: () => setObjective("balanced"), r: () => $("receipts").scrollIntoView({ behavior: "smooth", block: "start" }) });
+  3: () => setObjective("balanced"), r: () => { $("receipts-box").open = true; $("receipts").scrollIntoView({ behavior: "smooth", block: "start" }); } });
 window.brownout = { handle };   // the WebSocket's handler, exposed for feeding real timelines from the console
 renderAll();
 connectWS(handle, $("conn"));

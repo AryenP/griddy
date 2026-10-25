@@ -87,7 +87,7 @@ def test_replay_panel_shows_real_data_with_its_sources_and_labels_estimates():
 
 def test_the_judge_page_is_the_3d_world_and_its_dock():
     """index.html (Sat 16:30): the grid as a 3D world drawn without a library, four choices and four numbers."""
-    assert re.findall(r'<script src="([^"]+)"', WORLD_HTML) == ["common.js", "world.js", "demo.js"]
+    assert re.findall(r'<script src="([^"]+)"', WORLD_HTML) == ["common.js", "seen.js", "world.js", "demo.js"]
     assert '<canvas id="world"' in WORLD_HTML and 'href="/info.html"' in WORLD_HTML
     assert "simulated" not in WORLD_HTML.lower() + DEMO_JS.lower()
     assert set(re.findall(r'postJSON\(\s*[`"](/api/[\w/${}]+)', DEMO_JS)) <= {"/api/replay", "/api/jobs/${job}", "/api/whatif", "/api/whatif/read"}
@@ -140,7 +140,7 @@ def test_the_city_map_says_what_is_real_and_what_is_drawn():
 def test_the_logo_loader_shows_while_the_page_loads_and_always_goes_away():
     """Sat 19:40 (Aryen): a G drawn as a power line, a red node healed by a mint pulse, the wordmark in Inter. It is
     inline SVG and CSS (nothing to download), fades after the first snapshot, and CSS fades it at 6 s if JS never runs."""
-    assert WORLD_HTML.index('id="w-load"') < WORLD_HTML.index('<header class="w-top">')     # first thing painted
+    assert WORLD_HTML.index('id="w-load"') < WORLD_HTML.index('<header class="w-top g-top">')     # first thing painted
     assert 'role="status"' in WORLD_HTML and "<svg" in WORLD_HTML and 'class="g-fault"' in WORLD_HTML
     css = (WEB / "world.css").read_text()
     assert "w-load-out 0.4s ease 6s forwards" in css and ".w-load * { animation: none !important; }" in css

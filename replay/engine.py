@@ -186,7 +186,7 @@ class Replay:
                 peak_t, peak = ahead.idxmax(), float(ahead.max())
                 return [{"kind": "brownout", "replay_s": self.real_s(ev, m), "before_window": m == w0,
                          "at": None if m == w0 else m.isoformat(), "cut_pct": float(self.cfg.get("flag_cut_pct", 20)),
-                         "label": f"Brownout's flag: the day-ahead forecast for {peak_t:%a %H:%M} is {peak:,.0f} MW, above the "
+                         "label": f"Griddy's flag: the day-ahead forecast for {peak_t:%a %H:%M} is {peak:,.0f} MW, above the "
                                   f"{rec:,} MW record before this event. Our sites start shifting work now",
                          "source": f"forecast: EIA-930 ({ev['ba']}), published the day before; record: {ev['record_source']}"}]
         return []

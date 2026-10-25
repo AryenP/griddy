@@ -97,7 +97,7 @@ function provenance(ev, data) {
   if (!data) return html``;
   if (data.source === "live") {
     const same = data.max_diff_mw === 0 ? ", identical to the evidence copy" : data.max_diff_mw != null ? `, within ${fixed(data.max_diff_mw, 0)} MW of the evidence copy` : "";
-    return html`Grid data fetched live from api.eia.gov at ${data.fetched_at ? new Date(data.fetched_at).toTimeString().slice(0, 5) : "—"} (EIA-930, ${ev ? ev.ba : ""}${same}). The software sees each hour once it has ended, never a later one.`;
+    return html`Grid data fetched live from api.eia.gov at ${data.fetched_at ? new Date(data.fetched_at).toTimeString().slice(0, 5) : "—"} (EIA-930, ${ev ? ev.ba : ""}${same}). The software sees each hour only once it has ended.`;
   }
   return html`Grid data: the evidence copy, ${ev ? ev.data_source : "EIA-930"} (${data.why || "api.eia.gov not reached"}). The software sees each hour once it has ended.`;
 }
@@ -123,7 +123,7 @@ function render() {
   const train = D.jobs.train;
   $("w-work-btn").hidden = running() || !train || train.state === "running" || train.state === "done";
   const g = D.grid, p = D.power;
-  if (g) $("w-feed").textContent = `${g.iso} feed ${g.stale ? "STALE" : "live"} · ${fixed(g.feed_age_s, 0)} s`;
+  if (g) { $("w-feed").textContent = `${g.iso} · ${g.stale ? "stale" : "live"} · ${fixed(g.feed_age_s, 0)} s`; $("w-feed").className = `badge ${g.stale ? "bad" : "ok"}`; }
   $("w-versus").hidden = true;
   if (running()) {
     const d = D.last, sc = d.scale;
@@ -172,7 +172,7 @@ function render() {
     $("w-progress").style.width = "0%";
     $("w-head").textContent = ev.iso === "ERCOT" && D.scale && D.scale.demand_mw
       ? `Texas right now: ERCOT is serving ${gw(D.scale.demand_mw)} (live). Press play to run ${ev.when} through the same software.`
-      : `Press play: the hours are fetched live from the U.S. EIA and run through the software one hour at a time.`;
+      : `Press play to fetch the hours live from the U.S. EIA. The software gets them one hour at a time.`;
   }
   $("s-served").textContent = gw(served); $("s-served-src").textContent = g ? `${g.iso} fuel mix, live` : "";
   $("s-needed").textContent = gw(needed); $("s-needed-src").textContent = needed ? `${g.iso} load forecast` : "no forecast for this hour";
@@ -284,10 +284,10 @@ function confirmBreak(h, pt) {
   const ts = World.targets().filter((t) => t.id.startsWith("plant:"));
   const big = ts.reduce((a, b) => (b.mw > (a ? a.mw : 0) ? b : a), null);
   const card = h.id.startsWith("plant:")
-    ? [`Trip the ${h.title.toLowerCase()} fleet?`, `What-if: the grid loses its real output at this moment, ${gw(h.mw)}. Griddy reacts live; this Mac's watts are measured.`, "Trip it"]
+    ? [`Trip the ${h.title.toLowerCase()} fleet?`, `What-if: the grid loses this fleet's output right now, ${gw(h.mw)}. Griddy responds live and this Mac's watts are measured.`, "Trip it"]
     : h.id === "hub"
-      ? ["Fail the main substation?", `What-if: it cuts off the largest fleet${big ? `, ${big.title.toLowerCase()} (${gw(big.mw)}, its real output)` : ""}. Griddy reacts live.`, "Fail it"]
-      : [`Surge demand in ${h.title === "City" ? "the city" : h.title}?`, "What-if: demand jumps to the highest forecast for the rest of today, the operator's real published forecast. Griddy reacts live.", "Surge it"];
+      ? ["Fail the main substation?", `What-if: it cuts off the largest fleet${big ? `, ${big.title.toLowerCase()} (${gw(big.mw)} right now)` : ""}. Griddy responds live.`, "Fail it"]
+      : [`Surge demand in ${h.title === "City" ? "the city" : h.title}?`, "What-if: demand jumps to today's highest published forecast. Griddy responds live.", "Surge it"];
   const city = h.id === "city" ? cityNow() : null;
   openPop(card[0], card[1], [...(city ? [[`Open the ${city.name} map`, "open", () => { closePop(); openCity(city); }]] : []),
     [card[2], "go", () => breakIt(h.id)], ["Cancel", "", closePop]], pt, { target: h.id });
@@ -307,7 +307,7 @@ World.onPick((h, pt) => confirmBreak(h, pt));
 $("w-break-btn").addEventListener("click", async (e) => {
   if (faulted()) { await postJSON("/api/whatif", { target: "clear", who: "judge" }); D.whatif = null; render(); return; }
   const r = e.currentTarget.getBoundingClientRect();
-  openPop("Break a part of the grid", "What-if: the fault is invented, its size is real, taken from the grid at this moment.",
+  openPop("Break a part of the grid", "What-if: you invent the fault. Its size comes from the grid at this moment.",
     [...World.targets().map((t) => [t.mw ? `${t.title} · ${gw(t.mw)}` : t.title, "", () => confirmBreak(t, { x: r.left + r.width / 2, y: r.top })]),
       ["Cancel", "", closePop]], { x: r.left + r.width / 2, y: r.top }, { target: null });
 });

@@ -27,3 +27,4 @@ body.proof.p .proof-trace .grid { stroke: rgba(255, 255, 255, 0.06); }
 body.proof.p .proof-trace .tick { fill: #6b7774; font: 12px var(--font); }
 body.proof.p .proof-trace .trace { stroke-width: 2; }
 @media (max-width: 640px) { body.proof.p { padding: 10px 12px 28px; } body.proof.p .panel { padding: 14px; border-radius: 18px; } }
+body.proof.p .i-top { position: sticky; top: 12px; z-index: 5; margin-bottom: 20px; }

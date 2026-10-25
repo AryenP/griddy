@@ -1,32 +1,61 @@
-/* The info page (info.html): every graph and every source, in a quiet monitoring style (Aryen, Sat 16:30): a near-black
-   page, soft dark cards with large radii, big thin numbers, small muted labels, one mint accent for live and measured.
-   Loaded after style.css and dashboard.css; it changes the look, never the content. */
-body.dash.d {
-  --bg: #08090a; --panel: #121415; --panel2: #191c1d; --line: rgba(255, 255, 255, 0.07);
-  --text: #f0f4f2; --muted: #8f9b98; --ok: #7df0bf; --off: #1d2122; --action: #2f6fe0;
+/* The Info page (info.html), quiet (Aryen, Sat: "judges won't read all those chunks of info, it's too much and too
+   crowded"): four numbers, the power chart, the 24-hour map and the jobs on screen; the replay, the reasoning, the log and
+   the receipts folded until someone opens them. Every source line stays, one short line in faint type. Loaded after
+   style.css and dashboard.css; the top bar comes from chrome.css. */
+body.dash.d.i {
+  --bg: #07090a; --panel: #101314; --panel2: #171b1c; --line: rgba(255, 255, 255, 0.06);
+  --text: #eef3f1; --muted: #8b9794; --faint: #5f6b68; --ok: #7df0bf; --off: #1d2122; --action: #2f6fe0;
   --font: "Inter", "SF Pro Text", system-ui, -apple-system, "Segoe UI", sans-serif;
-  font-size: 15.5px; padding: 18px 22px 40px; max-width: 1560px; letter-spacing: -0.005em;
+  font: 15px/1.45 var(--font); letter-spacing: -0.005em; color: var(--text); max-width: 1440px; padding: 16px 24px 48px;
   background:
-    radial-gradient(1200px 600px at 10% -10%, rgba(125, 240, 191, 0.07), transparent 60%),
-    radial-gradient(900px 500px at 100% 0%, rgba(90, 168, 255, 0.06), transparent 60%), var(--bg);
+    radial-gradient(1100px 520px at 12% -12%, rgba(125, 240, 191, 0.06), transparent 60%),
+    radial-gradient(800px 420px at 100% 0%, rgba(90, 168, 255, 0.05), transparent 60%), var(--bg);
 }
-body.dash.d .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 22px; padding: 20px 22px;
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 20px 40px -24px rgba(0, 0, 0, 0.7); }
-body.dash.d h2 { font-size: 0.82rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
-body.dash.d .src { color: #6b7774; font-size: 0.74rem; }
-body.dash.d button, body.dash.d select { border-radius: 999px; border-color: var(--line); background: var(--panel2); }
+.i-top { position: sticky; top: 12px; z-index: 5; margin-bottom: 20px; }
+.i-main { display: grid; gap: 16px; }
+body.d.i .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 18px 20px; box-shadow: none; }
+body.d.i h2 { font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 0 0 10px; }
+body.d.i .src { color: var(--faint); font-size: 0.7rem; line-height: 1.4; }
+body.d.i .cap { color: var(--muted); font-size: 0.82rem; }
+body.d.i button, body.d.i select { border-radius: 999px; border-color: var(--line); background: var(--panel2); }
 
-/* top bar: the same pill navigation as the grid page */
-.i-nav { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; padding: 8px 10px 8px 18px; border-radius: 999px;
-  background: rgba(18, 20, 21, 0.8); border: 1px solid var(--line); }
-.i-nav b { font-size: 1.05rem; font-weight: 650; }
-.i-nav nav { margin-left: auto; display: flex; gap: 4px; padding: 4px; border-radius: 999px; background: rgba(255, 255, 255, 0.04); }
-.i-nav nav a { color: var(--muted); text-decoration: none; padding: 6px 14px; border-radius: 999px; font-size: 0.85rem; }
-.i-nav nav a[aria-current="page"] { color: #06120d; background: var(--ok); }
-body.dash.d .d-top { margin-bottom: 14px; }
-body.dash.d .d-claim h1 { display: none; }
-body.dash.d .d-claim p { font-size: 1rem; }
+/* the controls: one quiet row */
+.i-bar { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.i-bar .quote:empty { display: none; }
+.i-bar .d-knobs { margin-left: auto; }
 
-/* numbers: big and thin */
-body.dash.d .d-big, body.dash.d .d-num, body.dash.d .d-watts { font-weight: 300; letter-spacing: -0.02em; }
-body.dash.d .d-state { font-weight: 600; }
+/* four numbers */
+.i-kpis { display: grid; grid-template-columns: 1.3fr 1fr 1fr 1fr; gap: 16px; }
+.i-kpi { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.i-kpi .d-watts, .i-kpi .d-num { font-size: clamp(1.9rem, 3vw, 2.8rem); font-weight: 300; letter-spacing: -0.03em; line-height: 1.05; margin: 0; }
+.i-kpi .d-watts { font-size: clamp(2.4rem, 4vw, 3.6rem); }
+.i-kpi .d-state { font-size: 0.85rem; font-weight: 500; margin: 6px 0 0; }
+.i-kpi .d-state-sub, .i-kpi .d-ratio, .i-kpi .sub { font-size: 0.75rem; color: var(--muted); margin: 0; }
+.i-kpi .d-state-sub:empty { display: none; }
+.i-kpi .src { margin-top: auto; padding-top: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.i-kpi .d-fleet:empty { display: none; }
+
+/* the power chart */
+.i-trace .d-chart-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.i-trace .d-trace { min-height: 260px; }
+body.d.i .legend { font-size: 0.72rem; color: var(--muted); gap: 4px 14px; }
+
+/* folded until opened */
+.i-more { padding: 0; }
+.i-more > summary { list-style: none; cursor: pointer; padding: 16px 20px; display: flex; align-items: baseline; gap: 12px;
+  font-size: 0.85rem; font-weight: 500; color: var(--text); border-radius: 18px; }
+.i-more > summary::-webkit-details-marker { display: none; }
+.i-more > summary::after { content: "+"; margin-left: auto; color: var(--muted); font-weight: 300; font-size: 1.2rem; line-height: 1; }
+.i-more[open] > summary::after { content: "\2212"; }
+.i-more > summary:hover { background: rgba(255, 255, 255, 0.02); }
+.i-more > summary:focus-visible { outline: 2px solid var(--ok); outline-offset: -2px; }
+.i-more > section, .i-more > .d-why { margin: 0; border: 0; border-top: 1px solid var(--line); border-radius: 0 0 18px 18px; background: transparent; }
+.i-more .d-why { padding: 16px 20px 20px; }
+.i-more .d-why > .panel { padding: 0; border: 0; background: transparent; }
+
+@media (max-width: 1100px) { .i-kpis { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 640px) {
+  body.dash.d.i { padding: 10px 12px 32px; }
+  .i-kpis { grid-template-columns: 1fr; }
+  .i-bar .d-knobs { margin-left: 0; }
+}
